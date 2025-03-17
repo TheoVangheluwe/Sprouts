@@ -91,4 +91,19 @@
                 // Ajouter la courbe à la liste de connexions (si elle relie deux points)
                 if (currentCurve.length > 1) {
                     // Vous pouvez enregistrer la courbe ici si besoin
-   
+                    console.log('Nouvelle connexion:', currentCurve);
+                }
+                currentCurve = []; // Réinitialiser pour la prochaine courbe
+            }
+        }
+
+        function mouseDragged() {
+            // Ajouter à la courbe en temps réel lorsque la souris est déplacée
+            if (isDrawing) {
+                currentCurve.push({ x: mouseX, y: mouseY });
+            }
+        }
+    </script>
+
+</body>
+</html>
