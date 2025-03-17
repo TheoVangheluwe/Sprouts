@@ -1,3 +1,4 @@
 from django.shortcuts import render
 
-# Create your views here.
+def draw_canvas(request):
+    return render(request, 'Game/canvas.html')
