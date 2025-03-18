@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'Game',
+    'webpack_loader',
 ]
 
 MIDDLEWARE = [
@@ -122,3 +123,16 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Configuration pour webpack_loader
+WEBPACK_LOADER = {
+    'DEFAULT': {
+        'BUNDLE_DIR_NAME': 'bundles/',
+        'STATS_FILE': BASE_DIR / 'frontend' / 'webpack-stats.json',
+    }
+}
+
+# Ajoutez le chemin des fichiers statiques générés par Webpack
+STATICFILES_DIRS = [
+    BASE_DIR / 'frontend' / 'build' / 'static',
+]
