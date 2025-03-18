@@ -13,8 +13,11 @@ const GameBoard = () => {
       let currentCurve = [];
       let completedCurves = [];
       let isDrawing = false;
+      let canAddPoint = false;
       const maxConnections = 3;
-      const tolerance = 7;
+      const tolerance = 15; // Tolérance pour éviter les points trop serrés
+      const minPointDistance = 15; // Distance minimale entre les points
+      const minPointsInLoop = 50; // Nombre minimum de points pour former une boucle
 
       // Fonction pour vérifier si une courbe croise une autre
       const curvesIntersect = (curve1, curves) => {
@@ -60,6 +63,21 @@ const GameBoard = () => {
               console.log('Self-intersection detected in curve:', { x1, y1, x2, y2 }, 'and', { x3, y3, x4, y4 });
               return true;
             }
+          }
+        }
+        return false;
+      };
+
+      // Fonction pour vérifier si un point est sur la courbe actuelle
+      const isPointOnCurve = (x, y, curve) => {
+        for (let i = 0; i < curve.length - 1; i++) {
+          const x1 = curve[i].x;
+          const y1 = curve[i].y;
+          const x2 = curve[i + 1].x;
+          const y2 = curve[i + 1].y;
+          const d = p.dist(x, y, x1, y1) + p.dist(x, y, x2, y2) - p.dist(x1, y1, x2, y2);
+          if (d < tolerance) {
+            return true;
           }
         }
         return false;
@@ -113,20 +131,38 @@ const GameBoard = () => {
       };
 
       p.mousePressed = () => {
-        const selectedPoints = points.filter(pt => p.dist(pt.x, pt.y, p.mouseX, p.mouseY) < 10);
+        if (canAddPoint) {
+          // Ajouter un point sur la courbe actuelle
+          if (isPointOnCurve(p.mouseX, p.mouseY, currentCurve)) {
+            const newPoint = { x: p.mouseX, y: p.mouseY, connections: 0 };
+            const isTooClose = points.some(pt => p.dist(pt.x, pt.y, newPoint.x, newPoint.y) < minPointDistance);
 
-        if (selectedPoints.length === 1) {
-          const startPoint = selectedPoints[0];
-
-          if (startPoint.connections < maxConnections) {
-            isDrawing = true;
-            currentCurve = [startPoint];
-            console.log('Start drawing from:', startPoint);
+            if (!isTooClose) {
+              points.push(newPoint);
+              console.log('New point added on curve:', newPoint);
+              canAddPoint = false;
+            } else {
+              console.log('Point too close to an existing point.');
+            }
           } else {
-            console.log('Point already has max connections:', startPoint);
+            console.log('Point not on the curve.');
           }
-        } else {
-          console.log('No valid start point found.');
+        } else if (!isDrawing) {
+          const selectedPoints = points.filter(pt => p.dist(pt.x, pt.y, p.mouseX, p.mouseY) < 10);
+
+          if (selectedPoints.length === 1) {
+            const startPoint = selectedPoints[0];
+
+            if (startPoint.connections < maxConnections) {
+              isDrawing = true;
+              currentCurve = [startPoint];
+              console.log('Start drawing from:', startPoint);
+            } else {
+              console.log('Point already has max connections:', startPoint);
+            }
+          } else {
+            console.log('No valid start point found.');
+          }
         }
       };
 
@@ -142,18 +178,19 @@ const GameBoard = () => {
             console.log('End drawing at:', endPoint);
 
             if (endPoint === currentCurve[0]) {
-              if (endPoint.connections < 2) {
+              if (endPoint.connections < 2 && newCurve.length >= minPointsInLoop) {
                 const isLoopValid = !curvesIntersect(newCurve, completedCurves) && !isSelfIntersecting(newCurve.slice(0, -1));
 
                 if (isLoopValid) {
                   completedCurves.push(newCurve);
                   endPoint.connections += 2;
                   console.log('Loop added:', newCurve);
+                  canAddPoint = true;
                 } else {
                   console.log('Loop not added due to intersection.');
                 }
               } else {
-                console.log('Loop not added due to connection limit.');
+                console.log(`Loop not added due to connection limit or insufficient points in loop. Points in loop: ${newCurve.length}`);
               }
             } else if (endPoint.connections < maxConnections) {
               if (!curvesIntersect(newCurve, completedCurves) && !isSelfIntersecting(newCurve)) {
@@ -162,6 +199,7 @@ const GameBoard = () => {
                   pt.connections += 1;
                 });
                 console.log('Curve added:', newCurve);
+                canAddPoint = true;
               } else {
                 console.log('Curve not added due to intersection.');
               }
@@ -171,8 +209,6 @@ const GameBoard = () => {
           } else {
             console.log('No valid end point found.');
           }
-
-          currentCurve = [];
         }
       };
 
