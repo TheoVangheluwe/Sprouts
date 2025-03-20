@@ -1,0 +1,27 @@
+
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="description" content="Page de connexion pour accéder à votre compte.">
+    <meta name="keywords" content="connexion, login, utilisateur, mot de passe, compte">
+    <title>Connexion</title>
+    <link rel="stylesheet" href="{% static 'Game/css/login.css' %}">
+</head>
+<body>
+    <h1>Connexion</h1>
+    <form method="post">
+        {% csrf_token %}
+        <label for="username">Nom d'utilisateur :</label>
+        <input type="text" name="username" id="username" required>
+        <label for="password">Mot de passe :</label>
+        <input type="password" name="password" id="password" required>
+        <button type="submit">Se connecter</button>
+    </form>
+    {% if error %}
+        <p class="error-message">{{ error }}</p>
+    {% endif %}
+    <p>Pas encore de compte ? <a href="{% url 'register' %}">Inscrivez-vous ici</a>.</p>
+</body>
+</html>
