@@ -3,6 +3,8 @@ export const drawGame = (canvasRef, pointsToDraw, curvesToDraw, tempCurve = null
   if (canvas) {
     const ctx = canvas.getContext("2d");
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Draw curves
     curvesToDraw.forEach(curve => {
       ctx.beginPath();
       ctx.moveTo(curve[0].x, curve[0].y);
@@ -13,6 +15,8 @@ export const drawGame = (canvasRef, pointsToDraw, curvesToDraw, tempCurve = null
       ctx.lineWidth = 2;
       ctx.stroke();
     });
+
+    // Draw points
     pointsToDraw.forEach(point => {
       ctx.beginPath();
       ctx.arc(point.x, point.y, 5, 0, Math.PI * 2);
@@ -20,6 +24,8 @@ export const drawGame = (canvasRef, pointsToDraw, curvesToDraw, tempCurve = null
       ctx.fill();
       ctx.fillText(point.label, point.x + 10, point.y + 5);
     });
+
+    // Draw temporary curve
     if (tempCurve && tempCurve.length > 0) {
       ctx.beginPath();
       ctx.moveTo(tempCurve[0].x, tempCurve[0].y);
@@ -80,7 +86,7 @@ export const connectPoints = (p1, p2, curvePoints, points, setPoints, setCurves)
   setCurves(prevCurves => [...prevCurves, curvePoints]);
 };
 
-export const curveIntersects = (newCurve, curves) => {
+export const curveIntersects = (newCurve, curves, points) => {
   for (let curve of curves) {
     for (let i = 0; i < newCurve.length - 1; i++) {
       const seg1Start = newCurve[i];
@@ -88,18 +94,37 @@ export const curveIntersects = (newCurve, curves) => {
       for (let j = 0; j < curve.length - 1; j++) {
         const seg2Start = curve[j];
         const seg2End = curve[j + 1];
+
+        // Ignore intersections at start and end points
+        if (points.some(point => point.x === seg1Start.x && point.y === seg1Start.y) ||
+            points.some(point => point.x === seg1End.x && point.y === seg1End.y) ||
+            points.some(point => point.x === seg2Start.x && point.y === seg2Start.y) ||
+            points.some(point => point.x === seg2End.x && point.y === seg2End.y)) {
+          continue;
+        }
+
         if (segmentsIntersect(seg1Start, seg1End, seg2Start, seg2End)) {
           return true;
         }
       }
     }
   }
+
   for (let i = 0; i < newCurve.length - 1; i++) {
     const seg1Start = newCurve[i];
     const seg1End = newCurve[i + 1];
     for (let j = i + 2; j < newCurve.length - 1; j++) {
       const seg2Start = newCurve[j];
       const seg2End = newCurve[j + 1];
+
+      // Ignore intersections at start and end points
+      if (points.some(point => point.x === seg1Start.x && point.y === seg1Start.y) ||
+          points.some(point => point.x === seg1End.x && point.y === seg1End.y) ||
+          points.some(point => point.x === seg2Start.x && point.y === seg2Start.y) ||
+          points.some(point => point.x === seg2End.x && point.y === seg2End.y)) {
+        continue;
+      }
+
       if (segmentsIntersect(seg1Start, seg1End, seg2Start, seg2End)) {
         return true;
       }
@@ -209,6 +234,16 @@ export const getClosestPointOnCurve = (x, y, curve, tolerance = 15) => {
   }
 
   return closestPoint;
+};
+
+export const isPointTooClose = (x, y, points, minDistance = 30) => {
+  for (const point of points) {
+    const distance = Math.hypot(point.x - x, point.y - y);
+    if (distance < minDistance) {
+      return true;
+    }
+  }
+  return false;
 };
 
 const getProjection = (px, py, p1, p2) => {
