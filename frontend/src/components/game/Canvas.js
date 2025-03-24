@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { toast } from 'react-toastify';
-import { drawGame, getMousePos, getNearPoint, canConnect, connectPoints, curveIntersects, curveLength, getNextLabel, generateGraphString } from './Utils';
+import { drawGame, getMousePos, getNearPoint, canConnect, connectPoints, curveIntersects, curveLength, getNextLabel, generateGraphString, getClosestPointOnCurve } from './Utils';
 
 const Canvas = ({ points, setPoints, curves, setCurves, setGrapheChaine }) => {
   const canvasRef = useRef(null);
@@ -54,17 +54,16 @@ const Canvas = ({ points, setPoints, curves, setCurves, setGrapheChaine }) => {
     const pos = getMousePos(canvas, event);
 
     if (awaitingPointPlacement) {
-      const distanceToCurve = currentCurve.map(p => Math.hypot(p.x - pos.x, p.y - pos.y));
-      const minDistance = Math.min(...distanceToCurve);
-      if (minDistance <= 15) {
-        const newPoint = { x: pos.x, y: pos.y, connections: 2, label: getNextLabel(points) };
+      const closestPoint = getClosestPointOnCurve(pos.x, pos.y, currentCurve);
+      if (closestPoint) {
+        const newPoint = { x: closestPoint.x, y: closestPoint.y, connections: 2, label: getNextLabel(points) };
         setPoints(prevPoints => [...prevPoints, newPoint]);
         setCurves(prevCurves => [...prevCurves, currentCurve]);
         setAwaitingPointPlacement(false);
         setCurrentCurve([]);
         toast.success("Point placé.", { autoClose: 1500 });
       } else {
-        toast.error("Cliquez plus près de la courbe.", { autoClose: 1500 });
+        toast.error("Cliquez sur la courbe.", { autoClose: 1500 });
       }
     } else {
       const start = getNearPoint(pos.x, pos.y, points);
@@ -102,7 +101,7 @@ const Canvas = ({ points, setPoints, curves, setCurves, setGrapheChaine }) => {
         toast.error("Courbe trop courte.", { autoClose: 1500 });
         setCurrentCurve([]);
       } else {
-        toast.success("Placez un point sur la courbe.", { autoClose: 1500 });
+        toast.info("Placez un point sur la courbe.", { autoClose: 1500 });
         connectPoints(selectedPoint, endPoint, currentCurve, points, setPoints, setCurves);
         setAwaitingPointPlacement(true);
       }
