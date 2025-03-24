@@ -1,31 +1,32 @@
 /* Style pour le corps de la page */
 body {
     font-family: Arial, sans-serif;
-    background-color: #121113; /* Couleur de fond de la page */
+    background-color: #BACDB0; /* Couleur de fond douce */
     margin: 0;
     padding: 0;
     display: flex;
     justify-content: center;
     align-items: center;
     height: 100vh; /* Hauteur de la fenêtre pour centrer verticalement */
+    color: #2E2C2F; /* Couleur de texte principale */
 }
 
 /* Cadre central */
 .login-container {
-    background-color: #899878; /* Couleur de fond du cadre */
+    background-color: #729B79; /* Couleur de fond blanche */
     padding: 2rem;
     border-radius: 15px; /* Coins arrondis */
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Ombre douce */
     width: 100%;
     max-width: 400px; /* Largeur maximale */
     text-align: center; /* Centrer le contenu */
-    color: #ffffff; /* Texte blanc */
+    color: #2E2C2F; /* Texte sombre */
 }
 
 /* Titre */
 h1 {
     font-size: 1.8rem;
-    color: #ffffff; /* Texte blanc */
+    color: #2E2C2F; /* Texte légèrement plus sombre */
     margin-bottom: 1.5rem;
 }
 
@@ -35,17 +36,25 @@ input[type="password"] {
     width: 100%;
     padding: 0.75rem;
     margin-bottom: 1rem;
-    border: 1px solid #ccc;
+    border: 1px solid #cccccc; /* Bordure grise claire */
     border-radius: 10px; /* Coins arrondis */
     font-size: 1rem;
     box-sizing: border-box; /* Inclure le padding dans la largeur */
+    background-color: #f9f9f9; /* Fond légèrement gris */
+    color: #2E2C2F; /* Texte sombre */
+}
+
+input[type="text"]:focus,
+input[type="password"]:focus {
+    border-color: #888888; /* Bordure plus foncée au focus */
+    outline: none;
 }
 
 /* Bouton de connexion */
 button {
     font: inherit;
-    background-color: #222725; /* Couleur bleue */
-    color: #fff;
+    background-color: #475B63; /* Bleu moderne */
+    color: #ffffff; /* Texte blanc */
     border: none;
     border-radius: 10px;
     font-size: 1rem;
@@ -56,7 +65,7 @@ button {
 }
 
 button:hover {
-    background-color: #222725; 
+    background-color: #434190; /* Bleu plus foncé au survol */
 }
 
 /* Lien "Register" */
@@ -64,11 +73,58 @@ button:hover {
     display: block;
     margin-top: 1rem;
     font-size: 0.9rem;
-    color: #ffffff; /* Texte blanc */
+    color: #5a67d8; /* Bleu moderne */
     text-decoration: underline;
     cursor: pointer;
 }
 
 .register-link:hover {
-    color: #cccccc; /* Couleur grise au survol */
+    color: #434190; /* Bleu plus foncé au survol */
+}
+
+/* Messages d'alerte */
+.messages {
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    z-index: 1000;
+}
+
+.message {
+    background-color: #f8d7da; /* Rouge clair pour les erreurs */
+    color: #721c24; /* Rouge foncé pour le texte */
+    padding: 10px 20px;
+    margin-bottom: 10px;
+    border: 1px solid #f5c6cb;
+    border-radius: 5px;
+    font-size: 0.9rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.message.info {
+    background-color: #d1ecf1; /* Bleu clair pour les infos */
+    color: #0c5460; /* Bleu foncé pour le texte */
+    border-color: #bee5eb;
+}
+
+/* Centrer la boîte de connexion */
+.login-container {
+    width: 300px;
+    margin: 0 auto;
+    text-align: center;
+    padding: 20px;
+    border: 1px solid #e0e0e0; /* Bordure douce */
+    border-radius: 10px;
+    background-color: #ffffff; /* Fond blanc */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.error-messages {
+    margin-top: 10px;
+    color: red;
+    font-size: 14px;
+}
+
+.message.error {
+    font-weight: bold;
 }
