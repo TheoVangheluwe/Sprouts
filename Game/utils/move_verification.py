@@ -1,7 +1,5 @@
 from collections import defaultdict
 
-from collections import defaultdict
-
 def parse_chain(chain):
     regions = []
     region = []
@@ -101,26 +99,3 @@ def is_valid_move(old_chain, new_chain):
     # Vérification OK
     #print("Coup valide selon les règles de base.")
     return True
-
-
-
-# Exemple
-chain = "AL.}AL.BNMCMN.}MC.}!"
-chain_old2 = "A.BNMCMN.}MC.}!"
-chain_old = "AL.}AL.B.MC.}MC.}!"
-
-#regions = parse_chain(chain)
-#print("➡️ Structure détectée :")
-#for i, region in enumerate(regions):
-#    print(f"Région {i+1}:")
-#    for boundary in region:
-#        print("  -", boundary)
-#degree = analyze_vertices(regions)
-#print("\n📊 Degrés des sommets :")
-#for v, d in degree.items():
-#    print(f"  {v} : {d}")
-#print("\n🟢 Sommets jouables (degré < 3) :")
-#print(playable_vertices(degree))
-
-
-print(is_valid_move(chain_old, chain))
