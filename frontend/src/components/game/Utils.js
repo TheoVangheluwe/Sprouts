@@ -61,30 +61,30 @@ export const canConnect = (p1, p2) => {
 };
 
 export const connectPoints = (p1, p2, curvePoints, points, setPoints, setCurves) => {
-  if (curvePoints.some(point => !points.some(p => p.x === point.x && p.y === point.y))) {
-    console.error("Courbe contient des points non valides");
-    return;
-  }
+  console.log("Connecting points:", p1, p2); // Log des points à connecter
 
-  let updatedPoints;
-  if (p1 === p2) {
-    updatedPoints = points.map(point => {
-      if (point === p1) {
-        return { ...point, connections: point.connections + 2 };
-      }
-      return point;
-    });
-  } else {
-    updatedPoints = points.map(point => {
-      if (point === p1 || point === p2) {
-        return { ...point, connections: point.connections + 1 };
-      }
-      return point;
-    });
-  }
+  // Mettre à jour les connexions des points
+  let updatedPoints = points.map(point => {
+    if (point.label === p1.label || point.label === p2.label) {
+      const newConnections = point.connections + 1;
+      console.log(`Updating point ${point.label} with ${newConnections} connections`); // Log des mises à jour de points
+      return { ...point, connections: newConnections }; // Retourner une copie avec connections mises à jour
+    }
+    return point;
+  });
+
+  console.log("Updated points: ", updatedPoints); // Log des points mis à jour
+
+  // Mettre à jour les points et ajouter la courbe
   setPoints(updatedPoints);
-  setCurves(prevCurves => [...prevCurves, curvePoints]);
+  setCurves(prevCurves => {
+    const updatedCurves = [...prevCurves, curvePoints];
+    console.log("Updated curves: ", updatedCurves); // Log des courbes mises à jour
+    return updatedCurves;
+  });
 };
+
+
 
 export const curveIntersects = (newCurve, curves, points) => {
   for (let curve of curves) {
@@ -167,15 +167,6 @@ export const getNextLabel = (points) => {
   return '';
 };
 
-export const generateGraphString = (points, curves) => {
-  let graphStr = "";
-  const regions = identifyRegions(curves);
-  regions.forEach((region, index) => {
-    graphStr += `${region.map(boundary => boundary.map(point => point.label).join('.')).join('.')}.}`;
-  });
-  graphStr += '!';
-  return graphStr;
-};
 
 export const identifyRegions = (curves) => {
   const regions = [];

@@ -1,8 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { toast } from 'react-toastify';
-import { drawGame, getMousePos, getNearPoint, canConnect, connectPoints, curveIntersects, curveLength, getNextLabel, generateGraphString, getClosestPointOnCurve, isPointTooClose } from './Utils';
+import { drawGame, getMousePos, getNearPoint, canConnect, connectPoints, curveIntersects, curveLength, getNextLabel,  getClosestPointOnCurve, isPointTooClose } from './Utils';
 
-const Canvas = ({ points, setPoints, curves, setCurves, setGrapheChaine }) => {
+const Canvas = ({ points, setPoints, curves, setCurves }) => {
   const canvasRef = useRef(null);
   const [selectedPoint, setSelectedPoint] = useState(null);
   const [isDrawing, setIsDrawing] = useState(false);
@@ -43,11 +43,7 @@ const Canvas = ({ points, setPoints, curves, setCurves, setGrapheChaine }) => {
     setPoints(newPoints);
   }, [setPoints]);
 
-  useEffect(() => {
-    const graphStr = generateGraphString(points, curves);
-    setGrapheChaine(graphStr);
-    drawGame(canvasRef, points, curves, currentCurve);
-  }, [points, curves, currentCurve]);
+
 
   const handleMouseDown = (event) => {
     const canvas = canvasRef.current;
@@ -55,20 +51,23 @@ const Canvas = ({ points, setPoints, curves, setCurves, setGrapheChaine }) => {
     const pos = getMousePos(canvas, event);
 
     if (awaitingPointPlacement) {
-      const closestPoint = getClosestPointOnCurve(pos.x, pos.y, currentCurve);
-      if (closestPoint && !isPointTooClose(closestPoint.x, closestPoint.y, points)) {
-        const newPoint = { x: closestPoint.x, y: closestPoint.y, connections: 2, label: getNextLabel(points) };
-        setPoints(prevPoints => [...prevPoints, newPoint]);
-        setCurves(prevCurves => [...prevCurves, currentCurve]);
-        setAwaitingPointPlacement(false);
-        setCurrentCurve([]);
-        toast.success("Point placé.", { autoClose: 1500 });
-      } else if (isPointTooClose(closestPoint.x, closestPoint.y, points)) {
-        toast.error("Le point est trop proche d'un autre.", { autoClose: 1500 });
-      } else {
-        toast.error("Cliquez plus près de la courbe.", { autoClose: 1500 });
-      }
+  const closestPoint = getClosestPointOnCurve(pos.x, pos.y, currentCurve);
+  if (closestPoint) {
+    if (!isPointTooClose(closestPoint.x, closestPoint.y, points)) {
+      const newPoint = { x: closestPoint.x, y: closestPoint.y, connections: 2, label: getNextLabel(points) };
+      setPoints(prevPoints => [...prevPoints, newPoint]);
+      setCurves(prevCurves => [...prevCurves, currentCurve]);
+      setAwaitingPointPlacement(false);
+      setCurrentCurve([]);
+      toast.success("Point placé.", { autoClose: 1500 });
     } else {
+      toast.error("Le point est trop proche d'un autre.", { autoClose: 1500 });
+    }
+  } else {
+    toast.error("Cliquez plus près de la courbe.", { autoClose: 1500 });
+  }
+}
+ else {
       const start = getNearPoint(pos.x, pos.y, points);
       if (start) {
         setSelectedPoint(start);
@@ -78,49 +77,73 @@ const Canvas = ({ points, setPoints, curves, setCurves, setGrapheChaine }) => {
     }
   };
 
-  const handleMouseMove = (event) => {
-    if (!isDrawing) return;
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const pos = getMousePos(canvas, event);
-    setCurrentCurve(prevCurve => {
-      const newCurve = [...prevCurve, pos];
-      drawGame(canvasRef, points, curves, newCurve);
-      return newCurve;
-    });
-  };
+const handleMouseUp = (event) => {
+  console.log("handleMouseUp triggered"); // Log de début de la fonction
+  if (!isDrawing) return;
+  const canvas = canvasRef.current;
+  if (!canvas) {
+    console.error("Canvas not found.");
+    return;
+  }
 
-  const handleMouseUp = (event) => {
-    if (!isDrawing) return;
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const pos = getMousePos(canvas, event);
-    const endPoint = getNearPoint(pos.x, pos.y, points);
+  const pos = getMousePos(canvas, event);
+  console.log("Mouse position on mouseUp: ", pos); // Log des coordonnées du curseur
 
-    if (endPoint && selectedPoint && canConnect(selectedPoint, endPoint)) {
-      const adjustedCurve = [currentCurve[0], ...currentCurve.slice(1), endPoint];
+  const endPoint = getNearPoint(pos.x, pos.y, points);
+  console.log("End point found: ", endPoint); // Log du point trouvé
 
-      if (curveIntersects(adjustedCurve, curves, points)) {
-        toast.error("Intersection détectée.", { autoClose: 1500 });
-        setCurrentCurve([]);
-      } else if (curveLength(adjustedCurve) < 50) {
-        toast.error("Courbe trop courte.", { autoClose: 1500 });
-        setCurrentCurve([]);
-      } else {
-        toast.success("Courbe terminée.", { autoClose: 1500 });
-        connectPoints(selectedPoint, endPoint, adjustedCurve, points, setPoints, setCurves);
-        setAwaitingPointPlacement(true);
-      }
+  if (endPoint && selectedPoint && canConnect(selectedPoint, endPoint)) {
+    const adjustedCurve = [...currentCurve, { x: endPoint.x, y: endPoint.y }];
+    console.log("Adjusted curve: ", adjustedCurve); // Log de la courbe ajustée
+
+    if (curveIntersects(adjustedCurve, curves, points)) {
+      toast.error("Intersection détectée.", { autoClose: 1500 });
+      setCurrentCurve([]); // Réinitialiser la courbe
+    } else if (curveLength(adjustedCurve) < 50) {
+      toast.error("Courbe trop courte.", { autoClose: 1500 });
+      setCurrentCurve([]); // Réinitialiser la courbe
     } else {
-      if (!endPoint) {
-        toast.error("Destination invalide.", { autoClose: 1500 });
-      } else if (!canConnect(selectedPoint, endPoint)) {
-        toast.error("Trop de connexions sur le point.", { autoClose: 1500 });
-      }
-      setCurrentCurve([]);
+      console.log("Curve validated, connecting points...");
+      connectPoints(selectedPoint, endPoint, adjustedCurve, points, setPoints, setCurves);
+      setAwaitingPointPlacement(true);
     }
-    setIsDrawing(false);
-  };
+  } else {
+    if (!endPoint) {
+      toast.error("Destination invalide.", { autoClose: 1500 });
+    } else if (!canConnect(selectedPoint, endPoint)) {
+      toast.error("Trop de connexions sur le point.", { autoClose: 1500 });
+    }
+    setCurrentCurve([]); // Réinitialiser la courbe
+  }
+  setIsDrawing(false);
+};
+
+const validateCurve = (curve) => {
+  return curve.every(point => point && point.x && point.y);
+};
+
+// Utilisation de cette fonction avant de dessiner ou de connecter les points
+const handleMouseMove = (event) => {
+  if (!isDrawing) return;
+  const canvas = canvasRef.current;
+  if (!canvas) return;
+  const pos = getMousePos(canvas, event);
+
+  setCurrentCurve(prevCurve => {
+    const newCurve = [...prevCurve, { x: pos.x, y: pos.y }];
+    if (!validateCurve(newCurve)) {
+      console.error("Invalid curve detected:", newCurve);
+      return prevCurve; // Retourne la courbe précédente si elle est invalide
+    }
+    if (newCurve.length > 1) {
+      drawGame(canvasRef, points, curves, newCurve);
+    }
+    return newCurve;
+  });
+};
+
+
+
 
   return (
     <div id="canvas-container">
