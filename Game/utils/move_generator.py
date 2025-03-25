@@ -1,0 +1,1 @@
+#créer une fct qui génère les coups possibles pour une chaine donnée
