@@ -2,6 +2,7 @@ from move_verification import parse_chain, get_vertex_degrees
 from copy import deepcopy
 import itertools
 
+#actuellement non fonctionnel
 def generate_possible_moves(chain, prefix="X"):
     regions = parse_chain(chain)
     degrees = get_vertex_degrees(regions)
@@ -40,7 +41,7 @@ def generate_possible_moves(chain, prefix="X"):
             new_vertex = f"{prefix}{counter}"
             counter += 1
 
-            # 🧬 copie du graphe
+            # copie du graphe
             new_region = [list(boundary) for boundary in boundaries]
             new_region.append([v1, new_vertex, v2])
 

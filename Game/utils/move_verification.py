@@ -62,6 +62,7 @@ def get_vertex_degrees(regions):
 
     return degree
 
+# Vérifie si un coup est valide selon les règles de base mais il faut ajouter la verif que le nouveau point est bien placé + verif des zones
 def is_valid_move(old_chain, new_chain):
     #setup
     old_regions = parse_chain(old_chain)
@@ -95,6 +96,10 @@ def is_valid_move(old_chain, new_chain):
         if new_degrees[v] > 3:
             print(f"Le sommet {v} dépasse 3 connexions ({new_degrees[v]}).")
             return False
+        
+    #4 Vérifier que le nouveau coup est valide (connection des sommets valide)
+
+    #5 Verifier que le nouveau coup est valide (region) (verif si doit créer nouvelle region ou pas)
 
     # Vérification OK
     #print("Coup valide selon les règles de base.")

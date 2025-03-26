@@ -1,0 +1,18 @@
+Document pour but de pas avoir à alt tab h24 (à supprimer lorsque les moves utils seront finis)
+
+Règles de degrés
+
+Le degré suit le nombre d’apparition dans la chaîne de caractères et a dans les règles un maximum de 3.
+Sauf, il y a une ambiguïté pour le degré 1 et 0, le degré 0 apparaît une seule fois aussi dans la chaîne de caractères mais est seul dans sa boundary.
+
+
+Règles de nouveau move
+
+Pour faire un coup dans la chaîne de caractères : 
+- soit on choisit un point de degrés 0 ou 1 pour 'self-loop'
+    -> cela resultera automatiquement à la création d'une région à partir de ce point et du nouveau créé par ce coup (les 2).
+
+- soit on choisit deux points de degrés inferieur à 3 qui apparraissent tous les deux au moins une fois dans la même région (séparé par '}')
+    -> cas dans la même boundary
+    -> cas boundary et point isolé
+    -> cas deux points isolés
