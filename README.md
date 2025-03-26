@@ -5,4 +5,7 @@ Projet M1 ISEN
 Installer django
 ```bash 
 pip install django
+pip install channels
+pip install requests
+
 ```

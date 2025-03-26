@@ -11,6 +11,7 @@ from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse
 from django.contrib import messages
 import requests
+import logging
 
 
 def index(request):
@@ -25,18 +26,64 @@ def game_view(request, game_id):
     # Logique pour récupérer l'état du jeu
     return JsonResponse(game.state)
 
-##def login_view(request):
-    if request.method == 'POST':
-        username = request.POST['username']
-        password = request.POST['password']
-        user = authenticate(request, username=username, password=password)
-        if user is not None:
-            login(request, user)
-            return JsonResponse({'success': True})
+# Configure the logger
+logger = logging.getLogger(__name__)
+
+def join_game(request):
+    try:
+        logger.debug("Join game view called")
+
+        # Logique pour créer ou rejoindre une salle d'attente
+        game = Game.objects.filter(status='waiting').first()
+        if game:
+            game.player_count += 1
+            logger.info(f"Player joined game {game.id}. Current players: {game.player_count}")
+            if game.player_count >= 2:
+                game.status = 'in_progress'
+            game.save()
         else:
-            return JsonResponse({'success': False})
+            game = Game.objects.create(status='waiting', player_count=1)
+            logger.info(f"New game created with ID: {game.id}")
+
+        return JsonResponse({'game_id': game.id, 'status': game.status})
+    except Exception as e:
+        # Loggez l'erreur pour le débogage
+        logger.error(f"Error in join_game: {e}")
+        return JsonResponse({'error': 'An error occurred while joining the game.'}, status=500)
+def list_games(request):
+    games = Game.objects.all().values('id', 'status', 'player_count')
+    return JsonResponse(list(games), safe=False)
 
 
+def game_status(request, game_id):
+    try:
+        game = Game.objects.get(id=game_id)
+
+        # Vérifie si le jeu doit démarrer
+        if game.player_count >= 2 and game.status == "waiting":
+            game.status = "started"
+            game.save()
+
+        return JsonResponse({
+            'status': game.status,
+            'player_count': game.player_count
+        })
+    except Game.DoesNotExist:
+        return JsonResponse({'error': 'Game not found'}, status=404)
+
+
+def start_game(request, game_id):
+    try:
+        game = Game.objects.get(id=game_id)
+
+        if game.player_count >= 2 and game.status == "waiting":
+            game.status = "started"
+            game.save()
+            return JsonResponse({'success': True, 'message': 'Game started'})
+
+        return JsonResponse({'success': False, 'message': 'Not enough players'})
+    except Game.DoesNotExist:
+        return JsonResponse({'error': 'Game not found'}, status=404)
 def register(request):
     if request.method == 'POST':
         form = UserCreationForm(request.POST)

@@ -168,39 +168,6 @@ export const getNextLabel = (points) => {
 };
 
 
-export const identifyRegions = (curves) => {
-  const regions = [];
-  const visited = new Set();
-
-  const findBoundaries = (curve, startIndex, endIndex) => {
-    const boundaries = [];
-    let currentIndex = startIndex;
-    while (currentIndex <= endIndex) {
-      const boundary = [];
-      let i = currentIndex;
-      while (i <= endIndex && !visited.has(`${curve[i].x},${curve[i].y}`)) {
-        boundary.push(curve[i]);
-        visited.add(`${curve[i].x},${curve[i].y}`);
-        i++;
-      }
-      if (boundary.length > 0) {
-        boundaries.push(boundary);
-      }
-      currentIndex = i;
-    }
-    return boundaries;
-  };
-
-  curves.forEach(curve => {
-    const boundaries = findBoundaries(curve, 0, curve.length - 1);
-    if (boundaries.length > 0) {
-      regions.push(boundaries);
-    }
-  });
-
-  return regions;
-};
-
 export const getClosestPointOnCurve = (x, y, curve, tolerance = 15) => {
   let closestPoint = null;
   let minDistance = Infinity;
