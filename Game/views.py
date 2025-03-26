@@ -70,17 +70,41 @@ def game_status(request, game_id):
     except Game.DoesNotExist:
         return JsonResponse({'error': 'Game not found'}, status=404)
 
-def start_game(request, game_id):
+
+@csrf_exempt
+@login_required(login_url='login')
+def set_ready(request, game_id):
     try:
         game = Game.objects.get(id=game_id)
+        game.player_ready[request.user.id] = True
+        game.save()
 
-        if game.player_count >= 2 and game.status == "waiting":
+        if game.is_ready():
             game.status = "started"
             game.save()
             return JsonResponse({'success': True, 'message': 'Game started'})
 
+        return JsonResponse({'success': True, 'message': 'Player ready'})
+    except Game.DoesNotExist:
+        return JsonResponse({'error': 'Game not found'}, status=404)
+
+@csrf_exempt  # Désactiver temporairement la protection CSRF pour diagnostiquer le problème
+@login_required(login_url='login')  # Redirige vers la page de connexion si non connecté
+def start_game(request, game_id):
+    logger.debug("start_game view called")
+    try:
+        game = Game.objects.get(id=game_id)
+        logger.info(f"Game {game_id} status: {game.status}, players: {game.player_count}")
+
+        if game.player_count >= 2 and game.status == "waiting":
+            game.status = "started"
+            game.save()
+            logger.info(f"Game {game_id} started")
+            return JsonResponse({'success': True, 'message': 'Game started'})
+
         return JsonResponse({'success': False, 'message': 'Not enough players'})
     except Game.DoesNotExist:
+        logger.error(f"Game with id {game_id} does not exist.")
         return JsonResponse({'error': 'Game not found'}, status=404)
 
 def register(request):
