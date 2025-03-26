@@ -29,7 +29,8 @@ function WaitingRoom() {
                     setPlayers(data.players || []); // Évite les erreurs si `players` est `undefined`
 
                     if (data.status === "started") {
-                        window.location.href = `/game/${gameId}`;
+                        setGameStarted(true);
+                        window.location.href = `/online/game/${gameId}`;
                     }
                 })
                 .catch(error => console.error("Erreur récupération statut du jeu:", error));
@@ -41,17 +42,34 @@ function WaitingRoom() {
     const startGame = () => {
         if (!gameId) return;
 
-        fetch(`http://127.0.0.1:8000/api/game/${gameId}/start/`, { method: "POST" })
-            .then(response => response.json())
+        fetch(`http://127.0.0.1:8000/api/game/${gameId}/start/`, {
+            method: "POST",
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('token')}` // Assurez-vous que l'utilisateur est authentifié
+            }
+        })
+            .then(response => {
+                if (!response.ok) {
+                    if (response.status === 403) {
+                        throw new Error("Vous n'êtes pas autorisé à démarrer le jeu.");
+                    } else if (response.status === 404) {
+                        throw new Error("Jeu non trouvé.");
+                    } else {
+                        throw new Error("Erreur lors du démarrage du jeu.");
+                    }
+                }
+                return response.json();
+            })
             .then(data => {
                 if (data.success) {
                     setGameStarted(true);
-                    window.location.href = `/game/${gameId}`;
+                    window.location.href = `/online/game/${gameId}`;
                 } else {
                     console.error("Erreur au démarrage du jeu:", data.message);
                 }
             })
-            .catch(error => console.error("Erreur lors du démarrage du jeu:", error));
+            .catch(error => console.error("Erreur lors du démarrage du jeu:", error.message));
     };
 
     return (

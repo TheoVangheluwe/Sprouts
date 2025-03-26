@@ -10,24 +10,20 @@ from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse
 from django.contrib import messages
-import requests
 import logging
 
+# Configure the logger
+logger = logging.getLogger(__name__)
 
 def index(request):
     return render(request, 'index.html')
 
 @csrf_exempt
-
-
 @login_required(login_url='login')  # Redirige vers la page de connexion si non connecté
 def game_view(request, game_id):
     game = Game.objects.get(id=game_id)
     # Logique pour récupérer l'état du jeu
     return JsonResponse(game.state)
-
-# Configure the logger
-logger = logging.getLogger(__name__)
 
 def join_game(request):
     try:
@@ -37,12 +33,14 @@ def join_game(request):
         game = Game.objects.filter(status='waiting').first()
         if game:
             game.player_count += 1
+            game.players.add(request.user)  # Ajoute l'utilisateur au jeu
             logger.info(f"Player joined game {game.id}. Current players: {game.player_count}")
             if game.player_count >= 2:
                 game.status = 'in_progress'
             game.save()
         else:
             game = Game.objects.create(status='waiting', player_count=1)
+            game.players.add(request.user)  # Ajoute l'utilisateur au jeu
             logger.info(f"New game created with ID: {game.id}")
 
         return JsonResponse({'game_id': game.id, 'status': game.status})
@@ -50,10 +48,10 @@ def join_game(request):
         # Loggez l'erreur pour le débogage
         logger.error(f"Error in join_game: {e}")
         return JsonResponse({'error': 'An error occurred while joining the game.'}, status=500)
+
 def list_games(request):
     games = Game.objects.all().values('id', 'status', 'player_count')
     return JsonResponse(list(games), safe=False)
-
 
 def game_status(request, game_id):
     try:
@@ -66,11 +64,11 @@ def game_status(request, game_id):
 
         return JsonResponse({
             'status': game.status,
-            'player_count': game.player_count
+            'player_count': game.player_count,
+            'players': [{"username": player.username} for player in game.players.all()]
         })
     except Game.DoesNotExist:
         return JsonResponse({'error': 'Game not found'}, status=404)
-
 
 def start_game(request, game_id):
     try:
@@ -84,6 +82,7 @@ def start_game(request, game_id):
         return JsonResponse({'success': False, 'message': 'Not enough players'})
     except Game.DoesNotExist:
         return JsonResponse({'error': 'Game not found'}, status=404)
+
 def register(request):
     if request.method == 'POST':
         form = UserCreationForm(request.POST)
@@ -93,7 +92,6 @@ def register(request):
     else:
         form = UserCreationForm()
     return render(request, 'register.html', {'form': form})
-
 
 def login_view(request):
     if request.method == 'POST':
@@ -116,7 +114,6 @@ def logout_view(request):
     logout(request)  # Déconnecte l'utilisateur
     return redirect('login')  # Redirige vers la page de connexion
 
-
 @login_required(login_url='login')  # Redirige vers la page de connexion si non connecté
 def ReactAppView(request):
     # Chemin vers le fichier index.html généré par React
@@ -129,7 +126,7 @@ def ReactAppView(request):
             "Le fichier React index.html n'existe pas. Assurez-vous d'avoir exécuté 'npm run build'.",
             status=404,
         )
-    
+
 def login_redirect_with_message(request):
     messages.error(request, "Vous devez être connecté pour accéder à cette page.")
     return redirect('login')

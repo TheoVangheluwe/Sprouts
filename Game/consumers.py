@@ -1,4 +1,5 @@
 import logging
+import json
 from channels.generic.websocket import AsyncWebsocketConsumer
 from .models import Game
 
@@ -19,8 +20,12 @@ class GameConsumer(AsyncWebsocketConsumer):
 
         await self.accept()
 
-        game = Game.objects.get(id=self.room_name)
-        logger.info(f"Game {self.room_name} status: {game.status}, players: {game.player_count}")
+        try:
+            game = Game.objects.get(id=self.room_name)
+            logger.info(f"Game {self.room_name} status: {game.status}, players: {game.player_count}")
+        except Game.DoesNotExist:
+            logger.error(f"Game with id {self.room_name} does not exist.")
+            await self.close()
 
         if game.status == 'in_progress':
             await self.send(text_data=json.dumps({
@@ -45,18 +50,24 @@ class GameConsumer(AsyncWebsocketConsumer):
         logger.info(f"Received message of type: {message_type} in room: {self.room_name}")
 
         if message_type == 'player_joined':
-            game = Game.objects.get(id=self.room_name)
-            if game.player_count >= 2:
-                game.status = 'in_progress'
+            try:
+                game = Game.objects.get(id=self.room_name)
+                game.player_count += 1
                 game.save()
-                logger.info(f"Game {self.room_name} started with {game.player_count} players.")
-                await self.channel_layer.group_send(
-                    self.room_group_name,
-                    {
-                        'type': 'start_game',
-                        'message': 'La partie commence !'
-                    }
-                )
+
+                if game.player_count >= 2:
+                    game.status = 'in_progress'
+                    game.save()
+                    logger.info(f"Game {self.room_name} started with {game.player_count} players.")
+                    await self.channel_layer.group_send(
+                        self.room_group_name,
+                        {
+                            'type': 'start_game',
+                            'message': 'La partie commence !'
+                        }
+                    )
+            except Game.DoesNotExist:
+                logger.error(f"Game with id {self.room_name} does not exist.")
 
     async def start_game(self, event):
         logger.debug("Start_game method called")
