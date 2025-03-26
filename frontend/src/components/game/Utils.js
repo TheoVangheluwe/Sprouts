@@ -167,40 +167,6 @@ export const getNextLabel = (points) => {
   return '';
 };
 
-
-export const identifyRegions = (curves) => {
-  const regions = [];
-  const visited = new Set();
-
-  const findBoundaries = (curve, startIndex, endIndex) => {
-    const boundaries = [];
-    let currentIndex = startIndex;
-    while (currentIndex <= endIndex) {
-      const boundary = [];
-      let i = currentIndex;
-      while (i <= endIndex && !visited.has(`${curve[i].x},${curve[i].y}`)) {
-        boundary.push(curve[i]);
-        visited.add(`${curve[i].x},${curve[i].y}`);
-        i++;
-      }
-      if (boundary.length > 0) {
-        boundaries.push(boundary);
-      }
-      currentIndex = i;
-    }
-    return boundaries;
-  };
-
-  curves.forEach(curve => {
-    const boundaries = findBoundaries(curve, 0, curve.length - 1);
-    if (boundaries.length > 0) {
-      regions.push(boundaries);
-    }
-  });
-
-  return regions;
-};
-
 export const getClosestPointOnCurve = (x, y, curve, tolerance = 15) => {
   let closestPoint = null;
   let minDistance = Infinity;
@@ -249,4 +215,76 @@ const getProjection = (px, py, p1, p2) => {
   } else {
     return { x: p1.x + t * dx, y: p1.y + t * dy };
   }
+};
+
+
+//Ajout MAx
+export const updateConnections = (startLabel, endLabel, newPointLabel, connections) => {
+  if (!connections[startLabel]) connections[startLabel] = [];
+  if (!connections[endLabel]) connections[endLabel] = [];
+  if (!connections[newPointLabel]) connections[newPointLabel] = [];
+
+  connections[startLabel].push(newPointLabel);
+  connections[endLabel].push(newPointLabel);
+  connections[newPointLabel].push(startLabel, endLabel);
+
+  return connections;
+};
+
+// Fonction pour générer la chaîne de caractères
+export const generateGraphString = (connections) => {
+  const isolatedPoints = [];
+
+  // Parcourir chaque point pour identifier les points isolés
+  for (const point in connections) {
+    if (connections[point].length === 0) {
+      isolatedPoints.push(point);
+    }
+  }
+
+  // Construire la chaîne de caractères pour les points isolés
+  let graphStr = "";
+  isolatedPoints.forEach(point => {
+    graphStr += `${point}.}`;
+  });
+
+  return graphStr;
+};
+
+export const findRegions = (connections) => {
+  const regions = [];
+
+  // Fonction pour trouver les cycles
+  const findCycles = (start, current, path, visited) => {
+    console.log(`Visiting point: ${current}, Path so far: ${path.join(' -> ')}`);
+
+    visited.add(current);
+    path.push(current);
+
+    const neighbors = connections[current];
+
+    for (const neighbor of neighbors) {
+      console.log(`Exploring neighbor: ${neighbor}`);
+      if (neighbor === start && path.length > 2) {
+        console.log(`Cycle found: ${path.join(' -> ')}`);
+        regions.push([...path]);
+      }
+      if (!visited.has(neighbor) || neighbor === start) {
+        findCycles(start, neighbor, path, new Set(visited)); // Utiliser un nouvel ensemble pour chaque voisin
+      }
+    }
+
+    path.pop();
+    visited.delete(current);
+    console.log(`Finished exploring point: ${current}`);
+  };
+
+  // Parcourir chaque point pour identifier les régions
+  for (const point in connections) {
+    console.log(`Starting exploration from point: ${point}`);
+    const visited = new Set();
+    findCycles(point, point, [], visited);
+  }
+
+  return regions;
 };
