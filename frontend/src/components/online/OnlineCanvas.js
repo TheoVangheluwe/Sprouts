@@ -1,8 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { toast } from 'react-toastify';
-import { drawGame, getMousePos, getNearPoint, canConnect, connectPoints, curveIntersects, curveLength, getNextLabel, getClosestPointOnCurve, isPointTooClose } from './Utils';
+import { drawGame, getMousePos, getNearPoint, canConnect, connectPoints, curveIntersects, curveLength, getNextLabel, getClosestPointOnCurve, isPointTooClose } from './OnlineUtils';
 
-const Canvas = ({ points, setPoints, curves, setCurves, currentPlayer, myTurn, onMove }) => {
+const OnlineCanvas = ({ points, setPoints, curves, setCurves, currentPlayer, myTurn, onMove }) => {
   const canvasRef = useRef(null);
   const [selectedPoint, setSelectedPoint] = useState(null);
   const [isDrawing, setIsDrawing] = useState(false);
@@ -140,4 +140,4 @@ const Canvas = ({ points, setPoints, curves, setCurves, currentPlayer, myTurn, o
   );
 };
 
-export default Canvas;
+export default OnlineCanvas;

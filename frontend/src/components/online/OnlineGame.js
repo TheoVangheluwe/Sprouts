@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import GameBoard from './GameBoard'; // Assurez-vous de modifier les imports pour correspondre à votre structure de fichier
+import GameBoard from '../game/GameBoard'; // Assurez-vous de modifier les imports pour correspondre à votre structure de fichier
 
 function OnlineGame() {
     const { gameId } = useParams(); // Utilisez useParams pour récupérer le paramètre gameId depuis l'URL
