@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { toast } from 'react-toastify';
 import { drawGame, getMousePos, getNearPoint, canConnect, connectPoints, curveIntersects, curveLength, getNextLabel, getClosestPointOnCurve, isPointTooClose } from './OnlineUtils';
 
-const OnlineCanvas = ({ points, setPoints, curves, setCurves, currentPlayer, myTurn, onMove }) => {
+const OnlineCanvas = ({ points, setPoints, curves = [], setCurves, currentPlayer, myTurn, onMove }) => {
   const canvasRef = useRef(null);
   const [selectedPoint, setSelectedPoint] = useState(null);
   const [isDrawing, setIsDrawing] = useState(false);
@@ -16,7 +16,7 @@ const OnlineCanvas = ({ points, setPoints, curves, setCurves, currentPlayer, myT
         const container = canvas.parentElement;
         canvas.width = container.clientWidth;
         canvas.height = container.clientHeight;
-        drawGame(canvasRef, points, curves, currentCurve); // Redraw the game
+        drawGame(canvasRef, points || [], curves || [], currentCurve); // Redraw the game
       }
     };
 
@@ -43,17 +43,30 @@ const OnlineCanvas = ({ points, setPoints, curves, setCurves, currentPlayer, myT
     setPoints(newPoints);
   }, [setPoints]);
 
+  useEffect(() => {
+    if (myTurn) {
+      console.log("It's your turn to play.");
+    } else {
+      console.log("Waiting for the other player to play.");
+    }
+  }, [myTurn]);
+
   const handleMouseDown = (event) => {
-    if (!myTurn) return; // Ne pas permettre de dessiner si ce n'est pas le tour du joueur
+    if (!myTurn) {
+      console.log("Not player's turn");
+      return; // Ne pas permettre de dessiner si ce n'est pas le tour du joueur
+    }
     const canvas = canvasRef.current;
     if (!canvas) return;
     const pos = getMousePos(canvas, event);
+    console.log("Mouse down at position:", pos);
 
     if (awaitingPointPlacement) {
       const closestPoint = getClosestPointOnCurve(pos.x, pos.y, currentCurve);
       if (closestPoint) {
         if (!isPointTooClose(closestPoint.x, closestPoint.y, points)) {
           const newPoint = { x: closestPoint.x, y: closestPoint.y, connections: 2, label: getNextLabel(points) };
+          console.log("Placing new point:", newPoint);
           setPoints(prevPoints => [...prevPoints, newPoint]);
           setCurves(prevCurves => [...prevCurves, currentCurve]);
           setAwaitingPointPlacement(false);
@@ -69,9 +82,12 @@ const OnlineCanvas = ({ points, setPoints, curves, setCurves, currentPlayer, myT
     } else {
       const start = getNearPoint(pos.x, pos.y, points);
       if (start) {
+        console.log("Starting new curve from point:", start);
         setSelectedPoint(start);
         setIsDrawing(true);
         setCurrentCurve([{ x: start.x, y: start.y }]);
+      } else {
+        console.log("No point near start position");
       }
     }
   };
@@ -86,9 +102,11 @@ const OnlineCanvas = ({ points, setPoints, curves, setCurves, currentPlayer, myT
 
     const pos = getMousePos(canvas, event);
     const endPoint = getNearPoint(pos.x, pos.y, points);
+    console.log("Mouse up at position:", pos);
 
     if (endPoint && selectedPoint && canConnect(selectedPoint, endPoint)) {
       const adjustedCurve = [...currentCurve, { x: endPoint.x, y: endPoint.y }];
+      console.log("Connecting to end point:", endPoint);
 
       if (curveIntersects(adjustedCurve, curves, points)) {
         toast.error("Intersection détectée.", { autoClose: 1500 });
@@ -110,6 +128,7 @@ const OnlineCanvas = ({ points, setPoints, curves, setCurves, currentPlayer, myT
       setCurrentCurve([]); // Réinitialiser la courbe
     }
     setIsDrawing(false);
+    setSelectedPoint(null); // Réinitialiser le point sélectionné
   };
 
   const handleMouseMove = (event) => {
@@ -135,6 +154,7 @@ const OnlineCanvas = ({ points, setPoints, curves, setCurves, currentPlayer, myT
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseUp} // Ajoutez ceci pour arrêter de dessiner lorsque la souris quitte le canvas
       />
     </div>
   );

@@ -1,32 +1,40 @@
-export const drawGame = (canvasRef, pointsToDraw, curvesToDraw, tempCurve = null) => {
+export const drawGame = (canvasRef, pointsToDraw = [], curvesToDraw = [], tempCurve = null) => {
   const canvas = canvasRef.current;
   if (canvas) {
     const ctx = canvas.getContext("2d");
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     // Draw curves
-    curvesToDraw.forEach(curve => {
-      ctx.beginPath();
-      ctx.moveTo(curve[0].x, curve[0].y);
-      for (let i = 1; i < curve.length; i++) {
-        ctx.lineTo(curve[i].x, curve[i].y);
-      }
-      ctx.strokeStyle = "blue";
-      ctx.lineWidth = 2;
-      ctx.stroke();
-    });
+    if (Array.isArray(curvesToDraw)) {
+      curvesToDraw.forEach(curve => {
+        if (curve.length > 0) {
+          ctx.beginPath();
+          ctx.moveTo(curve[0].x, curve[0].y);
+          for (let i = 1; i < curve.length; i++) {
+            ctx.lineTo(curve[i].x, curve[i].y);
+          }
+          ctx.strokeStyle = "blue";
+          ctx.lineWidth = 2;
+          ctx.stroke();
+        }
+      });
+    }
 
     // Draw points
-    pointsToDraw.forEach(point => {
-      ctx.beginPath();
-      ctx.arc(point.x, point.y, 5, 0, Math.PI * 2);
-      ctx.fillStyle = "black";
-      ctx.fill();
-      ctx.fillText(point.label, point.x + 10, point.y + 5);
-    });
+    if (Array.isArray(pointsToDraw)) {
+      pointsToDraw.forEach(point => {
+        ctx.beginPath();
+        ctx.arc(point.x, point.y, 5, 0, Math.PI * 2);
+        ctx.fillStyle = "black";
+        ctx.fill();
+        if (point.label) {
+          ctx.fillText(point.label, point.x + 10, point.y + 5);
+        }
+      });
+    }
 
     // Draw temporary curve
-    if (tempCurve && tempCurve.length > 0) {
+    if (Array.isArray(tempCurve) && tempCurve.length > 0) {
       ctx.beginPath();
       ctx.moveTo(tempCurve[0].x, tempCurve[0].y);
       for (let i = 1; i < tempCurve.length; i++) {
@@ -61,30 +69,34 @@ export const canConnect = (p1, p2) => {
 };
 
 export const connectPoints = (p1, p2, curvePoints, points, setPoints, setCurves) => {
-  console.log("Connecting points:", p1, p2); // Log des points à connecter
+  console.log("Connecting points:", p1, p2);
 
-  // Mettre à jour les connexions des points
+  // Update point connections
   let updatedPoints = points.map(point => {
     if (point.label === p1.label || point.label === p2.label) {
       const newConnections = point.connections + 1;
-      console.log(`Updating point ${point.label} with ${newConnections} connections`); // Log des mises à jour de points
-      return { ...point, connections: newConnections }; // Retourner une copie avec connections mises à jour
+      console.log(`Updating point ${point.label} with ${newConnections} connections`);
+      return { ...point, connections: newConnections };
     }
     return point;
   });
 
-  console.log("Updated points: ", updatedPoints); // Log des points mis à jour
+  console.log("Updated points: ", updatedPoints);
 
-  // Mettre à jour les points et ajouter la courbe
+  // Update points and add the curve
   setPoints(updatedPoints);
   setCurves(prevCurves => {
     const updatedCurves = [...prevCurves, curvePoints];
-    console.log("Updated curves: ", updatedCurves); // Log des courbes mises à jour
+    console.log("Updated curves: ", updatedCurves);
     return updatedCurves;
   });
 };
 
-export const curveIntersects = (newCurve, curves, points) => {
+export const curveIntersects = (newCurve, curves = [], points) => {
+  console.log("Checking intersections for newCurve:", newCurve);
+  console.log("Existing curves:", curves);
+  console.log("Points:", points);
+
   for (let curve of curves) {
     for (let i = 0; i < newCurve.length - 1; i++) {
       const seg1Start = newCurve[i];
@@ -92,6 +104,8 @@ export const curveIntersects = (newCurve, curves, points) => {
       for (let j = 0; j < curve.length - 1; j++) {
         const seg2Start = curve[j];
         const seg2End = curve[j + 1];
+
+        console.log("Checking segments:", seg1Start, seg1End, seg2Start, seg2End);
 
         // Ignore intersections at start and end points
         if (points.some(point => point.x === seg1Start.x && point.y === seg1Start.y) ||
@@ -114,6 +128,8 @@ export const curveIntersects = (newCurve, curves, points) => {
     for (let j = i + 2; j < newCurve.length - 1; j++) {
       const seg2Start = newCurve[j];
       const seg2End = newCurve[j + 1];
+
+      console.log("Checking segments within newCurve:", seg1Start, seg1End, seg2Start, seg2End);
 
       // Ignore intersections at start and end points
       if (points.some(point => point.x === seg1Start.x && point.y === seg1Start.y) ||
@@ -165,7 +181,7 @@ export const getNextLabel = (points) => {
   return '';
 };
 
-export const identifyRegions = (curves) => {
+export const identifyRegions = (curves = []) => {
   const regions = [];
   const visited = new Set();
 
@@ -188,6 +204,7 @@ export const identifyRegions = (curves) => {
     return boundaries;
   };
 
+  console.log("Curves to be processed: ", curves);
   curves.forEach(curve => {
     const boundaries = findBoundaries(curve, 0, curve.length - 1);
     if (boundaries.length > 0) {
