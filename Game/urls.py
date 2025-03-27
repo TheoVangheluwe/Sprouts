@@ -14,6 +14,6 @@ urlpatterns = [
     path('api/game/<int:game_id>/start/', views.start_game, name='start_game'),
     path('api/game/', views.list_games, name='list_games'),
     path('api/game/<int:game_id>/ready/', views.set_ready, name='set_ready'),
-
+    path('api/game/<int:game_id>/state/', views.game_state, name='game_state'),
 
 ]

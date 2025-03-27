@@ -1,15 +1,14 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from .models import Game
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth import logout
-import os
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
-from django.http import HttpResponse
 from django.contrib import messages
+import os
 import logging
 
 # Configure the logger
@@ -21,10 +20,14 @@ def index(request):
 @csrf_exempt
 @login_required(login_url='login')  # Redirige vers la page de connexion si non connecté
 def game_view(request, game_id):
-    game = Game.objects.get(id=game_id)
-    # Logique pour récupérer l'état du jeu
-    return JsonResponse(game.state)
+    try:
+        game = Game.objects.get(id=game_id)
+        return JsonResponse({'status': game.status, 'player_count': game.player_count, 'players': [{"username": player.username} for player in game.players.all()]})
+    except Game.DoesNotExist:
+        return JsonResponse({'error': 'Game not found'}, status=404)
 
+@csrf_exempt
+@login_required(login_url='login')  # Redirige vers la page de connexion si non connecté
 def join_game(request):
     try:
         logger.debug("Join game view called")
@@ -37,9 +40,10 @@ def join_game(request):
             logger.info(f"Player joined game {game.id}. Current players: {game.player_count}")
             if game.player_count >= 2:
                 game.status = 'in_progress'
+                game.current_player = game.players.first()  # Définir le premier joueur comme joueur actuel
             game.save()
         else:
-            game = Game.objects.create(status='waiting', player_count=1)
+            game = Game.objects.create(status='waiting', player_count=1, current_player=request.user)
             game.players.add(request.user)  # Ajoute l'utilisateur au jeu
             logger.info(f"New game created with ID: {game.id}")
 
@@ -53,23 +57,36 @@ def list_games(request):
     games = Game.objects.all().values('id', 'status', 'player_count')
     return JsonResponse(list(games), safe=False)
 
+@login_required(login_url='login')  # Redirige vers la page de connexion si non connecté
 def game_status(request, game_id):
     try:
         game = Game.objects.get(id=game_id)
-
-        # Vérifie si le jeu doit démarrer
-        if game.player_count >= 2 and game.status == "waiting":
-            game.status = "started"
-            game.save()
-
+        players = [
+            {
+                "username": player.username,
+                "ready": game.player_ready.get(str(player.id), False)
+            }
+            for player in game.players.all()
+        ]
         return JsonResponse({
             'status': game.status,
             'player_count': game.player_count,
-            'players': [{"username": player.username} for player in game.players.all()]
+            'players': players
         })
     except Game.DoesNotExist:
         return JsonResponse({'error': 'Game not found'}, status=404)
 
+@login_required(login_url='login')  # Redirige vers la page de connexion si non connecté
+def game_state(request, game_id):
+    try:
+        game = Game.objects.get(id=game_id)
+        return JsonResponse({
+            'status': game.status,
+            'state': game.state,  # Assurez-vous que l'état du jeu est renvoyé
+            'currentPlayer': game.current_player.username
+        })
+    except Game.DoesNotExist:
+        return JsonResponse({'error': 'Game not found'}, status=404)
 
 @csrf_exempt
 @login_required(login_url='login')
@@ -96,13 +113,14 @@ def start_game(request, game_id):
         game = Game.objects.get(id=game_id)
         logger.info(f"Game {game_id} status: {game.status}, players: {game.player_count}")
 
-        if game.player_count >= 2 and game.status == "waiting":
+        # Vérifiez si tous les joueurs sont prêts
+        if game.player_count >= 2 and game.status == "waiting" and all(game.player_ready.values()):
             game.status = "started"
             game.save()
             logger.info(f"Game {game_id} started")
             return JsonResponse({'success': True, 'message': 'Game started'})
 
-        return JsonResponse({'success': False, 'message': 'Not enough players'})
+        return JsonResponse({'success': False, 'message': 'Not all players are ready'})
     except Game.DoesNotExist:
         logger.error(f"Game with id {game_id} does not exist.")
         return JsonResponse({'error': 'Game not found'}, status=404)

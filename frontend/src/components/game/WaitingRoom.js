@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom"; // Importez useNavigate
 
 function WaitingRoom() {
     const [gameId, setGameId] = useState(null);
     const [playerCount, setPlayerCount] = useState(0);
     const [players, setPlayers] = useState([]);
-    const [gameStarted, setGameStarted] = useState(false);
     const [ready, setReady] = useState(false);
+    const navigate = useNavigate(); // Utilisez useNavigate pour la redirection
 
     useEffect(() => {
         fetch(`http://127.0.0.1:8000/api/game/`)
@@ -27,18 +28,20 @@ function WaitingRoom() {
                 .then(response => response.json())
                 .then(data => {
                     setPlayerCount(data.player_count);
-                    setPlayers(data.players || []); // Évite les erreurs si `players` est `undefined`
+                    setPlayers(data.players || []);
 
-                    if (data.status === "started") {
-                        setGameStarted(true);
-                        window.location.href = `/online/game/${gameId}`;
+                    // Vérifiez si tous les joueurs sont prêts
+                    const allPlayersReady = data.players.every(player => player.ready);
+
+                    if (allPlayersReady) {
+                        navigate(`/online-game/${gameId}`); // Redirigez vers votre composant OnlineGame
                     }
                 })
                 .catch(error => console.error("Erreur récupération statut du jeu:", error));
         }, 2000);
 
         return () => clearInterval(interval);
-    }, [gameId]);
+    }, [gameId, navigate]);
 
     const setPlayerReady = () => {
         if (!gameId) return;
@@ -76,7 +79,6 @@ function WaitingRoom() {
         <div style={{ textAlign: "center", padding: "20px" }}>
             <h2>Salle d'Attente</h2>
             <p>Jeu ID: {gameId ?? "Chargement..."}</p>
-            <p>État: {gameStarted ? "En cours..." : "Waiting for players..."}</p>
             <p>Nombre de joueurs: {playerCount}</p>
             <ul style={{ listStyleType: "none", padding: 0 }}>
                 {players.map((player, index) => (
