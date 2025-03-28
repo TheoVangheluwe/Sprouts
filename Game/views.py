@@ -128,26 +128,39 @@ def start_game(request, game_id):
 @csrf_exempt
 @login_required(login_url='login')
 def make_move(request, game_id):
+    logger.debug(f"make_move called with method {request.method} for game_id {game_id}")
+
     if request.method == 'POST':
         try:
             logger.debug(f"Received move request for game_id: {game_id}")
             game = Game.objects.get(id=game_id)
 
-            # On suppose que la requête contient le mouvement dans le corps JSON
-            move = json.loads(request.body.decode('utf-8')).get('move')
+            move = json.loads(request.body.decode('utf-8'))
             logger.debug(f"Move received: {move}")
 
             if not move:
                 logger.error("Move data is missing")
                 return JsonResponse({'error': 'Move data is missing'}, status=400)
 
-            # Logique pour traiter le mouvement et mettre à jour l'état du jeu
-            # Exemple de mise à jour de l'état du jeu
-            game.state = move  # Remplacer par la logique réelle pour mettre à jour l'état du jeu
+            # Initialiser l'état s'il est vide
+            if not game.state:
+                game.state = {"curves": [], "points": []}
+
+            if move["type"] == "draw_curve":
+                game.state["curves"].append(move["curve"])  # 🔹 Ajouter la courbe sans écraser les autres
+            elif move["type"] == "place_point":
+                game.state["points"].append(move["point"])  # 🔹 Ajouter le point sans effacer le reste
+
             game.save()
             logger.debug(f"Game state updated: {game.state}")
 
-            return JsonResponse({'state': game.state, 'currentPlayer': game.current_player.id})
+            return JsonResponse({
+                'state': game.state,
+                'currentPlayer': game.current_player.id,
+                'curves': game.state.get('curves', []),
+                'points': game.state.get('points', [])
+            })
+
         except Game.DoesNotExist:
             logger.error(f"Game with id {game_id} does not exist.")
             return JsonResponse({'error': 'Game not found'}, status=404)
@@ -157,7 +170,10 @@ def make_move(request, game_id):
         except Exception as e:
             logger.error(f"Error in make_move: {e}")
             return JsonResponse({'error': 'An error occurred while making the move.'}, status=500)
-    return JsonResponse({'error': 'Invalid request method'}, status=405)
+
+    else:
+        logger.error("Invalid request method")
+        return JsonResponse({'error': 'Invalid request method'}, status=405)
 
 def register(request):
     if request.method == 'POST':

@@ -129,8 +129,6 @@ export const curveIntersects = (newCurve, curves = [], points) => {
       const seg2Start = newCurve[j];
       const seg2End = newCurve[j + 1];
 
-      console.log("Checking segments within newCurve:", seg1Start, seg1End, seg2Start, seg2End);
-
       // Ignore intersections at start and end points
       if (points.some(point => point.x === seg1Start.x && point.y === seg1Start.y) ||
           points.some(point => point.x === seg1End.x && point.y === seg1End.y) ||

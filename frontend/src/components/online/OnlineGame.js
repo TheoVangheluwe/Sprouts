@@ -7,77 +7,64 @@ function OnlineGame() {
     const [gameState, setGameState] = useState(null);
     const [currentPlayer, setCurrentPlayer] = useState(null);
     const [playerId, setPlayerId] = useState(null);
+    const [curves, setCurves] = useState([]);
+    const [points, setPoints] = useState([]);
 
     useEffect(() => {
-        const fetchPlayerId = async () => {
+        const fetchPlayerIdAndGameState = async () => {
             try {
-                const response = await fetch('/api/join-game');
-                const data = await response.json();
-                if (response.ok) {
-                    setPlayerId(data.player_id);
-                    console.log("Player ID fetched:", data.player_id);
+                const playerResponse = await fetch('/api/join-game');
+                const playerData = await playerResponse.json();
+                if (playerResponse.ok) {
+                    setPlayerId(playerData.player_id);
+                    console.log("Player ID fetched:", playerData.player_id);
                 } else {
-                    console.error("Failed to fetch player ID:", data.error);
+                    console.error("Failed to fetch player ID:", playerData.error);
+                }
+
+                const gameResponse = await fetch(`http://127.0.0.1:8000/api/game/${gameId}/state/`);
+                const gameData = await gameResponse.json();
+                if (gameResponse.ok) {
+                    console.log("Game state fetched:", gameData);
+                    setGameState(gameData.state);
+                    setCurrentPlayer(gameData.currentPlayer);
+                } else {
+                    console.error("Failed to fetch game state:", gameData.error);
                 }
             } catch (error) {
-                console.error("Error fetching player ID:", error);
+                console.error("Error fetching player ID and game state:", error);
             }
         };
 
-        fetchPlayerId();
-    }, []);
-
-    useEffect(() => {
-        const fetchGameState = async () => {
-            try {
-                const response = await fetch(`http://127.0.0.1:8000/api/game/${gameId}/state/`);
-                const data = await response.json();
-                if (response.ok) {
-                    console.log("Game state fetched:", data);
-                    setGameState(data.state);
-                    setCurrentPlayer(data.currentPlayer);
-                } else {
-                    console.error("Failed to fetch game state:", data.error);
-                }
-            } catch (error) {
-                console.error("Error fetching game state:", error);
-            }
-        };
-
-        fetchGameState();
+        fetchPlayerIdAndGameState();
     }, [gameId]);
 
-    const handleMove = async (move) => {
-        try {
-            const response = await fetch(`http://127.0.0.1:8000/api/game/${gameId}/move/`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ move }) // Assurez-vous que move est un objet JSON valide
-            });
-            const data = await response.json();
-            if (response.ok) {
-                console.log("Move response:", data);
+const handleMove = async (move) => {
+    console.log("Sending move:", move);
+    try {
+        const response = await fetch(`http://127.0.0.1:8000/api/game/${gameId}/move/`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(move)
+        });
 
-                // Vérifiez que `curves` est un tableau avant de l'utiliser
-                const curves = Array.isArray(data.state.curve) ? data.state.curve : [];
+        const data = await response.json();
+        console.log("Move response data:", data);
 
-                // Mise à jour de l'état du jeu avec les nouvelles courbes et points
-                setGameState(prevState => ({
-                    ...prevState,
-                    points: move.type === 'place_point' ? [...prevState.points, move.point] : prevState.points,
-                    curves: move.type === 'draw_curve' ? [...prevState.curves, ...curves] : prevState.curves,
-                    state: data.state,
-                    currentPlayer: data.currentPlayer
-                }));
-            } else {
-                console.error("Failed to make move:", data.error);
-            }
-        } catch (error) {
-            console.error("Error making move:", error);
+        if (response.ok) {
+            console.log("Updated game state:", data);
+
+            // Vérifie si les courbes sont bien mises à jour
+            setCurves(data.curves);
+            setCurrentPlayer(data.currentPlayer);
+        } else {
+            console.error("Failed to make move:", data.error);
         }
-    };
+    } catch (error) {
+        console.error("Error making move:", error);
+    }
+};
+
 
     return (
         <div>
