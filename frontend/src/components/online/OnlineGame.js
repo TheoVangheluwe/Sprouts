@@ -7,8 +7,6 @@ function OnlineGame() {
     const [gameState, setGameState] = useState(null);
     const [currentPlayer, setCurrentPlayer] = useState(null);
     const [playerId, setPlayerId] = useState(null);
-    const [curves, setCurves] = useState([]);
-    const [points, setPoints] = useState([]);
 
     useEffect(() => {
         const fetchPlayerIdAndGameState = async () => {
@@ -17,7 +15,6 @@ function OnlineGame() {
                 const playerData = await playerResponse.json();
                 if (playerResponse.ok) {
                     setPlayerId(playerData.player_id);
-                    console.log("Player ID fetched:", playerData.player_id);
                 } else {
                     console.error("Failed to fetch player ID:", playerData.error);
                 }
@@ -25,7 +22,6 @@ function OnlineGame() {
                 const gameResponse = await fetch(`http://127.0.0.1:8000/api/game/${gameId}/state/`);
                 const gameData = await gameResponse.json();
                 if (gameResponse.ok) {
-                    console.log("Game state fetched:", gameData);
                     setGameState(gameData.state);
                     setCurrentPlayer(gameData.currentPlayer);
                 } else {
@@ -37,34 +33,46 @@ function OnlineGame() {
         };
 
         fetchPlayerIdAndGameState();
+
+        // Ajouter un intervalle de mise à jour de l'état du jeu pour synchroniser avec les autres joueurs
+        const intervalId = setInterval(async () => {
+            try {
+                const gameResponse = await fetch(`http://127.0.0.1:8000/api/game/${gameId}/state/`);
+                const gameData = await gameResponse.json();
+                if (gameResponse.ok) {
+                    setGameState(gameData.state);
+                    setCurrentPlayer(gameData.currentPlayer);
+                } else {
+                    console.error("Failed to fetch game state:", gameData.error);
+                }
+            } catch (error) {
+                console.error("Error fetching game state:", error);
+            }
+        }, 2000); // Mettre à jour toutes les 2 secondes
+
+        return () => clearInterval(intervalId);
     }, [gameId]);
 
-const handleMove = async (move) => {
-    console.log("Sending move:", move);
-    try {
-        const response = await fetch(`http://127.0.0.1:8000/api/game/${gameId}/move/`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(move)
-        });
+    const handleMove = async (move) => {
+        try {
+            const response = await fetch(`http://127.0.0.1:8000/api/game/${gameId}/move/`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(move)
+            });
 
-        const data = await response.json();
-        console.log("Move response data:", data);
+            const data = await response.json();
 
-        if (response.ok) {
-            console.log("Updated game state:", data);
-
-            // Vérifie si les courbes sont bien mises à jour
-            setCurves(data.curves);
-            setCurrentPlayer(data.currentPlayer);
-        } else {
-            console.error("Failed to make move:", data.error);
+            if (response.ok) {
+                setGameState(data.state);
+                setCurrentPlayer(data.currentPlayer);
+            } else {
+                console.error("Failed to make move:", data.error);
+            }
+        } catch (error) {
+            console.error("Error making move:", error);
         }
-    } catch (error) {
-        console.error("Error making move:", error);
-    }
-};
-
+    };
 
     return (
         <div>

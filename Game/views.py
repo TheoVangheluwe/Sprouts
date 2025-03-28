@@ -151,6 +151,12 @@ def make_move(request, game_id):
             elif move["type"] == "place_point":
                 game.state["points"].append(move["point"])  # 🔹 Ajouter le point sans effacer le reste
 
+                # Passer le tour au joueur suivant
+                players = list(game.players.all())
+                current_player_index = players.index(game.current_player)
+                next_player_index = (current_player_index + 1) % len(players)
+                game.current_player = players[next_player_index]
+
             game.save()
             logger.debug(f"Game state updated: {game.state}")
 
