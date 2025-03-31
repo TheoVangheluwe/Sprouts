@@ -17,13 +17,14 @@ def index(request):
     return render(request, 'index.html')
 
 @csrf_exempt
-
-
-@login_required(login_url='login')  # Redirige vers la page de connexion si non connecté
+@login_required(login_url='login_redirect_with_message')  # Utilise la vue de redirection personnalisée
 def game_view(request, game_id):
-    game = Game.objects.get(id=game_id)
-    # Logique pour récupérer l'état du jeu
-    return JsonResponse(game.state)
+    try:
+        game = Game.objects.get(id=game_id)
+        # Logique pour récupérer l'état du jeu
+        return JsonResponse(game.state)
+    except Game.DoesNotExist:
+        return JsonResponse({'error': 'Game not found'}, status=404)
 
 ##def login_view(request):
     if request.method == 'POST':
@@ -70,7 +71,7 @@ def logout_view(request):
     return redirect('login')  # Redirige vers la page de connexion
 
 
-@login_required(login_url='login')  # Redirige vers la page de connexion si non connecté
+@login_required(login_url='login_redirect_with_message')  # Redirige vers la page de connexion si non connecté
 def ReactAppView(request):
     # Chemin vers le fichier index.html généré par React
     react_index_path = os.path.join(settings.BASE_DIR, 'frontend', 'build', 'index.html')
