@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { toast } from 'react-toastify';
-import { drawGame, getMousePos, getNearPoint, canConnect, connectPoints, curveIntersects, curveLength, getNextLabel, generateGraphString } from './Utils';
+import { drawGame, getMousePos, getNearPoint, canConnect, connectPoints, curveIntersects, curveLength, getNextLabel, generateGraphString, getClosestPointOnCurve } from './Utils';
 
 const Canvas = ({ points, setPoints, curves, setCurves, setGrapheChaine }) => {
   const canvasRef = useRef(null);
@@ -54,10 +54,9 @@ const Canvas = ({ points, setPoints, curves, setCurves, setGrapheChaine }) => {
     const pos = getMousePos(canvas, event);
 
     if (awaitingPointPlacement) {
-      const distanceToCurve = currentCurve.map(p => Math.hypot(p.x - pos.x, p.y - pos.y));
-      const minDistance = Math.min(...distanceToCurve);
-      if (minDistance <= 15) {
-        const newPoint = { x: pos.x, y: pos.y, connections: 2, label: getNextLabel(points) };
+      const closestPoint = getClosestPointOnCurve(pos.x, pos.y, currentCurve);
+      if (closestPoint) {
+        const newPoint = { x: closestPoint.x, y: closestPoint.y, connections: 2, label: getNextLabel(points) };
         setPoints(prevPoints => [...prevPoints, newPoint]);
         setCurves(prevCurves => [...prevCurves, currentCurve]);
         setAwaitingPointPlacement(false);
@@ -93,17 +92,29 @@ const Canvas = ({ points, setPoints, curves, setCurves, setGrapheChaine }) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const pos = getMousePos(canvas, event);
-    const endPoint = getNearPoint(pos.x, pos.y, points);
+    const endPoint = getNearPoint(pos.x, pos.y, points, 30); // Increased threshold for end point detection
+
     if (endPoint && selectedPoint && canConnect(selectedPoint, endPoint)) {
-      if (curveIntersects(currentCurve, curves)) {
+      // Adjust the end of the curve to the nearest point
+      let adjustedCurve = [...currentCurve];
+
+      // Remove the last few points if necessary to snap to the nearest point
+      const lastPointIndex = adjustedCurve.length - 1;
+      if (Math.hypot(adjustedCurve[lastPointIndex].x - endPoint.x, adjustedCurve[lastPointIndex].y - endPoint.y) > 30) {
+        adjustedCurve = adjustedCurve.slice(0, -1); // Remove the last point
+      }
+
+      adjustedCurve.push(endPoint);
+
+      if (curveIntersects(adjustedCurve, curves)) {
         toast.error("Intersection détectée.", { autoClose: 1500 });
         setCurrentCurve([]);
-      } else if (curveLength(currentCurve) < 50) {
+      } else if (curveLength(adjustedCurve) < 50) {
         toast.error("Courbe trop courte.", { autoClose: 1500 });
         setCurrentCurve([]);
       } else {
         toast.success("Placez un point sur la courbe.", { autoClose: 1500 });
-        connectPoints(selectedPoint, endPoint, currentCurve, points, setPoints, setCurves);
+        connectPoints(selectedPoint, endPoint, adjustedCurve, points, setPoints, setCurves);
         setAwaitingPointPlacement(true);
       }
     } else {

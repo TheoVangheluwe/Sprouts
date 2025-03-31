@@ -184,3 +184,43 @@ export const identifyRegions = (curves) => {
 
   return regions;
 };
+
+export const getClosestPointOnCurve = (x, y, curve, tolerance = 15) => {
+  let closestPoint = null;
+  let minDistance = Infinity;
+
+  for (let i = 0; i < curve.length - 1; i++) {
+    const start = curve[i];
+    const end = curve[i + 1];
+    const projection = getProjection(x, y, start, end);
+
+    if (projection) {
+      const distance = Math.hypot(projection.x - x, projection.y - y);
+      if (distance < minDistance) {
+        minDistance = distance;
+        closestPoint = projection;
+      }
+    }
+  }
+
+  // Return null if the closest point is beyond the tolerance
+  if (minDistance > tolerance) {
+    return null;
+  }
+
+  return closestPoint;
+};
+
+const getProjection = (px, py, p1, p2) => {
+  const dx = p2.x - p1.x;
+  const dy = p2.y - p1.y;
+  const t = ((px - p1.x) * dx + (py - p1.y) * dy) / (dx * dx + dy * dy);
+
+  if (t < 0) {
+    return p1;
+  } else if (t > 1) {
+    return p2;
+  } else {
+    return { x: p1.x + t * dx, y: p1.y + t * dy };
+  }
+};
