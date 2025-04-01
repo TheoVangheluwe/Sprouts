@@ -232,7 +232,6 @@ export const generateInitialGraphString = (points) => {
   return initialGraphString;
 };
 
-//Génération de la chaine de caractère à chaque coup
 export const generateGraphString = (startPoint, addedPoint, endPoint, currentGraphString) => {
   let regionString;
 
@@ -262,55 +261,61 @@ export const generateGraphString = (startPoint, addedPoint, endPoint, currentGra
 
   // Cas n°1: Les deux points sont différents et isolés
   if (startIsIsolated && endIsIsolated && (startPoint !== endPoint)) {
-    regionString = `${startPoint.label}${addedPoint.label}${endPoint.label}${addedPoint.label}`;
-    let updatedGraphString = currentGraphString.replace('!', `${regionString}.}!`);
-    updatedGraphString = updatedGraphString
-      .replace(new RegExp(`${startPoint.label}\\.`), '')
+    regionString = `${startPoint.label}${addedPoint.label}${endPoint.label}${addedPoint.label}.`;
+
+    // Remplacer les points isolés par la nouvelle connexion
+    let updatedGraphString = currentGraphString
+      .replace(new RegExp(`${startPoint.label}\\.`), regionString)
       .replace(new RegExp(`${endPoint.label}\\.`), '');
+
     return updatedGraphString;
   }
   // Cas n°2: Un point est isolé et l'autre est déjà relié
   else if (startIsIsolated !== endIsIsolated) {
     const isolatedPoint = startIsIsolated ? startPoint : endPoint;
     const connectedPoint = startIsIsolated ? endPoint : startPoint;
-  
+
     // Créer la nouvelle région en utilisant le point connecté comme référence
     regionString = `${connectedPoint.label}${addedPoint.label}${isolatedPoint.label}${addedPoint.label}`;
-  
+
     const regions = findRegions(currentGraphString);
     const connectedRegion = regions.find(region => region.includes(connectedPoint.label));
-  
+
     if (connectedRegion) {
       const commonPoint = connectedPoint.label;
       console.log("point commun", commonPoint);
-  
+
       // Trouver l'index du point commun dans la région existante
       const insertIndex = connectedRegion.indexOf(commonPoint);
-  
+
       // Insérer la nouvelle région avant le point commun dans la région existante
       const updatedRegion = connectedRegion.slice(0, insertIndex) + regionString + connectedRegion.slice(insertIndex);
-  
+
       // Retirer le point isolé de la chaîne de caractères
       let updatedGraphString = currentGraphString.replace(
         new RegExp(`${isolatedPoint.label}\\.`),
         ''
       ).replace(connectedRegion, updatedRegion);
-  
+
       return updatedGraphString;
     }
   }
-  
+
   // Cas n°3: Les deux points sont déjà reliés
   else if (!startIsIsolated && !endIsIsolated && startPoint !== endPoint) {
     // Ajoutez ici la logique pour gérer les points déjà reliés
   }
   // Cas n°4: Le point de départ est le point d'arrivée (boucle)
   else if (startPoint === endPoint) {
-    console.log("dqdqd")
     if (startIsIsolated) {
-      regionString = `${startPoint.label}${addedPoint.label}`;
-      let updatedGraphString = currentGraphString.replace('!', `${regionString}.}!`);
-      updatedGraphString = updatedGraphString.replace(new RegExp(`${startPoint.label}\\.`), '');
+      regionString = `${startPoint.label}${addedPoint.label}.`;
+
+      // Remplacer le point isolé par la nouvelle connexion
+      let updatedGraphString = currentGraphString.replace(
+        new RegExp(`${startPoint.label}\\.`),
+        regionString
+      );
+
       return updatedGraphString;
     } else {
       // Cas où le point est déjà connecté
