@@ -84,8 +84,6 @@ export const connectPoints = (p1, p2, curvePoints, points, setPoints, setCurves)
   });
 };
 
-
-
 export const curveIntersects = (newCurve, curves, points) => {
   for (let curve of curves) {
     for (let i = 0; i < newCurve.length - 1; i++) {
@@ -158,13 +156,14 @@ export const segmentsIntersect = (A, B, C, D) => {
 
 export const getNextLabel = (points) => {
   const usedLabels = points.map(point => point.label);
-  const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  const alphabet = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'; // Inclut les lettres majuscules et minuscules
+
   for (let letter of alphabet) {
     if (!usedLabels.includes(letter)) {
       return letter;
     }
   }
-  return '';
+  return ''; // Retourne une chaîne vide si toutes les lettres sont utilisées
 };
 
 export const getClosestPointOnCurve = (x, y, curve, tolerance = 15) => {
@@ -217,74 +216,126 @@ const getProjection = (px, py, p1, p2) => {
   }
 };
 
+//Géneration de la chaine de caractère initial
+export const generateInitialGraphString = (points) => {
 
-//Ajout MAx
-export const updateConnections = (startLabel, endLabel, newPointLabel, connections) => {
-  if (!connections[startLabel]) connections[startLabel] = [];
-  if (!connections[endLabel]) connections[endLabel] = [];
-  if (!connections[newPointLabel]) connections[newPointLabel] = [];
+  let initialGraphString = '';
 
-  connections[startLabel].push(newPointLabel);
-  connections[endLabel].push(newPointLabel);
-  connections[newPointLabel].push(startLabel, endLabel);
+    // Ajouter les points isolés à la chaîne de caractères
+    points.forEach(point => {
+      initialGraphString += `${point.label}.`;
+    });
 
-  return connections;
+  // Ajout de la terminaison finale
+  initialGraphString += '}!';
+
+  return initialGraphString;
 };
 
-// Fonction pour générer la chaîne de caractères
-export const generateGraphString = (connections) => {
-  const isolatedPoints = [];
+//Génération de la chaine de caractère à chaque coup
+export const generateGraphString = (startPoint, addedPoint, endPoint, currentGraphString) => {
+  let regionString;
 
-  // Parcourir chaque point pour identifier les points isolés
-  for (const point in connections) {
-    if (connections[point].length === 0) {
-      isolatedPoints.push(point);
-    }
-  }
-
-  // Construire la chaîne de caractères pour les points isolés
-  let graphStr = "";
-  isolatedPoints.forEach(point => {
-    graphStr += `${point}.}`;
-  });
-
-  return graphStr;
-};
-
-export const findRegions = (connections) => {
-  const regions = [];
-
-  // Fonction pour trouver les cycles
-  const findCycles = (start, current, path, visited) => {
-    console.log(`Visiting point: ${current}, Path so far: ${path.join(' -> ')}`);
-
-    visited.add(current);
-    path.push(current);
-
-    const neighbors = connections[current];
-
-    for (const neighbor of neighbors) {
-      console.log(`Exploring neighbor: ${neighbor}`);
-      if (neighbor === start && path.length > 2) {
-        console.log(`Cycle found: ${path.join(' -> ')}`);
-        regions.push([...path]);
-      }
-      if (!visited.has(neighbor) || neighbor === start) {
-        findCycles(start, neighbor, path, new Set(visited)); // Utiliser un nouvel ensemble pour chaque voisin
-      }
-    }
-
-    path.pop();
-    visited.delete(current);
-    console.log(`Finished exploring point: ${current}`);
+  // Vérifier si les points sont isolés dans la chaîne de caractères actuelle
+  const isIsolated = (label, graphString) => {
+    const regex = new RegExp(`(^|[.}])${label}\\.`);
+    return regex.test(graphString);
   };
 
-  // Parcourir chaque point pour identifier les régions
-  for (const point in connections) {
-    console.log(`Starting exploration from point: ${point}`);
-    const visited = new Set();
-    findCycles(point, point, [], visited);
-  }
+  // Identifier les régions existantes dans la chaîne de caractères
+  const findRegions = (graphString) => {
+    const regionRegex = /(^|[.{}])([a-zA-Z]{2,})\./g;
+    const regions = [];
+    let match;
+    while ((match = regionRegex.exec(graphString)) !== null) {
+      regions.push(match[2]);
+    }
+    return regions;
+  };
 
-  return regions;
+  // Vérifier les conditions pour les points
+  const startIsIsolated = isIsolated(startPoint.label, currentGraphString);
+  const endIsIsolated = isIsolated(endPoint.label, currentGraphString);
+
+  console.log("départ isolé", startIsIsolated);
+  console.log("fin isolé", endIsIsolated);
+
+  // Cas n°1: Les deux points sont différents et isolés
+  if (startIsIsolated && endIsIsolated && (startPoint !== endPoint)) {
+    regionString = `${startPoint.label}${addedPoint.label}${endPoint.label}${addedPoint.label}`;
+    let updatedGraphString = currentGraphString.replace('!', `${regionString}.}!`);
+    updatedGraphString = updatedGraphString
+      .replace(new RegExp(`${startPoint.label}\\.`), '')
+      .replace(new RegExp(`${endPoint.label}\\.`), '');
+    return updatedGraphString;
+  }
+  // Cas n°2: Un point est isolé et l'autre est déjà relié
+  else if (startIsIsolated !== endIsIsolated) {
+    const isolatedPoint = startIsIsolated ? startPoint : endPoint;
+    const connectedPoint = startIsIsolated ? endPoint : startPoint;
+  
+    // Créer la nouvelle région en utilisant le point connecté comme référence
+    regionString = `${connectedPoint.label}${addedPoint.label}${isolatedPoint.label}${addedPoint.label}`;
+  
+    const regions = findRegions(currentGraphString);
+    const connectedRegion = regions.find(region => region.includes(connectedPoint.label));
+  
+    if (connectedRegion) {
+      const commonPoint = connectedPoint.label;
+      console.log("point commun", commonPoint);
+  
+      // Trouver l'index du point commun dans la région existante
+      const insertIndex = connectedRegion.indexOf(commonPoint);
+  
+      // Insérer la nouvelle région avant le point commun dans la région existante
+      const updatedRegion = connectedRegion.slice(0, insertIndex) + regionString + connectedRegion.slice(insertIndex);
+  
+      // Retirer le point isolé de la chaîne de caractères
+      let updatedGraphString = currentGraphString.replace(
+        new RegExp(`${isolatedPoint.label}\\.`),
+        ''
+      ).replace(connectedRegion, updatedRegion);
+  
+      return updatedGraphString;
+    }
+  }
+  
+  // Cas n°3: Les deux points sont déjà reliés
+  else if (!startIsIsolated && !endIsIsolated && startPoint !== endPoint) {
+    // Ajoutez ici la logique pour gérer les points déjà reliés
+  }
+  // Cas n°4: Le point de départ est le point d'arrivée (boucle)
+  else if (startPoint === endPoint) {
+    console.log("dqdqd")
+    if (startIsIsolated) {
+      regionString = `${startPoint.label}${addedPoint.label}`;
+      let updatedGraphString = currentGraphString.replace('!', `${regionString}.}!`);
+      updatedGraphString = updatedGraphString.replace(new RegExp(`${startPoint.label}\\.`), '');
+      return updatedGraphString;
+    } else {
+      // Cas où le point est déjà connecté
+      const commonPoint = startPoint.label;
+
+      // Trouver la région existante contenant le point commun
+      const regions = findRegions(currentGraphString);
+      const connectedRegion = regions.find(region => region.includes(commonPoint));
+
+      if (connectedRegion) {
+        // Créer la nouvelle région pour la boucle
+        regionString = `${commonPoint}${addedPoint.label}`;
+
+        // Trouver l'index du point commun dans la région existante
+        const insertIndex = connectedRegion.indexOf(commonPoint);
+
+        // Insérer la nouvelle région avant le point commun dans la région existante
+        const updatedRegion = connectedRegion.slice(0, insertIndex) + regionString + connectedRegion.slice(insertIndex);
+
+        // Mettre à jour la chaîne globale
+        let updatedGraphString = currentGraphString.replace(connectedRegion, updatedRegion);
+
+        return updatedGraphString;
+      }
+    }
+  }
+  return currentGraphString;
 };
