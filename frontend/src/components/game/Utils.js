@@ -243,13 +243,24 @@ export const generateGraphString = (startPoint, addedPoint, endPoint, currentGra
 
   // Identifier les régions existantes dans la chaîne de caractères
   const findRegions = (graphString) => {
-    const regionRegex = /(^|[.{}])([a-zA-Z]{2,})\./g;
+    const regionRegex = /(^[^{}]+|[^{}]+)(?=[.}]|$)/g;
     const regions = [];
     let match;
     while ((match = regionRegex.exec(graphString)) !== null) {
-      regions.push(match[2]);
+      regions.push(match[0]);
     }
     return regions;
+  };
+
+  // Identifier les frontières existantes dans la chaîne de caractères
+  const findFrontieres = (graphString) => {
+    const frontiereRegex = /(^|[.{}])([a-zA-Z]{2,})\./g;
+    const frontieres = [];
+    let match;
+    while ((match = frontiereRegex.exec(graphString)) !== null) {
+      frontieres.push(match[2]);
+    }
+    return frontieres;
   };
 
   // Vérifier les conditions pour les points
@@ -261,11 +272,11 @@ export const generateGraphString = (startPoint, addedPoint, endPoint, currentGra
 
   // Cas n°1: Les deux points sont différents et isolés
   if (startIsIsolated && endIsIsolated && (startPoint !== endPoint)) {
-    regionString = `${startPoint.label}${addedPoint.label}${endPoint.label}${addedPoint.label}.`;
+    regionString = `${startPoint.label}${addedPoint.label}${endPoint.label}${addedPoint.label}`;
 
     // Remplacer les points isolés par la nouvelle connexion
     let updatedGraphString = currentGraphString
-      .replace(new RegExp(`${startPoint.label}\\.`), regionString)
+      .replace(new RegExp(`${startPoint.label}\\.`), `${regionString}.`)
       .replace(new RegExp(`${endPoint.label}\\.`), '');
 
     return updatedGraphString;
@@ -277,26 +288,35 @@ export const generateGraphString = (startPoint, addedPoint, endPoint, currentGra
 
     // Créer la nouvelle région en utilisant le point connecté comme référence
     regionString = `${connectedPoint.label}${addedPoint.label}${isolatedPoint.label}${addedPoint.label}`;
+    console.log("Nouvelle région:", regionString);
 
     const regions = findRegions(currentGraphString);
-    const connectedRegion = regions.find(region => region.includes(connectedPoint.label));
+    /*const connectedRegions = regions.filter(region => region.includes(connectedPoint.label));
+    console.log("Régions connectées:", connectedRegions);*/
 
-    if (connectedRegion) {
+    // Trouver la région qui contient également le point isolé
+    const relevantRegion = regions.find(region => region.includes(isolatedPoint.label));
+    console.log("Région pertinente:", relevantRegion);
+
+    if (relevantRegion) {
       const commonPoint = connectedPoint.label;
-      console.log("point commun", commonPoint);
+      console.log("Point commun:", commonPoint);
 
       // Trouver l'index du point commun dans la région existante
-      const insertIndex = connectedRegion.indexOf(commonPoint);
+      const insertIndex = relevantRegion.indexOf(commonPoint);
+      console.log("Index d'insertion:", insertIndex);
 
       // Insérer la nouvelle région avant le point commun dans la région existante
-      const updatedRegion = connectedRegion.slice(0, insertIndex) + regionString + connectedRegion.slice(insertIndex);
+      let updatedRegion = relevantRegion.slice(0, insertIndex) + regionString + relevantRegion.slice(insertIndex);
 
-      // Retirer le point isolé de la chaîne de caractères
-      let updatedGraphString = currentGraphString.replace(
-        new RegExp(`${isolatedPoint.label}\\.`),
-        ''
-      ).replace(connectedRegion, updatedRegion);
+      // Supprimer le point isolé de la région mise à jour
+      updatedRegion = updatedRegion.replace(new RegExp(`${isolatedPoint.label}\\.`), '');
+      console.log("Région mise à jour:", updatedRegion);
 
+      // Remplacer l'ancienne région par la nouvelle région mise à jour dans la chaîne globale
+      let updatedGraphString = currentGraphString.replace(relevantRegion, updatedRegion);
+
+      console.log("Chaîne mise à jour:", updatedGraphString);
       return updatedGraphString;
     }
   }
@@ -308,13 +328,16 @@ export const generateGraphString = (startPoint, addedPoint, endPoint, currentGra
   // Cas n°4: Le point de départ est le point d'arrivée (boucle)
   else if (startPoint === endPoint) {
     if (startIsIsolated) {
-      regionString = `${startPoint.label}${addedPoint.label}.`;
+      regionString = `${startPoint.label}${addedPoint.label}`;
 
       // Remplacer le point isolé par la nouvelle connexion
       let updatedGraphString = currentGraphString.replace(
         new RegExp(`${startPoint.label}\\.`),
-        regionString
+        `${regionString}.`
       );
+
+      // Ajouter la nouvelle région à la fin
+      updatedGraphString = updatedGraphString.replace('!', `${regionString}.}!`);
 
       return updatedGraphString;
     } else {
@@ -323,20 +346,24 @@ export const generateGraphString = (startPoint, addedPoint, endPoint, currentGra
 
       // Trouver la région existante contenant le point commun
       const regions = findRegions(currentGraphString);
-      const connectedRegion = regions.find(region => region.includes(commonPoint));
+      const connectedRegions = regions.filter(region => region.includes(commonPoint));
 
-      if (connectedRegion) {
+      if (connectedRegions.length > 0) {
         // Créer la nouvelle région pour la boucle
         regionString = `${commonPoint}${addedPoint.label}`;
 
         // Trouver l'index du point commun dans la région existante
-        const insertIndex = connectedRegion.indexOf(commonPoint);
+        const relevantRegion = connectedRegions[0]; // Assuming we take the first relevant region
+        const insertIndex = relevantRegion.indexOf(commonPoint);
 
         // Insérer la nouvelle région avant le point commun dans la région existante
-        const updatedRegion = connectedRegion.slice(0, insertIndex) + regionString + connectedRegion.slice(insertIndex);
+        const updatedRegion = relevantRegion.slice(0, insertIndex) + regionString + relevantRegion.slice(insertIndex);
 
         // Mettre à jour la chaîne globale
-        let updatedGraphString = currentGraphString.replace(connectedRegion, updatedRegion);
+        let updatedGraphString = currentGraphString.replace(relevantRegion, updatedRegion);
+
+        // Ajouter la nouvelle région à la fin
+        updatedGraphString = updatedGraphString.replace('!', `${regionString}.}!`);
 
         return updatedGraphString;
       }
