@@ -16,3 +16,9 @@ Pour faire un coup dans la chaîne de caractères :
     -> cas dans la même boundary
     -> cas boundary et point isolé
     -> cas deux points isolés
+
+
+TODO:
+move_generator
+playable_vertices (in move_verification)
+is_valid_move (finir les derniers trucs)

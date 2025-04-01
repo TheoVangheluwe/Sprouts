@@ -35,4 +35,4 @@ for v, d in degree.items():
 
 #PLAYABLE VERTICES
 print("\nSommets jouables (degré < 3) :")
-print(playable_vertices(degree))
+print(playable_vertices(chain_doc))
