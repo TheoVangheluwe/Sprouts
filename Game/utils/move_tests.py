@@ -1,5 +1,6 @@
 from move_verification import parse_boundaries, parse_regions, get_vertex_degrees, is_valid_move,playable_vertices
 #from move_generator import generate_possible_moves, encode_to_chain
+from move_over import is_game_over
 
 chain_doc = "AL.}AL.BNMCMN.}D.COFPGQFOCM.}E.HRISJSIUKTKUIR.FQGP.}KT.}!" #chaine du pdf
 
@@ -49,3 +50,12 @@ chain_old2 = "AL.}AL.B.MC.}MC.}!" #possible chaine avant 2
 
 if True:
     print(is_valid_move(chain_old2, chain))
+
+"""
+Test is_game_over
+"""
+chain_over = "ABC.}ABC.}AB.}"
+chain_not_over = "AL.}AL.BNMCMN.}MC.}!"
+
+if True:
+    print(is_game_over(chain_over))
