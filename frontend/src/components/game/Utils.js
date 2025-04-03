@@ -290,6 +290,7 @@ export const generateGraphString = (startPoint, addedPoint, endPoint, currentGra
     regionString = `${connectedPoint.label}${addedPoint.label}${isolatedPoint.label}${addedPoint.label}`;
     console.log("Nouvelle région:", regionString);
 
+    //On trouve toutes les régions
     const regions = findRegions(currentGraphString);
     /*const connectedRegions = regions.filter(region => region.includes(connectedPoint.label));
     console.log("Régions connectées:", connectedRegions);*/
@@ -320,10 +321,80 @@ export const generateGraphString = (startPoint, addedPoint, endPoint, currentGra
       return updatedGraphString;
     }
   }
+   // Cas n°3: Les deux points sont déjà reliés
+   else if (!startIsIsolated && !endIsIsolated && startPoint !== endPoint) {
+    // Créer la nouvelle région
+    regionString = `${startPoint.label}${addedPoint.label}${endPoint.label}`;
+    console.log("Nouvelle région:", regionString);
 
-  // Cas n°3: Les deux points sont déjà reliés
-  else if (!startIsIsolated && !endIsIsolated && startPoint !== endPoint) {
-    // Ajoutez ici la logique pour gérer les points déjà reliés
+    // On trouve toutes les régions
+    const regions = findRegions(currentGraphString);
+    console.log("Régions existantes:", regions);
+
+    // Trouver les régions qui contiennent les deux points
+    const relevantRegions = regions.filter(region => region.includes(startPoint.label) && region.includes(endPoint.label));
+    console.log("Régions pertinentes:", relevantRegions);
+
+    // Appeler et afficher la fonction findFrontieres avec relevantRegions
+    const frontieres = findFrontieres(relevantRegions.join(' '));
+    console.log("Frontières trouvées:", frontieres);
+
+    relevantRegions.forEach(region => {
+      // Trouver les indices des points de départ et d'arrivée les plus proches du début de la chaîne
+      const startPointIndices = [...region.matchAll(new RegExp(`${startPoint.label}`, 'g'))].map(match => match.index);
+      const endPointIndices = [...region.matchAll(new RegExp(`${endPoint.label}`, 'g'))].map(match => match.index);
+
+      const startIndex = startPointIndices[0];
+      const endIndex = endPointIndices[0];
+
+      let startRecord=0;
+      
+
+      if (startIndex<= endIndex){
+        startRecord=startIndex;
+      }
+      else{
+        startRecord=endIndex;
+      }
+
+      for(let i=0;i<4;i++){
+        console.log(startRecord);
+        let result = '';
+        let index = startRecord;
+
+        while (true) {
+          index = (index + 1) % region.length;
+          if (region[index] === startPoint.label || region[index] === endPoint.label) {
+            break;
+          }
+          result += region[index];
+        }
+
+        console.log(region[startRecord].label)
+        console.log(region[index].label)
+        if(region[startRecord]===startPoint.label && region[index]===startPoint.label){
+          const departToDepart=result;
+          console.log("Points entre départ et départ:", departToDepart);
+        }
+        else if(region[startRecord]===startPoint.label && region[index]===endPoint.label){
+          const departToEnd=result;
+          console.log("Points entre départ et arrivé:", departToEnd);
+        }
+        else if(region[startRecord]===endPoint.label && region[index]===startPoint.label){
+          const endToDepart=result;
+          console.log("Points entre arrivé et départ:", endToDepart);
+        }
+        else if(region[startRecord]===endPoint.label && region[index]===endPoint.label){
+          const endToEnd=result;
+          console.log("Points entre arrivé et arrivé:", endToEnd);
+        }
+        startRecord=index;
+      }
+
+    });
+
+    // Logique pour gérer les points déjà reliés
+    // ...
   }
   // Cas n°4: Le point de départ est le point d'arrivée (boucle)
   else if (startPoint === endPoint) {
