@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { toast } from 'react-toastify';
-import { drawGame, getMousePos, getNearPoint, canConnect, connectPoints, curveIntersects, curveLength, getNextLabel, getClosestPointOnCurve, isPointTooClose, generateInitialGraphString, generateGraphString, } from './Utils';
+import { drawGame, getMousePos, getNearPoint, canConnect, connectPoints, curveIntersects, curveLength, getNextLabel, getClosestPointOnCurve, isPointTooClose, generateInitialGraphString, generateGraphString, updateCurveMap} from './Utils';
 
 const Canvas = ({ points, setPoints, curves, setCurves }) => {
   const canvasRef = useRef(null);
@@ -9,6 +9,7 @@ const Canvas = ({ points, setPoints, curves, setCurves }) => {
   const [currentCurve, setCurrentCurve] = useState([]);
   const [awaitingPointPlacement, setAwaitingPointPlacement] = useState(false);
   const [graphString, setGraphString] = useState(''); // État pour stocker la chaîne de caractères
+  const [curveMap, setCurveMap] = useState(new Map()); // État pour stocker la curveMap
 
   useEffect(() => {
     const resizeCanvas = () => {
@@ -47,13 +48,13 @@ const Canvas = ({ points, setPoints, curves, setCurves }) => {
     const width = canvas.width;
     const height = canvas.height;
     const newPoints = [];
-
+  
     const generateRandomPoint = () => {
-      const x = Math.random() * width;
-      const y = Math.random() * height;
+      const x = Math.round(Math.random() * width);
+      const y = Math.round(Math.random() * height);
       return { x, y };
     };
-
+  
     while (newPoints.length < 3) {
       const newPoint = generateRandomPoint();
       if (newPoints.every(point => Math.hypot(point.x - newPoint.x, point.y - newPoint.y) >= minDistance)) {
@@ -62,21 +63,21 @@ const Canvas = ({ points, setPoints, curves, setCurves }) => {
         newPoints.push(newPoint);
       }
     }
-
+  
     return newPoints;
-  };
+  };  
 
   const handleMouseDown = (event) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-
+  
     const pos = getMousePos(canvas, event);
-
+  
     if (awaitingPointPlacement) {
-      const closestPoint = getClosestPointOnCurve(pos.x, pos.y, currentCurve);
+      const closestPoint = getClosestPointOnCurve(Math.round(pos.x), Math.round(pos.y), currentCurve);
       if (closestPoint) {
-        if (!isPointTooClose(closestPoint.x, closestPoint.y, points)) {
-          const newPoint = { x: closestPoint.x, y: closestPoint.y, connections: 2, label: getNextLabel(points) };
+        if (!isPointTooClose(Math.round(closestPoint.x), Math.round(closestPoint.y), points)) {
+          const newPoint = { x: Math.round(closestPoint.x), y: Math.round(closestPoint.y), connections: 2, label: getNextLabel(points) };
           setPoints(prevPoints => [...prevPoints, newPoint]);
           setCurves(prevCurves => [...prevCurves, currentCurve]);
           setAwaitingPointPlacement(false);
@@ -89,14 +90,15 @@ const Canvas = ({ points, setPoints, curves, setCurves }) => {
         toast.error("Cliquez plus près de la courbe.", { autoClose: 1500 });
       }
     } else {
-      const start = getNearPoint(pos.x, pos.y, points);
+      const start = getNearPoint(Math.round(pos.x), Math.round(pos.y), points);
       if (start) {
         setSelectedPoint(start);
         setIsDrawing(true);
-        setCurrentCurve([{ x: start.x, y: start.y }]);
+        setCurrentCurve([{ x: Math.round(start.x), y: Math.round(start.y) }]);
       }
     }
   };
+  
 
   const handleMouseUp = (event) => {
     console.log("handleMouseUp triggered"); // Log de début de la fonction
@@ -106,18 +108,18 @@ const Canvas = ({ points, setPoints, curves, setCurves }) => {
       console.error("Canvas not found.");
       return;
     }
-
+  
     const pos = getMousePos(canvas, event);
     console.log("Mouse position on mouseUp: ", pos); // Log des coordonnées du curseur
-
-    const endPoint = getNearPoint(pos.x, pos.y, points);
+  
+    const endPoint = getNearPoint(Math.round(pos.x), Math.round(pos.y), points);
     console.log("End point found: ", endPoint); // Log du point trouvé
-
+  
     if (endPoint && selectedPoint && canConnect(selectedPoint, endPoint)) {
-      const addedPoint = { x: pos.x, y: pos.y, connections: 0, label: getNextLabel(points) };
+      const addedPoint = { x: Math.round(pos.x), y: Math.round(pos.y), connections: 0, label: getNextLabel(points) };
       const adjustedCurve = [...currentCurve, addedPoint, endPoint];
       console.log("Adjusted curve: ", adjustedCurve); // Log de la courbe ajustée
-
+  
       if (curveIntersects(adjustedCurve, curves, points)) {
         toast.error("Intersection détectée.", { autoClose: 1500 });
         setCurrentCurve([]); // Réinitialiser la courbe
@@ -126,12 +128,20 @@ const Canvas = ({ points, setPoints, curves, setCurves }) => {
         setCurrentCurve([]); // Réinitialiser la courbe
       } else {
         console.log("Curve validated, connecting points...");
-        connectPoints(selectedPoint, endPoint, adjustedCurve, points, setPoints, setCurves);
-        setAwaitingPointPlacement(true);
+  
+      // Mettre à jour la curveMap existante
+      const updatedCurveMap = updateCurveMap(curveMap, selectedPoint, endPoint, adjustedCurve);
+      console.log(updatedCurveMap);
 
-        // Mettre à jour la chaîne de caractères avec la nouvelle région
-        const updateGraphString = generateGraphString(selectedPoint, addedPoint, endPoint, graphString);
-        setGraphString(updateGraphString);
+      setCurves(prevCurves => [...prevCurves, adjustedCurve]);
+      setCurveMap(updatedCurveMap);
+
+      connectPoints(selectedPoint, endPoint, adjustedCurve, points, setPoints, setCurves);
+      setAwaitingPointPlacement(true);
+
+      // Mettre à jour la chaîne de caractères avec la nouvelle région
+      const updateGraphString = generateGraphString(selectedPoint, addedPoint, endPoint, graphString, updatedCurveMap, points);
+      setGraphString(updateGraphString);
       }
     } else {
       if (!endPoint) {
@@ -143,6 +153,7 @@ const Canvas = ({ points, setPoints, curves, setCurves }) => {
     }
     setIsDrawing(false);
   };
+  
 
   const validateCurve = (curve) => {
     return curve.every(point => point && point.x && point.y);
@@ -153,9 +164,9 @@ const Canvas = ({ points, setPoints, curves, setCurves }) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const pos = getMousePos(canvas, event);
-
+  
     setCurrentCurve(prevCurve => {
-      const newCurve = [...prevCurve, { x: pos.x, y: pos.y }];
+      const newCurve = [...prevCurve, { x: Math.round(pos.x), y: Math.round(pos.y) }];
       if (!validateCurve(newCurve)) {
         console.error("Invalid curve detected:", newCurve);
         return prevCurve; // Retourne la courbe précédente si elle est invalide
@@ -166,6 +177,7 @@ const Canvas = ({ points, setPoints, curves, setCurves }) => {
       return newCurve;
     });
   };
+  
 
   return (
     <div id="canvas-container">
