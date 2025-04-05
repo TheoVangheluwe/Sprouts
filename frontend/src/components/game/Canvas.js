@@ -79,16 +79,14 @@ const Canvas = ({ points, setPoints, curves, setCurves }) => {
       if (closestPoint) {
         if (!isPointTooClose(Math.round(closestPoint.x), Math.round(closestPoint.y), points)) {
           const newPoint = { x: Math.round(closestPoint.x), y: Math.round(closestPoint.y), connections: 2, label: getNextLabel(points) };
-          setPoints(prevPoints => [...prevPoints, newPoint]);
+          //setPoints(prevPoints => [...prevPoints, newPoint]);
           setCurves(prevCurves => [...prevCurves, currentCurve]);
 
           const test = points;
           test.push(newPoint);
 
-          console.log(test);
-
           // Mettre à jour la chaîne de caractères après avoir placé le point
-          const updatedGraphString = generateGraphString(selectedPoint, newPoint, endPoint, graphString, curveMap, points);
+          const updatedGraphString = generateGraphString(selectedPoint, newPoint, endPoint, graphString, curveMap, test);
           setGraphString(updatedGraphString);
 
           setAwaitingPointPlacement(false);
@@ -142,7 +140,6 @@ const Canvas = ({ points, setPoints, curves, setCurves }) => {
 
         // Mettre à jour la curveMap existante
         const updatedCurveMap = updateCurveMap(curveMap, selectedPoint, end, adjustedCurve);
-        console.log(updatedCurveMap);
 
         setCurves(prevCurves => [...prevCurves, adjustedCurve]);
         setCurveMap(updatedCurveMap);
