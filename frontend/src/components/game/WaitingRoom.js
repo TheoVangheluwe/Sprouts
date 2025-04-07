@@ -87,7 +87,8 @@ function WaitingRoom() {
                     </li>
                 ))}
             </ul>
-            {!ready && (
+
+            {playerCount > 1 && !ready && (
                 <button
                     onClick={setPlayerReady}
                     style={{

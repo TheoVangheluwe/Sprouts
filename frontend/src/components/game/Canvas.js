@@ -60,6 +60,7 @@ const Canvas = ({ points, setPoints, curves, setCurves, isMultiplayer }) => {
         if (!isPointTooClose(closestPoint.x, closestPoint.y, points)) {
           const newPoint = { x: closestPoint.x, y: closestPoint.y, connections: 2, label: getNextLabel(points) };
           setPoints(prevPoints => [...prevPoints, newPoint]);
+          console.log("points:", points)
           setCurves(prevCurves => [...prevCurves, currentCurve]);
           setAwaitingPointPlacement(false);
           setCurrentCurve([]);

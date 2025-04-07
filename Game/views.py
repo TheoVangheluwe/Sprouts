@@ -146,10 +146,25 @@ def make_move(request, game_id):
             if not game.state:
                 game.state = {"curves": [], "points": []}
 
-            if move["type"] == "draw_curve":
-                game.state["curves"].append(move["curve"])  # 🔹 Ajouter la courbe sans écraser les autres
+            if move["type"] == "initialize_points":
+                # Ajouter les points de base
+                game.state["points"] = move["points"]
+            elif move["type"] == "draw_curve":
+                start_point = next((p for p in game.state["points"] if p["label"] == move["startPoint"]), None)
+                end_point = next((p for p in game.state["points"] if p["label"] == move["endPoint"]), None)
+
+
+                # Ajouter la courbe et mettre à jour les connexions
+                game.state["curves"].append(move["curve"])
+
+                # Mettre à jour les connexions des points
+                for point in game.state["points"]:
+                    if point["label"] == move["startPoint"] or point["label"] == move["endPoint"]:
+                        point["connections"] += 1
+
             elif move["type"] == "place_point":
-                game.state["points"].append(move["point"])  # 🔹 Ajouter le point sans effacer le reste
+                # Ajouter le point sans effacer le reste
+                game.state["points"].append(move["point"])
 
                 # Passer le tour au joueur suivant
                 players = list(game.players.all())
@@ -180,7 +195,6 @@ def make_move(request, game_id):
     else:
         logger.error("Invalid request method")
         return JsonResponse({'error': 'Invalid request method'}, status=405)
-
 def register(request):
     if request.method == 'POST':
         form = UserCreationForm(request.POST)
