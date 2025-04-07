@@ -56,7 +56,7 @@ const Canvas = ({ points, setPoints, curves, setCurves }) => {
       return { x, y };
     };
 
-    while (newPoints.length < 3) {
+    while (newPoints.length < 4) {
       const newPoint = generateRandomPoint();
       if (newPoints.every(point => Math.hypot(point.x - newPoint.x, point.y - newPoint.y) >= minDistance)) {
         newPoint.connections = 0;
