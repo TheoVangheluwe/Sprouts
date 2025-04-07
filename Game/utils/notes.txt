@@ -21,4 +21,4 @@ Pour faire un coup dans la chaîne de caractères :
 TODO:
 move_generator
 playable_vertices (in move_verification)
-is_valid_move (finir les derniers trucs)
+is_valid_move (finir le derniers trucs)

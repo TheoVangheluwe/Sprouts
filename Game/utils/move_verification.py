@@ -88,7 +88,6 @@ def get_vertex_degrees(chain): #utilisation modulaire necessitant seulement la c
 
     return degree
 
-#A AMELIORER (voir dans regions si liable)
 """
 Détermine les sommets sur lesquels un coup peut être joué (pas très utile en comparaison avec les autres fonctions + complètes)
 """
@@ -96,10 +95,10 @@ def playable_vertices(chain):
     degree = get_vertex_degrees(chain)
     return [v for v, d in degree.items() if d < 3]
 
-#NON FINIT
 """
 Détermine à partir de deux chaînes de caractères (chaine actuelle et chaine du tour precedent) si le coup est valide ou non
 """
+#TODO
 def is_valid_move(old_chain, new_chain):
     old_boundaries = parse_boundaries(old_chain)
     new_boundaries = parse_boundaries(new_chain)

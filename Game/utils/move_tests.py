@@ -1,5 +1,5 @@
 from move_verification import parse_boundaries, parse_regions, get_vertex_degrees, is_valid_move,playable_vertices
-#from move_generator import generate_possible_moves, encode_to_chain
+from move_generator import generate_possible_moves, choose_move
 from move_over import is_game_over
 
 chain_doc = "AL.}AL.BNMCMN.}D.COFPGQFOCM.}E.HRISJSIUKTKUIR.FQGP.}KT.}!" #chaine du pdf
@@ -48,7 +48,7 @@ chain_old = "A.BNMCMN.}MC.}!" #possible chaine avant 1
 chain_old2 = "AL.}AL.B.MC.}MC.}!" #possible chaine avant 2
 #faire des tests avec des fausses chaines qui isolent chaque module de test de la fct
 
-if True:
+if False:
     print(is_valid_move(chain_old2, chain))
 
 """
@@ -57,5 +57,19 @@ Test is_game_over
 chain_over = "ABC.}ABC.}AB.}"
 chain_not_over = "AL.}AL.BNMCMN.}MC.}!"
 
-if True:
+if False:
     print(is_game_over(chain_over))
+
+"""
+Test generate_possible_moves
+"""
+if True:
+    print("Liste des coups possibles :")
+    print(generate_possible_moves(chain_doc))
+
+"""
+Test choose_move (dépend de generate_possible_moves)
+"""
+if True:
+    print("Coup choisi :")
+    print(choose_move(chain_doc))
