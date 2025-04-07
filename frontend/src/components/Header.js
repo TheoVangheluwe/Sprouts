@@ -1,5 +1,6 @@
 import React from 'react';
-import logo from './sprouts.png';import { Link } from 'react-router-dom';
+import logo from './sprouts.png';
+//import { Link } from 'react-router-dom';
 
 const Header = () => {
   return (
