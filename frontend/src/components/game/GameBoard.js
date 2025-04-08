@@ -3,6 +3,7 @@ import Canvas from './Canvas';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import './GameBoard.css';
+import Menu from '../Menu';
 
 const GameBoard = () => {
   const [points, setPoints] = useState([]);
@@ -10,7 +11,7 @@ const GameBoard = () => {
 
   return (
     <div className="game-container">
-      <h1>Sprouts Game</h1>
+      <Menu/>
       <Canvas
         points={points}
         setPoints={setPoints}

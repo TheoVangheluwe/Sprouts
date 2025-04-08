@@ -16,9 +16,8 @@ const Canvas = ({ points, setPoints, curves, setCurves }) => {
     const resizeCanvas = () => {
       const canvas = canvasRef.current;
       if (canvas) {
-        const container = canvas.parentElement;
-        canvas.width = container.clientWidth;
-        canvas.height = container.clientHeight;
+        canvas.width = 800;
+        canvas.height = 500;
         drawGame(canvasRef, points, curves, currentCurve);
       }
     };
@@ -182,10 +181,12 @@ const Canvas = ({ points, setPoints, curves, setCurves }) => {
   };
 
   return (
-    <div id="canvas-container">
+    <div id="canvas-container" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
       <canvas
         ref={canvasRef}
-        style={{ border: "1px solid black" }}
+        width="1000"
+        height="1000"
+        style={{ border: "1px solid black", backgroundColor: '#fff' }}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
