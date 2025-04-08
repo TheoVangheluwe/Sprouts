@@ -130,71 +130,79 @@ def start_game(request, game_id):
 def make_move(request, game_id):
     logger.debug(f"make_move called with method {request.method} for game_id {game_id}")
 
-    if request.method == 'POST':
-        try:
-            logger.debug(f"Received move request for game_id: {game_id}")
-            game = Game.objects.get(id=game_id)
-
-            move = json.loads(request.body.decode('utf-8'))
-            logger.debug(f"Move received: {move}")
-
-            if not move:
-                logger.error("Move data is missing")
-                return JsonResponse({'error': 'Move data is missing'}, status=400)
-
-            # Initialiser l'état s'il est vide
-            if not game.state:
-                game.state = {"curves": [], "points": []}
-
-            if move["type"] == "initialize_points":
-                # Ajouter les points de base
-                game.state["points"] = move["points"]
-            elif move["type"] == "draw_curve":
-                start_point = next((p for p in game.state["points"] if p["label"] == move["startPoint"]), None)
-                end_point = next((p for p in game.state["points"] if p["label"] == move["endPoint"]), None)
-
-
-                # Ajouter la courbe et mettre à jour les connexions
-                game.state["curves"].append(move["curve"])
-
-                # Mettre à jour les connexions des points
-                for point in game.state["points"]:
-                    if point["label"] == move["startPoint"] or point["label"] == move["endPoint"]:
-                        point["connections"] += 1
-
-            elif move["type"] == "place_point":
-                # Ajouter le point sans effacer le reste
-                game.state["points"].append(move["point"])
-
-                # Passer le tour au joueur suivant
-                players = list(game.players.all())
-                current_player_index = players.index(game.current_player)
-                next_player_index = (current_player_index + 1) % len(players)
-                game.current_player = players[next_player_index]
-
-            game.save()
-            logger.debug(f"Game state updated: {game.state}")
-
-            return JsonResponse({
-                'state': game.state,
-                'currentPlayer': game.current_player.id,
-                'curves': game.state.get('curves', []),
-                'points': game.state.get('points', [])
-            })
-
-        except Game.DoesNotExist:
-            logger.error(f"Game with id {game_id} does not exist.")
-            return JsonResponse({'error': 'Game not found'}, status=404)
-        except json.JSONDecodeError:
-            logger.error("Invalid JSON format in request body")
-            return JsonResponse({'error': 'Invalid JSON format'}, status=400)
-        except Exception as e:
-            logger.error(f"Error in make_move: {e}")
-            return JsonResponse({'error': 'An error occurred while making the move.'}, status=500)
-
-    else:
+    if request.method != 'POST':
         logger.error("Invalid request method")
         return JsonResponse({'error': 'Invalid request method'}, status=405)
+
+    try:
+        logger.debug(f"Received move request for game_id: {game_id}")
+        game = Game.objects.get(id=game_id)
+
+        move = json.loads(request.body.decode('utf-8'))
+        logger.debug(f"Move received: {move}")
+
+        if not move:
+            logger.error("Move data is missing")
+            return JsonResponse({'error': 'Move data is missing'}, status=400)
+
+        if not game.state:
+            game.state = {"curves": [], "points": []}
+
+        if move["type"] == "initialize_points":
+            game.state["points"] = move["points"]
+
+        elif move["type"] == "draw_curve":
+            start_point = next((p for p in game.state["points"] if p["label"] == move["startPoint"]), None)
+            end_point = next((p for p in game.state["points"] if p["label"] == move["endPoint"]), None)
+
+            if not start_point or not end_point:
+                logger.error("Start point or end point not found")
+                return JsonResponse({'error': 'Invalid start or end point'}, status=400)
+
+            if start_point["connections"] >= 3 or end_point["connections"] >= 3:
+                logger.warning("One of the points has reached maximum connections")
+                return JsonResponse({'error': 'Maximum connections reached for a point'}, status=400)
+
+            game.state["curves"].append(move["curve"])
+
+            for point in game.state["points"]:
+                if point["label"] == move["startPoint"] or point["label"] == move["endPoint"]:
+                    point["connections"] += 1
+
+        elif move["type"] == "place_point":
+            game.state["points"].append(move["point"])
+
+            players = list(game.players.all())
+            current_player_index = players.index(game.current_player)
+            next_player_index = (current_player_index + 1) % len(players)
+            game.current_player = players[next_player_index]
+
+        else:
+            logger.error(f"Invalid move type: {move['type']}")
+            return JsonResponse({'error': 'Invalid move type'}, status=400)
+
+        game.save()
+        logger.debug(f"Game state updated: {game.state}")
+
+        return JsonResponse({
+            'gameId': game.id,
+            'state': game.state,
+            'currentPlayer': game.current_player.id,
+            'curves': game.state.get('curves', []),
+            'points': game.state.get('points', [])
+        })
+
+    except Game.DoesNotExist:
+        logger.error(f"Game with id {game_id} does not exist.")
+        return JsonResponse({'error': 'Game not found'}, status=404)
+
+    except json.JSONDecodeError:
+        logger.error("Invalid JSON format in request body")
+        return JsonResponse({'error': 'Invalid JSON format'}, status=400)
+
+    except Exception as e:
+        logger.error(f"Error in make_move: {e}")
+        return JsonResponse({'error': 'An error occurred while making the move.'}, status=500)
 def register(request):
     if request.method == 'POST':
         form = UserCreationForm(request.POST)

@@ -7,5 +7,6 @@ Installer django
 pip install django
 pip install channels
 pip install requests
+pip install django-webpack-loader
 
 ```

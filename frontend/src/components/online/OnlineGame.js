@@ -142,11 +142,6 @@ function OnlineGame() {
 };
     return (
         <div>
-            <h1>Jeu en Ligne</h1>
-            <div>
-                <p>Points actuels: {points.length}</p>
-                <p>Courbes actuelles: {curves.length}</p>
-            </div>
             {gameState && (
                 <OnlineCanvas
                     // Utiliser directement nos états locaux pour les points et courbes
@@ -160,17 +155,7 @@ function OnlineGame() {
                 />
             )}
             <ToastContainer position="top-right" autoClose={1500} hideProgressBar={true} newestOnTop={false} closeOnClick={false} rtl={false} pauseOnFocusLoss={false} draggable={false} pauseOnHover={false} />
-            <div style={{ border: '1px solid black', padding: '10px', margin: '10px 0' }}>
-                <h3>État actuel :</h3>
-                <p>Nombre de points : {points.length}</p>
-                <ul>
-                    {points.map((point, index) => (
-                        <li key={index}>
-                            Point {point.label} : x={point.x.toFixed(2)}, y={point.y.toFixed(2)}, connexions={point.connections}
-                        </li>
-                    ))}
-                </ul>
-            </div>
+
         </div>
     );
 }
