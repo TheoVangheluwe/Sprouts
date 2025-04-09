@@ -98,7 +98,12 @@ def playable_vertices(chain):
 """
 Détermine à partir de deux chaînes de caractères (chaine actuelle et chaine du tour precedent) si le coup est valide ou non
 """
-#TODO
+#TODO #possiblement changer la manière dont ca marche :
+#possible nouvelle methode
+# 1. on test quel point est nouveau 
+# 2. & ses deux connexions (attention self loop)
+# 3. on essaye de simuler le coup avec la chaine de charactère n-1 et verifie si ca marche
+# possible truc à verif : un coup entre deux points peut prendre plusieurs formes (dépend de quel region est joué et le decoupage de region)
 def is_valid_move(old_chain, new_chain):
     old_boundaries = parse_boundaries(old_chain)
     new_boundaries = parse_boundaries(new_chain)
