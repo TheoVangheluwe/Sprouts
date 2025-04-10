@@ -10,11 +10,20 @@ export const drawGame = (canvasRef, pointsToDraw = [], curvesToDraw = [], tempCu
 
     // Dessiner les courbes
     safeCurves.forEach(curve => {
-        if (curve && Array.isArray(curve) && curve.length > 0) {
+        // Adaptez cette partie pour gérer les courbes avec des structures différentes
+        let pointsToUse = null;
+
+        if (curve && Array.isArray(curve)) {
+            pointsToUse = curve;
+        } else if (curve && typeof curve === 'object' && Array.isArray(curve.points)) {
+            pointsToUse = curve.points;
+        }
+
+        if (pointsToUse && pointsToUse.length > 0) {
             ctx.beginPath();
-            ctx.moveTo(curve[0].x, curve[0].y);
-            for (let i = 1; i < curve.length; i++) {
-                ctx.lineTo(curve[i].x, curve[i].y);
+            ctx.moveTo(pointsToUse[0].x, pointsToUse[0].y);
+            for (let i = 1; i < pointsToUse.length; i++) {
+                ctx.lineTo(pointsToUse[i].x, pointsToUse[i].y);
             }
             ctx.strokeStyle = "blue";
             ctx.lineWidth = 2;

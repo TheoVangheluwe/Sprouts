@@ -141,13 +141,11 @@ def start_game(request, game_id):
 @csrf_exempt
 @login_required(login_url='login')
 def make_move(request, game_id):
-
     if request.method != 'POST':
         return JsonResponse({'error': 'Invalid request method'}, status=405)
 
     try:
         game = Game.objects.get(id=game_id)
-
         move = json.loads(request.body.decode('utf-8'))
 
         if not move:
@@ -157,14 +155,14 @@ def make_move(request, game_id):
             game.state = {"curves": [], "points": []}
 
         if move["type"] == "initialize_points":
-            # Le nombre de points est déterminé par la préférence du jeu
-            # Vérifier si le nombre de points est cohérent avec les préférences
+            # Initialisation des points avec vérification des préférences
             if len(move["points"]) in game.point_options:
                 game.state["points"] = move["points"]
             else:
                 return JsonResponse({'error': 'Invalid number of points'}, status=400)
 
         elif move["type"] == "draw_curve":
+            # Gestion des courbes
             start_point = next((p for p in game.state["points"] if p["label"] == move["startPoint"]), None)
             end_point = next((p for p in game.state["points"] if p["label"] == move["endPoint"]), None)
 
@@ -174,29 +172,48 @@ def make_move(request, game_id):
             if start_point["connections"] >= 3 or end_point["connections"] >= 3:
                 return JsonResponse({'error': 'Maximum connections reached for a point'}, status=400)
 
-            # Ajouter l'information du joueur à la courbe
+            # Normaliser la structure de la courbe
+            curve_to_add = None
             if isinstance(move["curve"], list):
-                move["curve"] = {"points": move["curve"], "player": request.user.id}
+                curve_to_add = {"points": move["curve"], "player": request.user.id}
             else:
-                move["curve"]["player"] = request.user.id
+                curve_to_add = move["curve"]
+                curve_to_add["player"] = request.user.id
 
-            game.state["curves"].append(move["curve"])
+            # Vérifier si la courbe existe déjà pour éviter les doublons
+            # Cette vérification est simplifiée pour plus de fiabilité
+            curve_exists = False
+            for i, existing_curve in enumerate(game.state.get("curves", [])):
+                # Vérifier la structure
+                if not isinstance(existing_curve, dict):
+                    continue
+
+                # Pour vérifier si les courbes sont les mêmes, on compare leurs points de début et de fin
+                existing_points = existing_curve.get("points", [])
+                new_points = curve_to_add.get("points", [])
+
+                if len(existing_points) > 0 and len(new_points) > 0:
+                    # Vérifier le premier et le dernier point
+                    if (existing_points[0] == new_points[0] and existing_points[-1] == new_points[-1]) or \
+                            (existing_points[0] == new_points[-1] and existing_points[-1] == new_points[0]):
+                        curve_exists = True
+                        break
+
+            if not curve_exists:
+                game.state.setdefault("curves", []).append(curve_to_add)
 
             for point in game.state["points"]:
                 if point["label"] == move["startPoint"] or point["label"] == move["endPoint"]:
                     point["connections"] += 1
 
         elif move["type"] == "place_point":
+            # Ajout d'un point
             game.state["points"].append(move["point"])
 
-            # Ajouter l'information du joueur à la courbe si elle existe
-            if "curve" in move and move["curve"]:
-                if isinstance(move["curve"], list):
-                    move["curve"] = {"points": move["curve"], "player": request.user.id}
-                else:
-                    move["curve"]["player"] = request.user.id
-                game.state["curves"].append(move["curve"])
+            # Ne pas ajouter la courbe ici, car elle a déjà été ajoutée lors du draw_curve
+            # Les courbes ne doivent pas être modifiées quand un point est placé
 
+            # Gestion du joueur suivant
             players = list(game.players.all())
             current_player_index = players.index(game.current_player)
             next_player_index = (current_player_index + 1) % len(players)
@@ -222,11 +239,8 @@ def make_move(request, game_id):
         return JsonResponse({'error': 'Invalid JSON format'}, status=400)
 
     except Exception as e:
-        return JsonResponse({'error': 'An error occurred while making the move.'}, status=500)
+        return JsonResponse({'error': f'An error occurred: {str(e)}'}, status=500)
 
-# Nouvelles fonctions pour la gestion des files d'attente avec préférences de points
-
-# Modification de la fonction create_game pour qu'elle crée une "salle d'attente" sans GameId
 @csrf_exempt
 @login_required(login_url='login')
 def create_game(request):
