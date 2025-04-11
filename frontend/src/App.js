@@ -5,6 +5,8 @@ import Footer from './components/Footer';
 import GamePage from './pages/GamePage';
 import HomePage from './pages/HomePage';
 import RulesPage from './pages/RulesPage';
+import WaitingRoom from './components/game/WaitingRoom';
+import OnlineGame from './components/Online/OnlineGame';
 import './App.css';
 
 const App = () => {
@@ -17,10 +19,13 @@ const App = () => {
             <Route path="/" element={<HomePage />} />
             <Route path="/game" element={<GamePage />} />
             <Route path="/rules" element={<RulesPage />} />
+            <Route path="/waiting-room" element={<WaitingRoom />} />
+            <Route path="/online-game/:gameId" element={<OnlineGame />} />
           </Routes>
         </main>
         <Footer />
       </div>
+        
     </Router>
   );
 };
