@@ -614,7 +614,7 @@ def join_specific_game(request, game_id):
 @csrf_exempt
 @login_required(login_url='login')
 def leave_game(request, game_id):
-    """Quitter un jeu"""
+    """Quitter un jeu et informer l'autre joueur"""
     if request.method != 'POST':
         return JsonResponse({'error': 'Invalid request method'}, status=405)
 
@@ -624,6 +624,21 @@ def leave_game(request, game_id):
         # Vérifier si le joueur est dans le jeu
         if request.user not in game.players.all():
             return JsonResponse({'error': 'You are not in this game'}, status=400)
+
+        # Récupérer l'adversaire avant de modifier le jeu
+        other_players = list(game.players.exclude(id=request.user.id))
+
+        # Ajouter une information dans l'état du jeu pour indiquer qui a abandonné
+        if not game.state:
+            game.state = {}
+
+        game.state['abandoned_by'] = request.user.username
+        game.state['abandoned_at'] = datetime.now().isoformat()
+        game.status = 'abandoned'  # Marquer le jeu comme abandonné
+        game.save()
+
+        # Enregistrer cette information avant de retirer le joueur
+        # pour que l'autre joueur puisse la voir
 
         # Retirer le joueur du jeu
         game.players.remove(request.user)
@@ -648,9 +663,12 @@ def leave_game(request, game_id):
 
         game.save()
 
-
-
-        return JsonResponse({'success': True, 'message': 'Left game successfully'})
+        # Retourner les informations sur l'abandon
+        return JsonResponse({
+            'success': True,
+            'message': 'Left game successfully',
+            'abandoned': True
+        })
 
     except Game.DoesNotExist:
         return JsonResponse({'error': 'Game not found'}, status=404)
