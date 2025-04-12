@@ -1,8 +1,19 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { toast } from 'react-toastify';
-import { drawGame, getMousePos, getNearPoint, canConnect, connectPoints, curveIntersects, curveLength, getNextLabel, getClosestPointOnCurve, isPointTooClose } from './OnlineUtils';
-
-
+import {
+    drawGame,
+    getMousePos,
+    getNearPoint,
+    canConnect,
+    connectPoints,
+    curveIntersects,
+    curveLength,
+    getNextLabel,
+    getClosestPointOnCurve,
+    isPointTooClose,
+    LOGICAL_WIDTH,
+    LOGICAL_HEIGHT
+} from './OnlineUtils';
 
 const OnlineCanvas = ({ points, setPoints, curves = [], setCurves, currentPlayer, myTurn, onMove }) => {
     const canvasRef = useRef(null);
@@ -14,8 +25,6 @@ const OnlineCanvas = ({ points, setPoints, curves = [], setCurves, currentPlayer
     // Références pour suivre les changements dans les props
     const prevPointsRef = useRef(null);
     const prevCurvesRef = useRef(null);
-
-
 
     // UseEffect pour redimensionner le canvas
     useEffect(() => {
@@ -58,8 +67,6 @@ const OnlineCanvas = ({ points, setPoints, curves = [], setCurves, currentPlayer
 
         // Ne log que si quelque chose a changé
         if (pointsChanged || curvesChanged)  {
-
-
             // Met à jour les références
             prevPointsRef.current = points;
             prevCurvesRef.current = curves;
@@ -70,11 +77,10 @@ const OnlineCanvas = ({ points, setPoints, curves = [], setCurves, currentPlayer
     useEffect(() => {
         if (points.length === 0) {
             const newPoints = [];
-            const canvas = canvasRef.current;
-            if (!canvas) return;
-            const centerX = canvas.width / 2;
-            const centerY = canvas.height / 2;
-            const radius = Math.min(canvas.width, canvas.height) * 0.3;
+            // Utiliser les dimensions logiques pour positionner les points initiaux
+            const centerX = LOGICAL_WIDTH / 2;
+            const centerY = LOGICAL_HEIGHT / 2;
+            const radius = Math.min(LOGICAL_WIDTH, LOGICAL_HEIGHT) * 0.3;
             const n = 3;
             const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
             for (let i = 0; i < n; i++) {
@@ -108,6 +114,7 @@ const OnlineCanvas = ({ points, setPoints, curves = [], setCurves, currentPlayer
         }
         const canvas = canvasRef.current;
         if (!canvas) return;
+        // getMousePos convertit déjà en coordonnées logiques [0,1000]
         const pos = getMousePos(canvas, event);
 
         if (awaitingPointPlacement) {
@@ -122,8 +129,6 @@ const OnlineCanvas = ({ points, setPoints, curves = [], setCurves, currentPlayer
                         connections: 2,
                         label: newLabel
                     };
-
-
 
                     // IMPORTANT: Mettre à jour les points localement
                     const updatedPoints = [...points, newPoint];
@@ -165,65 +170,64 @@ const OnlineCanvas = ({ points, setPoints, curves = [], setCurves, currentPlayer
 
     // Fonction pour gérer le relâchement du clic de souris
     const handleMouseUp = (event) => {
-    if (!isDrawing) return;
+        if (!isDrawing) return;
 
-    const canvas = canvasRef.current;
-    if (!canvas) return;
+        const canvas = canvasRef.current;
+        if (!canvas) return;
 
-    const pos = getMousePos(canvas, event);
-    const endPoint = getNearPoint(pos.x, pos.y, points);
+        // getMousePos convertit déjà en coordonnées logiques [0,1000]
+        const pos = getMousePos(canvas, event);
+        const endPoint = getNearPoint(pos.x, pos.y, points);
 
-    if (!endPoint) {
-        toast.error("Destination invalide.", { autoClose: 1500 });
-        setCurrentCurve([]);
+        if (!endPoint) {
+            toast.error("Destination invalide.", { autoClose: 1500 });
+            setCurrentCurve([]);
+            setIsDrawing(false);
+            setSelectedPoint(null);
+            return;
+        }
+
+        if (!selectedPoint || !canConnect(selectedPoint, endPoint)) {
+            toast.error("Trop de connexions sur le point.", { autoClose: 1500 });
+            setCurrentCurve([]);
+            setIsDrawing(false);
+            setSelectedPoint(null);
+            return;
+        }
+
+        const adjustedCurve = [...currentCurve, { x: endPoint.x, y: endPoint.y }];
+
+        if (curveIntersects(adjustedCurve, Array.isArray(curves) ? curves : [], points)) {
+            toast.error("Intersection détectée.", { autoClose: 1500 });
+            setCurrentCurve([]);
+        } else if (curveLength(adjustedCurve) < 50) {
+            toast.error("Courbe trop courte.", { autoClose: 1500 });
+            setCurrentCurve([]);
+        } else {
+            const updatedPoints = points.map(point => {
+                if (point.label === selectedPoint.label || point.label === endPoint.label) {
+                    return { ...point, connections: point.connections + 1 };
+                }
+                return point;
+            });
+
+            const updatedCurves = [...curves, adjustedCurve];
+
+            setPoints(updatedPoints);
+            setCurves(updatedCurves);
+            setAwaitingPointPlacement(true);
+
+            onMove({
+                type: 'draw_curve',
+                curve: adjustedCurve,
+                startPoint: selectedPoint.label,
+                endPoint: endPoint.label
+            });
+        }
+
         setIsDrawing(false);
         setSelectedPoint(null);
-        return;
-    }
-
-    if (!selectedPoint || !canConnect(selectedPoint, endPoint)) {
-        toast.error("Trop de connexions sur le point.", { autoClose: 1500 });
-        setCurrentCurve([]);
-        setIsDrawing(false);
-        setSelectedPoint(null);
-        return;
-    }
-
-    const adjustedCurve = [...currentCurve, { x: endPoint.x, y: endPoint.y }];
-
-    if (curveIntersects(adjustedCurve, Array.isArray(curves) ? curves : [], points)) {
-        toast.error("Intersection détectée.", { autoClose: 1500 });
-        setCurrentCurve([]);
-    } else if (curveLength(adjustedCurve) < 50) {
-        toast.error("Courbe trop courte.", { autoClose: 1500 });
-        setCurrentCurve([]);
-    } else {
-        const updatedPoints = points.map(point => {
-            if (point.label === selectedPoint.label || point.label === endPoint.label) {
-                return { ...point, connections: point.connections + 1 };
-            }
-            return point;
-        });
-
-        const updatedCurves = [...curves, adjustedCurve];
-
-        setPoints(updatedPoints);
-        setCurves(updatedCurves);
-        setAwaitingPointPlacement(true);
-
-        onMove({
-            type: 'draw_curve',
-            curve: adjustedCurve,
-            startPoint: selectedPoint.label,
-            endPoint: endPoint.label
-        });
-    }
-
-    setIsDrawing(false);
-    setSelectedPoint(null);
-};
-
-
+    };
 
     // Fonction pour gérer le mouvement de la souris
     const handleMouseMove = (event) => {
@@ -231,6 +235,7 @@ const OnlineCanvas = ({ points, setPoints, curves = [], setCurves, currentPlayer
 
         const canvas = canvasRef.current;
         if (!canvas) return;
+        // getMousePos convertit déjà en coordonnées logiques [0,1000]
         const pos = getMousePos(canvas, event);
 
         setCurrentCurve(prevCurve => {
@@ -247,10 +252,10 @@ const OnlineCanvas = ({ points, setPoints, curves = [], setCurves, currentPlayer
     };
 
     return (
-        <div id="canvas-container">
+        <div id="canvas-container" style={{ width: '100%', height: '100%' }}>
             <canvas
                 ref={canvasRef}
-                style={{ border: "1px solid black" }}
+                style={{ border: "1px solid black", width: '100%', height: '100%' }}
                 onMouseDown={handleMouseDown}
                 onMouseMove={handleMouseMove}
                 onMouseUp={handleMouseUp}

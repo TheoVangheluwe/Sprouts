@@ -23,11 +23,11 @@ function OnlineGame() {
         // Si le nombre de points est inférieur à 3, utiliser au moins 3 points
         const pointCount = Math.max(3, numPoints);
 
-        // Canvas dimensions
-        const canvasWidth = 600;
-        const canvasHeight = 500;
-        const padding = 50; // Espace minimum depuis les bords
-        const minDistanceBetweenPoints = 100; // Distance minimale entre les points
+        // Canvas dimensions en coordonnées logiques [0,500]
+        const canvasWidth = 500;  // Utiliser l'espace de coordonnées logiques
+        const canvasHeight = 500; // Utiliser l'espace de coordonnées logiques
+        const padding = 100; // Espace minimum depuis les bords (10% de l'espace)
+        const minDistanceBetweenPoints = 150; // Distance minimale entre les points
 
         const initialPoints = [];
         const labels = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
@@ -73,7 +73,6 @@ function OnlineGame() {
 
         return initialPoints;
     };
-
 
     useEffect(() => {
         // Récupérer les informations sur l'utilisateur
@@ -432,43 +431,64 @@ function OnlineGame() {
     }
 
     return (
-        <div style={{ position: 'relative' }}>
+        <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            minHeight: '90vh',
+            padding: '10px'
+        }}>
             {gameState && (
-                <>
-                    <OnlineCanvas
-                        points={points}
-                        setPoints={setPoints}
-                        curves={curves}
-                        setCurves={setCurves}
-                        currentPlayer={currentPlayer}
-                        myTurn={currentPlayer === playerId}
-                        onMove={handleMove}
-                        selectedPoints={selectedPoints}
-                    />
+                <div style={{
+                    width: '80%',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center'
+                }}>
                     <div style={{
-                        position: 'absolute',
-                        top: '10px',
-                        right: '10px',
-                        zIndex: 1000
+                        width: '100%',
+                        aspectRatio: '5/3',  // Rapport d'aspect 1250:750 (5:3)
+                        border: '1px solid #ddd',
+                        borderRadius: '8px',
+                        overflow: 'hidden',
+                        boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)'
+                    }}>
+                        <OnlineCanvas
+                            points={points}
+                            setPoints={setPoints}
+                            curves={curves}
+                            setCurves={setCurves}
+                            currentPlayer={currentPlayer}
+                            myTurn={currentPlayer === playerId}
+                            onMove={handleMove}
+                            selectedPoints={selectedPoints}
+                        />
+                    </div>
+
+                    <div style={{
+                        marginTop: '10px',
+                        textAlign: 'center'
                     }}>
                         <button
                             onClick={handleLeaveGame}
                             disabled={isLeaving}
                             style={{
-                                padding: '8px 15px',
+                                padding: '10px 20px',
                                 backgroundColor: '#f44336',
                                 color: 'white',
                                 border: 'none',
                                 borderRadius: '4px',
                                 cursor: isLeaving ? 'not-allowed' : 'pointer',
                                 fontWeight: 'bold',
-                                opacity: isLeaving ? 0.7 : 1
+                                opacity: isLeaving ? 0.7 : 1,
+                                margin: '10px 0'
                             }}
                         >
                             {isLeaving ? 'Sortie en cours...' : 'Quitter la partie'}
                         </button>
                     </div>
-                </>
+                </div>
             )}
             <ToastContainer position="top-right" autoClose={1500} hideProgressBar={true} newestOnTop={false} closeOnClick={false} rtl={false} pauseOnFocusLoss={false} draggable={false} pauseOnHover={false} />
         </div>

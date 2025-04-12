@@ -1,6 +1,34 @@
-export const drawGame = (canvasRef, pointsToDraw = [], curvesToDraw = [], tempCurve = null) => {
+// Constants pour les dimensions logiques
+const LOGICAL_WIDTH = 500;
+const LOGICAL_HEIGHT = 500;
+
+// Fonction pour convertir les coordonnées logiques vers les coordonnées physiques
+const toPhysicalCoords = (x, y, scale) => {
+    return {
+        x: x * scale.x,
+        y: y * scale.y
+    };
+};
+
+// Fonction pour convertir les coordonnées physiques vers les coordonnées logiques
+const toLogicalCoords = (x, y, scale) => {
+    return {
+        x: x / scale.x,
+        y: y / scale.y
+    };
+};
+
+export const drawGame = (canvasRef, pointsToDraw = [], curvesToDraw = [], tempCurve = null, scale = null) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+
+    // Calculer l'échelle si elle n'est pas fournie
+    if (!scale) {
+        scale = {
+            x: canvas.width / LOGICAL_WIDTH,
+            y: canvas.height / LOGICAL_HEIGHT
+        };
+    }
 
     const ctx = canvas.getContext("2d");
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -21,9 +49,13 @@ export const drawGame = (canvasRef, pointsToDraw = [], curvesToDraw = [], tempCu
 
         if (pointsToUse && pointsToUse.length > 0) {
             ctx.beginPath();
-            ctx.moveTo(pointsToUse[0].x, pointsToUse[0].y);
+            // Convertir les coordonnées logiques en coordonnées physiques
+            const physicalStart = toPhysicalCoords(pointsToUse[0].x, pointsToUse[0].y, scale);
+            ctx.moveTo(physicalStart.x, physicalStart.y);
+
             for (let i = 1; i < pointsToUse.length; i++) {
-                ctx.lineTo(pointsToUse[i].x, pointsToUse[i].y);
+                const physicalPoint = toPhysicalCoords(pointsToUse[i].x, pointsToUse[i].y, scale);
+                ctx.lineTo(physicalPoint.x, physicalPoint.y);
             }
             ctx.strokeStyle = "blue";
             ctx.lineWidth = 2;
@@ -38,11 +70,19 @@ export const drawGame = (canvasRef, pointsToDraw = [], curvesToDraw = [], tempCu
     safePoints.forEach(point => {
         if (point && typeof point.x === 'number' && typeof point.y === 'number') {
             ctx.beginPath();
-            ctx.arc(point.x, point.y, 5, 0, Math.PI * 2);
-            ctx.fillStyle = "black";
+            // Convertir les coordonnées logiques en coordonnées physiques
+            const physicalPoint = toPhysicalCoords(point.x, point.y, scale);
+            // Ajuster la taille du cercle en fonction de l'échelle
+            const radius = 5 * Math.min(scale.x, scale.y);
+            ctx.arc(physicalPoint.x, physicalPoint.y, radius, 0, Math.PI * 2);
+            ctx.fillStyle = point.connections >= 3 ? "red" : "black";
             ctx.fill();
+
             if (point.label) {
-                ctx.fillText(point.label, point.x + 10, point.y + 5);
+                // Ajuster la taille du texte en fonction de l'échelle
+                const fontSize = 12 * Math.min(scale.x, scale.y);
+                ctx.font = `${fontSize}px Arial`;
+                ctx.fillText(point.label, physicalPoint.x + radius + 5, physicalPoint.y + 5);
             }
         }
     });
@@ -50,9 +90,13 @@ export const drawGame = (canvasRef, pointsToDraw = [], curvesToDraw = [], tempCu
     // Dessiner la courbe temporaire
     if (tempCurve && tempCurve.length > 0) {
         ctx.beginPath();
-        ctx.moveTo(tempCurve[0].x, tempCurve[0].y);
+        // Convertir les coordonnées logiques en coordonnées physiques
+        const physicalStart = toPhysicalCoords(tempCurve[0].x, tempCurve[0].y, scale);
+        ctx.moveTo(physicalStart.x, physicalStart.y);
+
         for (let i = 1; i < tempCurve.length; i++) {
-            ctx.lineTo(tempCurve[i].x, tempCurve[i].y);
+            const physicalPoint = toPhysicalCoords(tempCurve[i].x, tempCurve[i].y, scale);
+            ctx.lineTo(physicalPoint.x, physicalPoint.y);
         }
         ctx.strokeStyle = "red";
         ctx.lineWidth = 2;
@@ -62,12 +106,20 @@ export const drawGame = (canvasRef, pointsToDraw = [], curvesToDraw = [], tempCu
 
 export const getMousePos = (canvas, event) => {
     const rect = canvas.getBoundingClientRect();
-    return {
-        x: event.clientX - rect.left,
-        y: event.clientY - rect.top,
+    const physicalX = event.clientX - rect.left;
+    const physicalY = event.clientY - rect.top;
+
+    // Convertir en coordonnées logiques [0,1000]×[0,1000]
+    const scale = {
+        x: canvas.width / LOGICAL_WIDTH,
+        y: canvas.height / LOGICAL_HEIGHT
     };
+
+    return toLogicalCoords(physicalX, physicalY, scale);
 };
 
+// Les fonctions suivantes n'ont pas besoin d'être modifiées car elles travaillent
+// déjà avec des coordonnées logiques après la conversion par getMousePos
 export const getNearPoint = (x, y, points, threshold = 15) => {
     return points.find(point => Math.hypot(point.x - x, point.y - y) <= threshold) || null;
 };
@@ -240,3 +292,13 @@ const getProjection = (px, py, p1, p2) => {
         return { x: p1.x + t * dx, y: p1.y + t * dy };
     }
 };
+
+// Exporter les fonctions de conversion pour les utiliser dans d'autres fichiers
+export const getScalingFactor = (canvas) => {
+    return {
+        x: canvas.width / LOGICAL_WIDTH,
+        y: canvas.height / LOGICAL_HEIGHT
+    };
+};
+
+export { toPhysicalCoords, toLogicalCoords, LOGICAL_WIDTH, LOGICAL_HEIGHT };
