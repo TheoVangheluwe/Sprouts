@@ -740,3 +740,401 @@ const isPointInPolygon = (point, polygon) => {
 
   return inside;
 };
+
+
+/**
+ * Découpe la chaîne de caractères en argument en frontières (concept de boundary)
+ */
+function parseBoundaries(chain) {
+  const boundaries = [];
+  let currentBoundary = [];
+
+  for (const char of chain) {
+      if (/\w/.test(char)) { // Vérifie si c'est un caractère alphanumérique
+          currentBoundary.push(char);
+      } else if (char === '.' || char === '}') {
+          if (currentBoundary.length > 0) {
+              boundaries.push(currentBoundary);
+              currentBoundary = [];
+          }
+      } else if (char === '!') {
+          break; // fin de la position
+      }
+  }
+
+  return boundaries;
+}
+
+/**
+* Découpe la chaîne de caractères en argument en régions
+*/
+function parseRegions(chain) {
+  const regions = [];
+  let currentRegion = [];
+  const seenInRegion = new Set();
+  let currentWord = "";
+
+  for (const char of chain) {
+      if (/\w/.test(char)) {
+          currentWord += char;
+      } else if (char === '.') {
+          if (currentWord) {
+              for (const v of currentWord) {
+                  if (!seenInRegion.has(v)) {
+                      currentRegion.push(v);
+                      seenInRegion.add(v);
+                  }
+              }
+              currentWord = "";
+          }
+      } else if (char === '}') {
+          if (currentWord) {
+              for (const v of currentWord) {
+                  if (!seenInRegion.has(v)) {
+                      currentRegion.push(v);
+                      seenInRegion.add(v);
+                  }
+              }
+              currentWord = "";
+          }
+          if (currentRegion.length > 0) {
+              regions.push(currentRegion);
+              currentRegion = [];
+              seenInRegion.clear();
+          }
+      } else if (char === '!') {
+          if (currentWord) {
+              for (const v of currentWord) {
+                  if (!seenInRegion.has(v)) {
+                      currentRegion.push(v);
+                      seenInRegion.add(v);
+                  }
+              }
+          }
+          if (currentRegion.length > 0) {
+              regions.push(currentRegion);
+          }
+          break;
+      }
+  }
+
+  return regions;
+}
+
+/**
+* Détermine le degré de chaque sommet dans la chaîne de caractères en argument
+*/
+function getVertexDegrees(chain) {
+  const boundaries = parseBoundaries(chain);
+  const degree = {};
+  const appearanceCount = {};
+  const singleVertexBoundaries = new Set();
+
+  const forbidden = new Set(['.', '}', '!']);
+
+  for (const boundary of boundaries) {
+      for (const v of boundary) {
+          if (forbidden.has(v)) continue;
+          appearanceCount[v] = (appearanceCount[v] || 0) + 1;
+      }
+      if (boundary.length === 1 && !forbidden.has(boundary[0])) {
+          singleVertexBoundaries.add(boundary[0]);
+      }
+  }
+
+  for (const [v, count] of Object.entries(appearanceCount)) {
+      if (count === 1 && singleVertexBoundaries.has(v)) {
+          degree[v] = 0;
+      } else {
+          degree[v] = count;
+      }
+  }
+
+  return degree;
+}
+
+/**
+* Détermine les sommets sur lesquels un coup peut être joué
+*/
+function playableVertices(chain) {
+  const degree = getVertexDegrees(chain);
+  return Object.entries(degree)
+      .filter(([_, d]) => d < 3)
+      .map(([v, _]) => v);
+}
+
+/**
+* Détermine à partir de deux chaînes de caractères si le coup est valide ou non
+*/
+function isValidMove(oldChain, newChain) {
+  const oldBoundaries = parseBoundaries(oldChain);
+  const newBoundaries = parseBoundaries(newChain);
+
+  const oldDegrees = getVertexDegrees(oldChain);
+  const newDegrees = getVertexDegrees(newChain);
+
+  const oldVertices = new Set(Object.keys(oldDegrees));
+  const newVertices = new Set(Object.keys(newDegrees));
+
+  // 1: Vérification de la présence d’un nouveau sommet
+  const addedVertices = [...newVertices].filter(v => !oldVertices.has(v));
+  if (addedVertices.length !== 1) {
+      console.log("Plus d’un nouveau sommet ou aucun n’a été ajouté.");
+      return false;
+  }
+
+  const newVertex = addedVertices[0];
+
+  // 2: Vérification du degré (2) du nouveau sommet
+  if (newDegrees[newVertex] !== 2) {
+      console.log("Le nouveau sommet n’a pas exactement 2 connexions.");
+      return false;
+  }
+
+  // 3: Vérification de la somme des degrés
+  const oldDegreeSum = Object.values(oldDegrees).reduce((a, b) => a + b, 0);
+  const newDegreeSum = Object.values(newDegrees).reduce((a, b) => a + b, 0);
+  if (newDegreeSum !== oldDegreeSum + 4) {
+      console.log(`La somme des degrés des sommets n'est pas correcte : ${newDegreeSum} != ${oldDegreeSum} + 4.`);
+      return false;
+  }
+
+  // 4: Vérification des degrés de tous les sommets
+  for (const v of oldVertices) {
+      if (newDegrees[v] > 3) {
+          console.log(`Le sommet ${v} dépasse 3 connexions (${newDegrees[v]}).`);
+          return false;
+      }
+  }
+
+  // 5: Vérifier que le nouveau coup est valide (connection des sommets valide)
+  const connections = [];
+  for (const boundary of newBoundaries) {
+      if (boundary.includes(newVertex)) {
+          const indices = boundary
+              .map((x, i) => (x === newVertex ? i : -1))
+              .filter(i => i !== -1);
+          for (const idx of indices) {
+              if (idx > 0) {
+                  const vBefore = boundary[idx - 1];
+                  if (vBefore !== newVertex) connections.push(vBefore);
+              }
+              if (idx + 1 < boundary.length) {
+                  const vAfter = boundary[idx + 1];
+                  if (vAfter !== newVertex) connections.push(vAfter);
+              }
+          }
+      }
+  }
+
+  let connectedVertices = connections.filter(v => oldVertices.has(v));
+  connectedVertices = [...new Set(connectedVertices)];
+  if (connectedVertices.length === 1 && newDegrees[connectedVertices[0]] === 2) {
+      connectedVertices.push(connectedVertices[0]);
+  }
+  if (connectedVertices.length !== 2) {
+      console.log("Le nouveau sommet n’est pas connecté à exactement deux anciens sommets.");
+      return false;
+  }
+
+  // 5.2: Vérifier que le nouveau coup est valide (région)
+  if (connectedVertices[0] !== connectedVertices[1]) {
+      const regions = parseRegions(newChain);
+      if (!regions.some(region => region.includes(connectedVertices[0]) && region.includes(connectedVertices[1]))) {
+          console.log("Les deux sommets connectés ne se trouvent pas dans la même région.");
+          return false;
+      }
+  }
+
+  // 6: Vérifier que les régions créées soient valides
+  return true;
+}
+
+
+
+/**
+ * Détermine la liste des coups possibles à partir de la chaîne de caractères en argument
+ * ("bug" connu, il y a parfois deux fois le même coup dans la liste, pas très important)
+ */
+function generatePossibleMoves(chain) {
+    const freeVRegion = []; // free_vertex_region
+    let plays = []; // liste des coups possibles (2 sommets)
+    const regions = parseRegions(chain);
+    const degree = getVertexDegrees(chain);
+
+    // Parcours de chaque région pour trouver les sommets connectables (degré <= 2)
+    for (const region of regions) {
+        const connectableVertices = region.filter(v => degree[v] <= 2);
+        if (connectableVertices.length > 1) { // s'il y a au moins un sommet connectable
+            freeVRegion.push(connectableVertices); // pour les ajouter
+        }
+    }
+
+    // Liste des paires de deux sommets différents connectables
+    const possiblePairs = [];
+    for (const regionVertices of freeVRegion) {
+        for (let i = 0; i < regionVertices.length; i++) {
+            for (let j = i + 1; j < regionVertices.length; j++) {
+                possiblePairs.push([regionVertices[i], regionVertices[j]]);
+            }
+        }
+    }
+    plays = possiblePairs; // ajout des paires de sommets connectables à la liste des coups possibles
+
+    // Ajouter les sommets avec un degré de 1 ou 0 à la liste des coups possibles
+    const possibleSelfLoops = [];
+    for (const region of regions) {
+        for (const vertex of region) {
+            if (degree[vertex] <= 1) {
+                possibleSelfLoops.push([vertex, vertex]);
+            }
+        }
+    }
+    plays = plays.concat(possibleSelfLoops); // ajout des sommets de degré 1 ou 0 en tant que 'self-loop'
+
+    return plays;
+}
+
+/**
+ * Choisit un coup possible entre deux sprouts à partir de la chaîne de caractères en argument
+ * et de generatePossibleMoves
+ */
+function chooseMove(chain) {
+    const possibleMoves = generatePossibleMoves(chain); // liste des coups possibles
+    if (possibleMoves.length > 0) {
+        return possibleMoves[Math.floor(Math.random() * possibleMoves.length)]; // choix aléatoire d'un coup
+    } else {
+        return null; // aucun coup possible
+    }
+}
+
+export { generatePossibleMoves, chooseMove };
+
+
+
+/**
+ * Vérifie si le jeu est terminé en fonction de la chaîne en argument
+ */
+function isGameOver(chain) {
+    const regions = parseRegions(chain);
+    const allDegrees = getVertexDegrees(chain);
+
+    // On regarde dans chaque région s'il y a un coup possible, 2 cas :
+    // 1. Il y a au moins un point de degré = 1 ou 0, self-loop jouable
+    // 2. Il y a au moins 2 points de degré <= 2, on peut jouer un coup
+
+    for (const region of regions) {
+        const regionDegrees = Object.fromEntries(
+            region.filter(v => v in allDegrees).map(v => [v, allDegrees[v]])
+        );
+
+        // Cas 1 : Vérifie s'il y a un point de degré 1 ou 0
+        const lowDegreePoints = Object.entries(regionDegrees).filter(([_, d]) => d <= 1);
+        if (lowDegreePoints.length > 0) {
+            return false;
+        }
+
+        // Cas 2 : Vérifie s'il y a au moins 2 points de degré <= 2
+        const playablePoints = Object.entries(regionDegrees).filter(([_, d]) => d <= 2);
+        if (playablePoints.length >= 2) {
+            return false;
+        }
+    }
+
+    return true; // Rien n'est jouable
+}
+
+export { isGameOver };
+
+
+
+/**
+ * Relie automatiquement deux points via une courbe en respectant les règles du jeu.
+ */
+export const autoConnectPoints = (points, curves, setPoints, setCurves, graphString, setGraphString, curveMap, setCurveMap) => {
+  // Générer les coups possibles
+  const possibleMoves = generatePossibleMoves(graphString);
+
+  if (possibleMoves.length === 0) {
+    console.log("Aucun coup possible.");
+    return;
+  }
+
+  // Choisir un coup valide
+  for (const [startLabel, endLabel] of possibleMoves) {
+    const startPoint = points.find(point => point.label === startLabel);
+    const endPoint = points.find(point => point.label === endLabel);
+
+    if (!startPoint || !endPoint) continue;
+
+    // Vérifier si les points peuvent être connectés
+    if (startPoint.connections >= 3 || endPoint.connections >= 3) continue;
+
+    // Générer une courbe plus naturelle
+    const midX = (startPoint.x + endPoint.x) / 2;
+    const midY = (startPoint.y + endPoint.y) / 2;
+
+    // Ajouter un décalage pour éloigner le point intermédiaire des courbes existantes
+    const offset = 50; // Ajustez cette valeur pour contrôler la courbure
+    const dx = endPoint.x - startPoint.x;
+    const dy = endPoint.y - startPoint.y;
+    const length = Math.sqrt(dx * dx + dy * dy);
+    const offsetX = (dy / length) * offset; // Perpendiculaire au segment
+    const offsetY = -(dx / length) * offset;
+
+    const controlPoint = {
+      x: midX + offsetX,
+      y: midY + offsetY,
+    };
+
+    const curve = [
+      { x: startPoint.x, y: startPoint.y },
+      controlPoint, // Point de contrôle pour la courbure
+      { x: endPoint.x, y: endPoint.y },
+    ];
+
+    // Vérifier si la courbe croise d'autres courbes
+    if (curveIntersects(curve, curves, points)) {
+      console.log("Intersection détectée, tentative avec un autre coup.");
+      continue;
+    }
+
+    // Vérifier si le coup est valide pour la chaîne de caractères
+    const addedPoint = {
+      x: controlPoint.x,
+      y: controlPoint.y,
+      connections: 2,
+      label: getNextLabel(points),
+    };
+
+    const updatedGraphString = generateGraphString(startPoint, addedPoint, endPoint, graphString, curveMap, points);
+    if (!isValidMove(graphString, updatedGraphString)) {
+      console.log("Coup invalide pour la chaîne de caractères.");
+      continue;
+    }
+
+    // Mettre à jour les points et les courbes
+    const updatedPoints = points.map(point => {
+      if (point.label === startPoint.label || point.label === endPoint.label) {
+        return { ...point, connections: point.connections + 1 };
+      }
+      return point;
+    });
+    updatedPoints.push(addedPoint);
+
+    const updatedCurves = [...curves, curve];
+    const updatedCurveMap = updateCurveMap(curveMap, startPoint, endPoint, curve);
+
+    // Mettre à jour les états
+    setPoints(updatedPoints);
+    setCurves(updatedCurves);
+    setGraphString(updatedGraphString);
+    setCurveMap(updatedCurveMap);
+
+    console.log("Coup joué :", { startPoint, endPoint, addedPoint });
+    console.log("Chaîne mise à jour :", updatedGraphString);
+    return;
+  }
+
+  console.log("Aucun coup valide trouvé.");
+};

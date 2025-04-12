@@ -25,3 +25,4 @@ def is_game_over(chain):
             return False
 
     return True #rien n'est jouable
+

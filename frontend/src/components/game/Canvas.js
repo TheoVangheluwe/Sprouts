@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { toast } from 'react-toastify';
 import { drawGame, getMousePos, getNearPoint, canConnect, connectPoints, curveIntersects, curveLength, getNextLabel, getClosestPointOnCurve, isPointTooClose, generateInitialGraphString, generateGraphString, updateCurveMap } from './Utils';
+import { autoConnectPoints } from './Utils';
 
 const Canvas = ({ points, setPoints, curves, setCurves }) => {
   const canvasRef = useRef(null);
@@ -191,6 +192,11 @@ const Canvas = ({ points, setPoints, curves, setCurves }) => {
         onMouseUp={handleMouseUp}
       />
       <p>Chaîne de caractères: {graphString}</p>
+      <button
+      onClick={() => autoConnectPoints(points, curves, setPoints, setCurves, graphString, setGraphString, curveMap, setCurveMap)}
+    >
+      Jouer un coup automatique
+    </button>
     </div>
   );
 };
