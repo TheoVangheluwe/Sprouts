@@ -8,37 +8,77 @@ function WaitingRoom({ setInWaitingRoom }) {
     const [selectedPoints, setSelectedPoints] = useState([]);
     const [hasJoinedQueue, setHasJoinedQueue] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
+    const [checkingActiveGame, setCheckingActiveGame] = useState(true);
     const navigate = useNavigate();
 
     const pointOptions = [3, 4, 5, 6, 7];
 
+    // Vérifier si le joueur a une partie active avant de lui permettre de rejoindre la file
+    useEffect(() => {
+        const checkActiveGame = async () => {
+            try {
+                const response = await fetch(`http://127.0.0.1:8000/api/queue/status/`, {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    }
+                });
+
+                const data = await response.json();
+
+                // Si le joueur a une partie active, le rediriger directement
+                if (data.active_game && data.game_id) {
+                    console.log("Active game found, redirecting to:", data.game_id);
+                    navigate(`/online-game/${data.game_id}`);
+                    return;
+                }
+
+                setCheckingActiveGame(false);
+            } catch (error) {
+                console.error("Error checking active game:", error);
+                setCheckingActiveGame(false);
+            }
+        };
+
+        checkActiveGame();
+    }, [navigate]);
+
     // Vérifier régulièrement l'état de la file d'attente
     useEffect(() => {
-        if (!hasJoinedQueue) return;
+        if (!hasJoinedQueue || checkingActiveGame) return;
 
-        const interval = setInterval(() => {
-            fetch(`http://127.0.0.1:8000/api/queue/status/`, {
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
-                }
-            })
-                .then(response => response.json())
-                .then(data => {
-                    console.log("Queue Status:", data);
-                    setQueueInfo(data);
-
-                    // Si un jeu a été créé, rediriger vers la page de jeu
-                    if (data.game_created && data.game_id) {
-                        console.log("Game created, redirecting to game:", data.game_id);
-                        setGameId(data.game_id);
-                        navigate(`/online-game/${data.game_id}`);
+        const interval = setInterval(async () => {
+            try {
+                const response = await fetch(`http://127.0.0.1:8000/api/queue/status/`, {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
                     }
-                })
-                .catch(error => console.error("Erreur récupération statut de la file:", error));
+                });
+
+                const data = await response.json();
+                console.log("Queue Status:", data);
+
+                // Si le joueur a une partie active, le rediriger directement
+                if (data.active_game && data.game_id) {
+                    console.log("Active game found during polling, redirecting to:", data.game_id);
+                    navigate(`/online-game/${data.game_id}`);
+                    return;
+                }
+
+                setQueueInfo(data);
+
+                // Si un jeu a été créé, rediriger vers la page de jeu
+                if (data.game_created && data.game_id) {
+                    console.log("Game created, redirecting to game:", data.game_id);
+                    setGameId(data.game_id);
+                    navigate(`/online-game/${data.game_id}`);
+                }
+            } catch (error) {
+                console.error("Erreur récupération statut de la file:", error);
+            }
         }, 2000);
 
         return () => clearInterval(interval);
-    }, [hasJoinedQueue, navigate, ready]); // Ajout de 'ready' comme dépendance
+    }, [hasJoinedQueue, navigate, ready, checkingActiveGame]);
 
     const togglePointSelection = (points) => {
         setSelectedPoints(prev => {
@@ -70,13 +110,21 @@ function WaitingRoom({ setInWaitingRoom }) {
                 })
             });
 
+            const data = await response.json();
+
             if (response.ok) {
-                const data = await response.json();
+                // Si le joueur a une partie active, le rediriger directement
+                if (data.active_game && data.game_id) {
+                    console.log("Active game found during join, redirecting to:", data.game_id);
+                    navigate(`/online-game/${data.game_id}`);
+                    return;
+                }
+
                 setHasJoinedQueue(true);
                 setQueueInfo(data);
                 console.log("Joined queue with points:", selectedPoints);
             } else {
-                throw new Error("Impossible de rejoindre la file d'attente");
+                throw new Error(data.error || "Impossible de rejoindre la file d'attente");
             }
         } catch (error) {
             console.error("Erreur lors de la mise en file d'attente:", error);
@@ -96,8 +144,9 @@ function WaitingRoom({ setInWaitingRoom }) {
                 }
             });
 
+            const data = await response.json();
+
             if (response.ok) {
-                const data = await response.json();
                 setReady(true);
                 console.log("Player ready, response:", data);
 
@@ -109,7 +158,7 @@ function WaitingRoom({ setInWaitingRoom }) {
                 }
                 // Ne pas mettre à jour queueInfo ici pour éviter de perdre les infos de match
             } else {
-                throw new Error("Erreur lors de la déclaration de l'état de préparation");
+                throw new Error(data.error || "Erreur lors de la déclaration de l'état de préparation");
             }
         } catch (error) {
             console.error("Erreur lors de la déclaration de l'état de préparation:", error);
@@ -146,6 +195,16 @@ function WaitingRoom({ setInWaitingRoom }) {
         setReady(false);
         setInWaitingRoom(false);
     };
+
+    // Afficher un écran de chargement pendant la vérification de partie active
+    if (checkingActiveGame) {
+        return (
+            <div style={{ textAlign: "center", padding: "20px" }}>
+                <h2>Vérification de partie en cours...</h2>
+                <p>Veuillez patienter pendant que nous vérifions si vous avez une partie active.</p>
+            </div>
+        );
+    }
 
     if (!hasJoinedQueue) {
         return (

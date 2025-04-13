@@ -128,8 +128,8 @@ export const canConnect = (p1, p2) => {
     if (p1 === p2) {
         return p1.connections <= 1;
     } else {
-        if (p1.connections >= 3 || p2.connections >= 3) return false;
-        return true;
+        // Pour les connexions entre points différents, limiter à 3 connexions
+        return p1.connections < 3 && p2.connections < 3;
     }
 };
 
@@ -158,55 +158,86 @@ export const connectPoints = (p1, p2, curvePoints, points, setPoints, setCurves)
 };
 
 export const curveIntersects = (newCurve, curves = [], points) => {
-    console.log("Checking intersections for newCurve:", newCurve);
-    console.log("Existing curves:", curves);
-    console.log("Points:", points);
+    // Si la courbe est invalide ou trop courte, pas d'intersection
+    if (!newCurve || newCurve.length < 2) return false;
 
+    // Fonction utilitaire pour vérifier si un point est proche d'un point officiel
+    const isNearOfficialPoint = (p) => {
+        return points.some(point =>
+            Math.hypot(point.x - p.x, point.y - p.y) < 10 // Seuil de tolérance plus élevé
+        );
+    };
+
+    // Vérifier les intersections avec les courbes existantes
     for (let curve of curves) {
+        // Gérer différents formats de courbes
+        const curvePoints = Array.isArray(curve.points) ? curve.points :
+                          Array.isArray(curve) ? curve : [];
+
+        if (curvePoints.length < 2) continue;
+
         for (let i = 0; i < newCurve.length - 1; i++) {
             const seg1Start = newCurve[i];
             const seg1End = newCurve[i + 1];
-            for (let j = 0; j < curve.length - 1; j++) {
-                const seg2Start = curve[j];
-                const seg2End = curve[j + 1];
 
-                // Ignore intersections at start and end points
-                if (points.some(point => point.x === seg1Start.x && point.y === seg1Start.y) ||
-                    points.some(point => point.x === seg1End.x && point.y === seg1End.y) ||
-                    points.some(point => point.x === seg2Start.x && point.y === seg2Start.y) ||
-                    points.some(point => point.x === seg2End.x && point.y === seg2End.y)) {
+            // Ignorer les segments très courts
+            if (Math.hypot(seg1End.x - seg1Start.x, seg1End.y - seg1Start.y) < 3) continue;
+
+            for (let j = 0; j < curvePoints.length - 1; j++) {
+                const seg2Start = curvePoints[j];
+                const seg2End = curvePoints[j + 1];
+
+                // Ignorer les segments très courts
+                if (Math.hypot(seg2End.x - seg2Start.x, seg2End.y - seg2Start.y) < 3) continue;
+
+                // Si les segments sont aux extrémités (points de jeu), pas d'intersection
+                if ((isNearOfficialPoint(seg1Start) && isNearOfficialPoint(seg2Start)) ||
+                    (isNearOfficialPoint(seg1Start) && isNearOfficialPoint(seg2End)) ||
+                    (isNearOfficialPoint(seg1End) && isNearOfficialPoint(seg2Start)) ||
+                    (isNearOfficialPoint(seg1End) && isNearOfficialPoint(seg2End))) {
                     continue;
                 }
 
+                // Vérifier l'intersection
                 if (segmentsIntersect(seg1Start, seg1End, seg2Start, seg2End)) {
+                    console.log("Intersection found between segments:",
+                                seg1Start, seg1End, "and", seg2Start, seg2End);
                     return true;
                 }
             }
         }
     }
 
+    // Vérifier l'auto-intersection de la nouvelle courbe
+    // On ne teste que les segments non adjacents
     for (let i = 0; i < newCurve.length - 1; i++) {
         const seg1Start = newCurve[i];
         const seg1End = newCurve[i + 1];
-        for (let j = i + 2; j < newCurve.length - 1; j++) {
+
+        // Ignorer les segments très courts
+        if (Math.hypot(seg1End.x - seg1Start.x, seg1End.y - seg1Start.y) < 3) continue;
+
+        // Tester uniquement avec des segments non adjacents (au moins 2 segments d'écart)
+        for (let j = i + 3; j < newCurve.length - 1; j++) {
             const seg2Start = newCurve[j];
             const seg2End = newCurve[j + 1];
 
-            // Ignore intersections at start and end points
-            if (points.some(point => point.x === seg1Start.x && point.y === seg1Start.y) ||
-                points.some(point => point.x === seg1End.x && point.y === seg1End.y) ||
-                points.some(point => point.x === seg2Start.x && point.y === seg2Start.y) ||
-                points.some(point => point.x === seg2End.x && point.y === seg2End.y)) {
-                continue;
-            }
+            // Ignorer les segments très courts
+            if (Math.hypot(seg2End.x - seg2Start.x, seg2End.y - seg2Start.y) < 3) continue;
 
+            // Vérifier l'intersection
             if (segmentsIntersect(seg1Start, seg1End, seg2Start, seg2End)) {
+                console.log("Self-intersection found between segments:",
+                            seg1Start, seg1End, "and", seg2Start, seg2End);
                 return true;
             }
         }
     }
+
     return false;
 };
+
+
 
 export const curveLength = (curve) => {
     let length = 0;
@@ -216,20 +247,67 @@ export const curveLength = (curve) => {
     return length;
 };
 
+// Nouvelle implémentation plus robuste de l'algorithme d'intersection
 export const segmentsIntersect = (A, B, C, D) => {
-    const orientation = (p, q, r) => {
-        const val = (q.y - p.y) * (r.x - q.x) - (q.x - p.x) * (r.y - q.y);
-        if (Math.abs(val) < 1e-6) return 0;
-        return val > 0 ? 1 : 2;
+    // Epsilon pour la comparaison à virgule flottante
+    const EPSILON = 1e-9;
+
+    // Fonction pour calculer la distance entre un point et un segment
+    const distancePointToSegment = (p, s1, s2) => {
+        const lengthSquared = Math.pow(s2.x - s1.x, 2) + Math.pow(s2.y - s1.y, 2);
+        if (lengthSquared === 0) return Math.hypot(p.x - s1.x, p.y - s1.y);
+
+        let t = ((p.x - s1.x) * (s2.x - s1.x) + (p.y - s1.y) * (s2.y - s1.y)) / lengthSquared;
+        t = Math.max(0, Math.min(1, t));
+
+        const proj = {
+            x: s1.x + t * (s2.x - s1.x),
+            y: s1.y + t * (s2.y - s1.y)
+        };
+
+        return Math.hypot(p.x - proj.x, p.y - proj.y);
     };
 
-    const o1 = orientation(A, B, C);
-    const o2 = orientation(A, B, D);
-    const o3 = orientation(C, D, A);
-    const o4 = orientation(C, D, B);
+    // Fonction pour vérifier si deux points sont presque identiques
+    const pointsAlmostEqual = (p1, p2) => {
+        return Math.abs(p1.x - p2.x) < EPSILON && Math.abs(p1.y - p2.y) < EPSILON;
+    };
 
-    return (o1 !== o2 && o3 !== o4);
+    // Si deux extrémités de segments sont les mêmes, ce n'est pas considéré comme une intersection
+    if (pointsAlmostEqual(A, C) || pointsAlmostEqual(A, D) ||
+        pointsAlmostEqual(B, C) || pointsAlmostEqual(B, D)) {
+        return false;
+    }
+
+    // Vérifier si les points d'un segment sont proches de l'autre segment
+    const PROXIMITY_THRESHOLD = 1.0; // pixels logiques
+    if (distancePointToSegment(A, C, D) < PROXIMITY_THRESHOLD ||
+        distancePointToSegment(B, C, D) < PROXIMITY_THRESHOLD ||
+        distancePointToSegment(C, A, B) < PROXIMITY_THRESHOLD ||
+        distancePointToSegment(D, A, B) < PROXIMITY_THRESHOLD) {
+        return false; // Les segments sont trop proches, mais ne se croisent pas réellement
+    }
+
+    // Utiliser la méthode des déterminants pour vérifier l'intersection
+    const det = (a, b, c, d) => a * d - b * c;
+
+    const dx1 = B.x - A.x;
+    const dy1 = B.y - A.y;
+    const dx2 = D.x - C.x;
+    const dy2 = D.y - C.y;
+
+    const d = det(dx1, -dx2, dy1, -dy2);
+
+    // Si les lignes sont parallèles, elles ne s'intersectent pas (ou coïncident)
+    if (Math.abs(d) < EPSILON) return false;
+
+    const s = det(C.x - A.x, -dx2, C.y - A.y, -dy2) / d;
+    const t = det(dx1, C.x - A.x, dy1, C.y - A.y) / d;
+
+    // Vérifier si l'intersection est sur les deux segments
+    return (s >= 0 && s <= 1 && t >= 0 && t <= 1);
 };
+
 
 export const getNextLabel = (points) => {
     const usedLabels = points.map(point => point.label);

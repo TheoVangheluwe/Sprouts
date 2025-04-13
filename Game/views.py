@@ -33,28 +33,18 @@ def game_view(request, game_id):
     except Game.DoesNotExist:
         return JsonResponse({'error': 'Game not found'}, status=404)
 
-@csrf_exempt
-@login_required(login_url='login')
-def join_game(request):
-    try:
-        logger.debug("Join game view called")
 
-        # Logique pour créer ou rejoindre une salle d'attente
-        game = Game.objects.filter(status='waiting').first()
-        if game:
-            game.player_count += 1
-            game.players.add(request.user)
-            if game.player_count >= 2:
-                game.status = 'in_progress'
-                game.current_player = game.players.first()
-            game.save()
-        else:
-            game = Game.objects.create(status='waiting', player_count=1, current_player=request.user)
-            game.players.add(request.user)
 
-        return JsonResponse({'game_id': game.id, 'status': game.status, 'player_id': request.user.id})
-    except Exception as e:
-        return JsonResponse({'error': 'An error occurred while joining the game.'}, status=500)
+def list_games(request):
+    # Supprimer les jeux inactifs de plus de 2 heures
+    old_date = datetime.now() - timedelta(hours=2)
+    Game.objects.filter(created_at__lt=old_date).delete()
+
+    # Récupérer les jeux actifs
+    games = Game.objects.filter(status='waiting').values('id', 'status', 'player_count', 'point_options')
+    return JsonResponse(list(games), safe=False)
+
+
 
 def list_games(request):
     # Supprimer les jeux inactifs de plus de 2 heures
@@ -241,50 +231,107 @@ def make_move(request, game_id):
     except Exception as e:
         return JsonResponse({'error': f'An error occurred: {str(e)}'}, status=500)
 
+
 @csrf_exempt
 @login_required(login_url='login')
 def create_game(request):
     """Créer une nouvelle salle d'attente avec les préférences de points"""
-    if request.method != 'POST':
+    if request.method == 'GET':
+        # Retourner l'ID du joueur
+        return JsonResponse({'player_id': request.user.id}, status=200)
+
+    elif request.method == 'POST':
+        try:
+            from django.db import transaction
+
+            with transaction.atomic():
+                data = json.loads(request.body.decode('utf-8'))
+                point_options = data.get('pointOptions', [3])  # Par défaut, 3 points si non spécifié
+
+                # Valider les options de points
+                valid_options = [3, 4, 5, 6, 7]
+                point_options = [opt for opt in point_options if opt in valid_options]
+
+                if not point_options:
+                    return JsonResponse({'error': 'No valid point options provided'}, status=400)
+
+                # Vérifier si le joueur a déjà une salle d'attente
+                existing_room = Game.objects.filter(
+                    players=request.user,
+                    status='waiting'
+                ).first()
+
+                if existing_room:
+                    # Mettre à jour les options de points de la salle existante
+                    existing_room.point_options = point_options
+                    existing_room.save()
+                    return JsonResponse({
+                        'waiting_room_id': existing_room.id,
+                        'status': existing_room.status,
+                        'player_id': request.user.id,
+                        'point_options': point_options
+                    })
+
+                # Créer une salle d'attente (pas encore une partie active)
+                waiting_room = Game.objects.create(
+                    status='waiting',
+                    player_count=1,
+                    current_player=request.user,
+                    point_options=point_options,
+                    state={"curves": [], "points": []},
+                    from_queue=True  # Marquer explicitement comme venant de la file d'attente
+                )
+                waiting_room.players.add(request.user)
+                waiting_room.player_ready = {str(request.user.id): False}
+                waiting_room.save()
+
+                return JsonResponse({
+                    'waiting_room_id': waiting_room.id,
+                    'status': waiting_room.status,
+                    'player_id': request.user.id,
+                    'point_options': point_options
+                })
+
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'Invalid JSON format'}, status=400)
+        except Exception as e:
+            return JsonResponse({'error': f'An error occurred: {str(e)}'}, status=500)
+    else:
         return JsonResponse({'error': 'Invalid request method'}, status=405)
 
+
+
+def cleanup_games():
+    """Nettoyer les parties non utilisées ou incohérentes"""
     try:
-        data = json.loads(request.body.decode('utf-8'))
-        point_options = data.get('pointOptions', [3])  # Par défaut, 3 points si non spécifié
+        # Supprimer les parties sans joueurs
+        Game.objects.filter(player_count=0).delete()
 
-        # Valider les options de points
-        valid_options = [3, 4, 5, 6, 7]
-        point_options = [opt for opt in point_options if opt in valid_options]
+        # Supprimer les parties en double - Garder seulement la plus récente pour chaque paire de joueurs
+        games = Game.objects.filter(status__in=['started', 'in_progress']).order_by('-created_at')
+        processed_pairs = set()
 
-        if not point_options:
-            return JsonResponse({'error': 'No valid point options provided'}, status=400)
+        for game in games:
+            players = sorted([player.id for player in game.players.all()])
+            players_key = tuple(players)
 
-        # Créer une salle d'attente (pas encore une partie active)
-        waiting_room = Game.objects.create(
-            status='waiting',
-            player_count=1,
-            current_player=request.user,
-            point_options=point_options,
-            state={"curves": [], "points": []},
-            # Ne pas définir de gameId ici
-        )
-        waiting_room.players.add(request.user)
-        waiting_room.player_ready[str(request.user.id)] = False
-        waiting_room.save()
-
-
-        return JsonResponse({
-            'waiting_room_id': waiting_room.id,  # Retourner l'ID de la salle d'attente, pas un gameId
-            'status': waiting_room.status,
-            'player_id': request.user.id,
-            'point_options': point_options
-        })
-
-    except json.JSONDecodeError:
-        return JsonResponse({'error': 'Invalid JSON format'}, status=400)
+            if len(players) == 2:  # Seulement pour les parties 1v1
+                if players_key in processed_pairs:
+                    # Cette paire de joueurs a déjà une partie plus récente
+                    game.status = 'abandoned'  # Marquer comme abandonnée au lieu de supprimer
+                    game.save()
+                else:
+                    processed_pairs.add(players_key)
     except Exception as e:
-        return JsonResponse({'error': f'An error occurred: {str(e)}'}, status=500)
+        logger.error(f"Error in cleanup_games: {str(e)}")
+def get_active_game(user):
+    """Vérifier si un joueur a une partie active et retourner l'ID de cette partie"""
+    active_game = Game.objects.filter(
+        players=user,
+        status__in=['started', 'in_progress']
+    ).order_by('-created_at').first()
 
+    return active_game
 
 @csrf_exempt
 @login_required(login_url='login')
@@ -294,6 +341,15 @@ def join_queue(request):
         return JsonResponse({'error': 'Invalid request method'}, status=405)
 
     try:
+        # Vérifier si le joueur a déjà une partie active
+        active_game = get_active_game(request.user)
+        if active_game:
+            return JsonResponse({
+                'active_game': True,
+                'game_id': active_game.id,
+                'message': 'You have an active game, redirecting...'
+            })
+
         data = json.loads(request.body.decode('utf-8'))
         point_preferences = data.get('pointPreferences', [3])  # Par défaut, 3 points
 
@@ -309,6 +365,7 @@ def join_queue(request):
         if existing_entry:
             # Mettre à jour les préférences
             existing_entry.point_preferences = point_preferences
+            existing_entry.ready = False  # Réinitialiser l'état "prêt"
             existing_entry.save()
             entry = existing_entry
         else:
@@ -361,6 +418,7 @@ def join_queue(request):
         return JsonResponse({'error': f'An error occurred: {str(e)}'}, status=500)
 
 
+# Modifier la fonction set_ready pour éviter la création de parties multiples
 @csrf_exempt
 @login_required(login_url='login')
 def set_ready(request):
@@ -369,86 +427,143 @@ def set_ready(request):
         return JsonResponse({'error': 'Invalid request method'}, status=405)
 
     try:
-        # Récupérer l'entrée du joueur dans la file d'attente
-        entry = QueueEntry.objects.get(user=request.user)
+        # Utiliser un verrou global pour cette action critique
+        from django.db import transaction
+        from django.core.cache import cache
+        import time
 
-        # Marquer le joueur comme prêt
-        entry.ready = True
-        entry.save()
+        # Tentative d'obtenir un verrou basé sur l'utilisateur
+        lock_id = f"game_creation_lock_{request.user.id}"
+        # L'acquisition du verrou est non-bloquante, si déjà verrouillé, on retourne un message d'attente
+        acquire_lock = lambda: cache.add(lock_id, "true", 10)  # verrou de 10 secondes max
+        release_lock = lambda: cache.delete(lock_id)
 
-        logger.info(f"Player {request.user.username} (id: {request.user.id}) is now ready")
-
-        # Vérifier si le joueur est matché avec un autre joueur
-        if not entry.matched_with:
-            logger.info(f"Player {request.user.username} is ready but not matched yet")
+        if not acquire_lock():
             return JsonResponse({
-                'success': True,
-                'message': 'Player ready, waiting for match',
-                'matched_also_ready': False
+                'success': False,
+                'message': 'Une opération est déjà en cours, veuillez patienter...'
             })
 
-        # Vérifier si l'adversaire est également prêt
-        if not entry.matched_with.ready:
-            logger.info(
-                f"Player {request.user.username} is ready, opponent {entry.matched_with.user.username} is not ready yet")
-            return JsonResponse({
-                'success': True,
-                'message': 'Player ready, waiting for opponent',
-                'matched_also_ready': False
-            })
+        try:
+            # Vérifier d'abord si le joueur a déjà une partie active
+            active_game = get_active_game(request.user)
+            if active_game:
+                logger.info(f"Player {request.user.username} already has an active game with id {active_game.id}")
+                return JsonResponse({
+                    'success': True,
+                    'message': 'Game already exists',
+                    'game_id': active_game.id
+                })
 
-        # Les deux joueurs sont prêts, on peut créer une partie
-        logger.info(f"Both players ready: {request.user.username} and {entry.matched_with.user.username}")
+            # TRANSACTION CRITIQUE - Cela garantit l'atomicité de toutes les opérations suivantes
+            with transaction.atomic():
+                # Récupérer l'entrée du joueur dans la file d'attente avec verrou pour éviter les modifications concurrentes
+                entry = QueueEntry.objects.select_for_update().get(user=request.user)
 
-        # Trouver des points communs pour la partie
-        common_points = set(entry.point_preferences).intersection(set(entry.matched_with.point_preferences))
-        if common_points:
-            selected_points = list(common_points)[0]
-        else:
-            selected_points = min(entry.point_preferences)
+                # Marquer le joueur comme prêt (seulement s'il ne l'est pas déjà)
+                if not entry.ready:
+                    entry.ready = True
+                    entry.save()
+                    logger.info(f"Player {request.user.username} (id: {request.user.id}) is now ready")
 
-        logger.info(f"Creating game with {selected_points} points")
+                # Vérifier si le joueur est matché avec un autre joueur
+                if not entry.matched_with:
+                    logger.info(f"Player {request.user.username} is ready but not matched yet")
+                    return JsonResponse({
+                        'success': True,
+                        'message': 'Player ready, waiting for match',
+                        'matched_also_ready': False
+                    })
 
-        # Vérifier si une partie existe déjà pour ces deux joueurs
-        existing_game = Game.objects.filter(
-            players=request.user
-        ).filter(
-            players=entry.matched_with.user
-        ).filter(
-            status='started',
-            from_queue=True
-        ).order_by('-created_at').first()
+                # Verrouiller également l'entrée du joueur matché pour éviter les modifications concurrentes
+                matched_entry = QueueEntry.objects.select_for_update().get(id=entry.matched_with.id)
 
-        if existing_game:
-            logger.info(f"Game already exists with id {existing_game.id}, returning that")
-            game_id = existing_game.id
-        else:
-            # Créer une nouvelle partie
-            game = Game.objects.create(
-                status='started',
-                player_count=2,
-                current_player=request.user,
-                point_options=[selected_points],
-                selected_points=selected_points,
-                from_queue=True,
-                state={"curves": [], "points": []}
-            )
+                # Vérifier si l'adversaire est également prêt
+                if not matched_entry.ready:
+                    logger.info(
+                        f"Player {request.user.username} is ready, opponent {matched_entry.user.username} is not ready yet")
+                    return JsonResponse({
+                        'success': True,
+                        'message': 'Player ready, waiting for opponent',
+                        'matched_also_ready': False
+                    })
 
-            # Ajouter les joueurs à la partie
-            game.players.add(request.user, entry.matched_with.user)
-            game.save()
+                # Vérifier encore une fois pour éviter les courses critiques
+                active_game = get_active_game(request.user)
+                if active_game:
+                    return JsonResponse({
+                        'success': True,
+                        'message': 'Game found after check',
+                        'game_id': active_game.id
+                    })
 
-            game_id = game.id
-            logger.info(f"New game created with id {game_id}")
+                # Les deux joueurs sont prêts, rechercher ou créer une partie
+                # Recherche avec verrouillage des enregistrements concernés
+                existing_game = Game.objects.select_for_update().filter(
+                    players=request.user
+                ).filter(
+                    players=matched_entry.user
+                ).filter(
+                    status__in=['started', 'in_progress'],
+                    from_queue=True
+                ).order_by('-created_at').first()
 
-        # Ne pas supprimer les entrées de file d'attente tout de suite
-        # pour que les deux joueurs puissent voir l'ID de partie via queue_status
+                if existing_game:
+                    logger.info(f"Game already exists with id {existing_game.id}, returning that")
+                    game_id = existing_game.id
+                else:
+                    # Double vérification - si le joueur adverse a déjà une partie, l'utiliser
+                    opponent_active_game = get_active_game(matched_entry.user)
+                    if opponent_active_game and request.user in opponent_active_game.players.all():
+                        logger.info(f"Found opponent active game with id {opponent_active_game.id}")
+                        return JsonResponse({
+                            'success': True,
+                            'message': 'Found via opponent',
+                            'game_id': opponent_active_game.id
+                        })
 
-        return JsonResponse({
-            'success': True,
-            'message': 'Game created',
-            'game_id': game_id
-        })
+                    # Aucune partie existante, créer une nouvelle partie
+                    common_points = set(entry.point_preferences).intersection(set(matched_entry.point_preferences))
+                    if common_points:
+                        selected_points = list(common_points)[0]
+                    else:
+                        selected_points = min(entry.point_preferences)
+
+                    logger.info(
+                        f"Creating game with {selected_points} points for players {request.user.username} and {matched_entry.user.username}")
+
+                    # CRÉATION UNIQUE - Cette création est maintenant parfaitement protégée contre les doublons
+                    game = Game.objects.create(
+                        status='started',
+                        player_count=2,
+                        current_player=request.user,
+                        point_options=[selected_points],
+                        selected_points=selected_points,
+                        from_queue=True,
+                        state={"curves": [], "points": []}
+                    )
+
+                    # Ajouter les joueurs à la partie
+                    game.players.add(request.user, matched_entry.user)
+                    game.save()
+
+                    game_id = game.id
+                    logger.info(f"New game created with id {game_id}")
+
+                    # Supprimer immédiatement les entrées de la file d'attente pour éviter les duplications
+                    QueueEntry.objects.filter(id__in=[entry.id, matched_entry.id]).delete()
+                    logger.info(f"Queue entries deleted for game {game_id}")
+
+                # Retourner l'ID de la partie (nouvelle ou existante)
+                return JsonResponse({
+                    'success': True,
+                    'message': 'Game created or found',
+                    'game_id': game_id
+                })
+
+        finally:
+            # S'assurer que le verrou est libéré même en cas d'erreur
+            release_lock()
 
     except QueueEntry.DoesNotExist:
         logger.error(f"Player {request.user.username} not found in queue")
@@ -458,10 +573,20 @@ def set_ready(request):
         return JsonResponse({'error': f'An error occurred: {str(e)}'}, status=500)
 
 
+# Modifier la fonction queue_status pour nettoyer la file d'attente correctement
 @login_required(login_url='login')
 def queue_status(request):
     """Obtenir le statut actuel dans la file d'attente"""
     try:
+        # Vérifier si le joueur a déjà une partie active
+        active_game = get_active_game(request.user)
+        if active_game:
+            return JsonResponse({
+                'active_game': True,
+                'game_id': active_game.id,
+                'message': 'You have an active game, redirecting...'
+            })
+
         # Récupérer l'entrée du joueur dans la file d'attente
         entry = QueueEntry.objects.filter(user=request.user).first()
 
@@ -489,7 +614,7 @@ def queue_status(request):
                 'ready': entry.matched_with.ready
             }
 
-            # Vérifier si les deux joueurs sont prêts
+            # Vérifier si les deux joueurs sont prêts - NE PAS créer de partie ici
             if entry.ready and entry.matched_with.ready:
                 # Vérifier si une partie a été créée pour ces joueurs
                 recent_games = Game.objects.filter(
@@ -497,7 +622,7 @@ def queue_status(request):
                 ).filter(
                     players=entry.matched_with.user
                 ).filter(
-                    status='started',
+                    status__in=['started', 'in_progress'],
                     from_queue=True
                 ).order_by('-created_at')[:1]
 
@@ -509,17 +634,10 @@ def queue_status(request):
                     response_data['game_created'] = True
                     response_data['game_id'] = game.id
 
-                    # Maintenir les entrées dans la file pendant quelques secondes
-                    # pour s'assurer que les deux joueurs peuvent voir l'ID de partie
-                    # La suppression se fera lors d'une prochaine requête queue_status
-                    if hasattr(entry, 'game_id_seen') and hasattr(entry.matched_with, 'game_id_seen'):
-                        logger.info(f"Both players have seen game {game.id}, cleaning up queue")
-                        matched_user = entry.matched_with.user
-                        QueueEntry.objects.filter(user__in=[request.user, matched_user]).delete()
-                    else:
-                        # Marquer que ce joueur a vu l'ID de partie
-                        entry.game_id_seen = True
-                        entry.save()
+                    # Supprimer immédiatement les entrées de la file d'attente
+                    matched_user = entry.matched_with.user
+                    QueueEntry.objects.filter(user__in=[request.user, matched_user]).delete()
+                    logger.info(f"Queue entries deleted via queue_status for game {game.id}")
         else:
             response_data['matched'] = False
 
@@ -528,7 +646,6 @@ def queue_status(request):
     except Exception as e:
         logger.error(f"Error in queue_status: {str(e)}")
         return JsonResponse({'error': f'An error occurred: {str(e)}'}, status=500)
-
 @csrf_exempt
 @login_required(login_url='login')
 def leave_queue(request):
@@ -611,6 +728,7 @@ def join_specific_game(request, game_id):
     except Exception as e:
         return JsonResponse({'error': f'An error occurred: {str(e)}'}, status=500)
 
+
 @csrf_exempt
 @login_required(login_url='login')
 def leave_game(request, game_id):
@@ -619,61 +737,73 @@ def leave_game(request, game_id):
         return JsonResponse({'error': 'Invalid request method'}, status=405)
 
     try:
-        game = Game.objects.get(id=game_id)
+        # Utiliser un verrou pour éviter les concurrences
+        from django.db import transaction
 
-        # Vérifier si le joueur est dans le jeu
-        if request.user not in game.players.all():
-            return JsonResponse({'error': 'You are not in this game'}, status=400)
+        with transaction.atomic():
+            game = Game.objects.select_for_update().get(id=game_id)
 
-        # Récupérer l'adversaire avant de modifier le jeu
-        other_players = list(game.players.exclude(id=request.user.id))
+            # Vérifier si le joueur est dans le jeu
+            if request.user not in game.players.all():
+                return JsonResponse({'error': 'You are not in this game'}, status=400)
 
-        # Ajouter une information dans l'état du jeu pour indiquer qui a abandonné
-        if not game.state:
-            game.state = {}
+            # Récupérer l'adversaire avant de modifier le jeu
+            other_players = list(game.players.exclude(id=request.user.id))
 
-        game.state['abandoned_by'] = request.user.username
-        game.state['abandoned_at'] = datetime.now().isoformat()
-        game.status = 'abandoned'  # Marquer le jeu comme abandonné
-        game.save()
+            # Ajouter une information dans l'état du jeu pour indiquer qui a abandonné
+            if not game.state:
+                game.state = {}
 
-        # Enregistrer cette information avant de retirer le joueur
-        # pour que l'autre joueur puisse la voir
+            game.state['abandoned_by'] = request.user.username
+            game.state['abandoned_at'] = datetime.now().isoformat()
+            game.status = 'abandoned'  # Marquer le jeu comme abandonné
+            game.save()
 
-        # Retirer le joueur du jeu
-        game.players.remove(request.user)
-        game.player_count -= 1
+            # Retirer le joueur du jeu
+            game.players.remove(request.user)
+            game.player_count -= 1
 
-        # Retirer le statut "prêt" du joueur
-        if str(request.user.id) in game.player_ready:
-            del game.player_ready[str(request.user.id)]
+            # Retirer le statut "prêt" du joueur
+            if str(request.user.id) in game.player_ready:
+                del game.player_ready[str(request.user.id)]
 
-        # Si le jeu est vide, le supprimer
-        if game.player_count <= 0:
-            game.delete()
-            return JsonResponse({'success': True, 'message': 'Game deleted'})
+            # Si le jeu est vide, le supprimer
+            if game.player_count <= 0:
+                game.delete()
+                return JsonResponse({'success': True, 'message': 'Game deleted'})
 
-        # Si le joueur actuel quitte, passer au joueur suivant
-        if game.current_player == request.user:
-            remaining_players = list(game.players.all())
-            if remaining_players:
-                game.current_player = remaining_players[0]
-            else:
-                game.current_player = None
+            # Si le joueur actuel quitte, passer au joueur suivant
+            if game.current_player == request.user:
+                remaining_players = list(game.players.all())
+                if remaining_players:
+                    game.current_player = remaining_players[0]
+                else:
+                    game.current_player = None
 
-        game.save()
+            game.save()
 
-        # Retourner les informations sur l'abandon
-        return JsonResponse({
-            'success': True,
-            'message': 'Left game successfully',
-            'abandoned': True
-        })
+            # Vérifier toutes les parties actives du joueur et les marquer comme abandonnées
+            other_games = Game.objects.filter(
+                players=request.user,
+                status__in=['waiting', 'in_progress', 'started']
+            )
+            for other_game in other_games:
+                if other_game.id != game_id:  # Éviter de traiter deux fois le même jeu
+                    other_game.status = 'abandoned'
+                    other_game.save()
+
+            # Retourner les informations sur l'abandon
+            return JsonResponse({
+                'success': True,
+                'message': 'Left game successfully',
+                'abandoned': True
+            })
 
     except Game.DoesNotExist:
         return JsonResponse({'error': 'Game not found'}, status=404)
     except Exception as e:
         return JsonResponse({'error': f'An error occurred: {str(e)}'}, status=500)
+
 
 def register(request):
     if request.method == 'POST':

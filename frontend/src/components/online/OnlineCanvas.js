@@ -25,6 +25,7 @@ const OnlineCanvas = ({ points, setPoints, curves = [], setCurves, currentPlayer
     // Références pour suivre les changements dans les props
     const prevPointsRef = useRef(null);
     const prevCurvesRef = useRef(null);
+    const prevMyTurnRef = useRef(myTurn);
 
     // UseEffect pour redimensionner le canvas
     useEffect(() => {
@@ -93,16 +94,18 @@ const OnlineCanvas = ({ points, setPoints, curves = [], setCurves, currentPlayer
         }
     }, [setPoints, points]);
 
-    // UseEffect pour le suivi du tour
+    // UseEffect pour le suivi du tour - Corrigé pour éviter les notifications multiples
     useEffect(() => {
-        const toastId = myTurn ? "your-turn" : "opponent-turn";
-        if (myTurn) {
-            toast.info("C'est votre tour de jouer.", { autoClose: false, toastId });
-        } else {
-            toast.info("En attente du tour de l'autre joueur.", { autoClose: false, toastId });
+        // Identifiants uniques pour chaque type de toast
+        const yourTurnId = "your-turn-toast";
+        const opponentTurnId = "opponent-turn-toast";
+
+        // Si myTurn a changé, mettre à jour les notifications
+        if (myTurn !== prevMyTurnRef.current) {
+            // Mettre à jour la référence
+            prevMyTurnRef.current = myTurn;
         }
         return () => {
-            toast.dismiss(toastId);
         };
     }, [myTurn]);
 
@@ -130,7 +133,7 @@ const OnlineCanvas = ({ points, setPoints, curves = [], setCurves, currentPlayer
                         label: newLabel
                     };
 
-                    // IMPORTANT: Mettre à jour les points localement
+                    // Mettre à jour les points localement
                     const updatedPoints = [...points, newPoint];
                     setPoints(updatedPoints);
 

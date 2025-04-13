@@ -11,7 +11,7 @@ urlpatterns = [
     path('login-redirect/', views.login_redirect_with_message, name='login_redirect'),
 
     # API existantes
-    path('api/join-game', views.join_game, name='join_game'),
+    #path('api/join-game', views.join_game, name='join_game'),
     path('api/game/<int:game_id>/status/', views.game_status, name='game_status'),
     path('api/game/<int:game_id>/start/', views.start_game, name='start_game'),
     path('api/game/', views.list_games, name='list_games'),
