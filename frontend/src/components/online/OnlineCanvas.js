@@ -173,64 +173,100 @@ const OnlineCanvas = ({ points, setPoints, curves = [], setCurves, myTurn, onMov
 
     // Fonction pour gérer le relâchement du clic de souris
     const handleMouseUp = (event) => {
-        if (!isDrawing) return;
+    if (!isDrawing) return;
 
-        const canvas = canvasRef.current;
-        if (!canvas) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
 
-        // getMousePos convertit déjà en coordonnées logiques [0,1000]
-        const pos = getMousePos(canvas, event);
-        const endPoint = getNearPoint(pos.x, pos.y, points);
+    // getMousePos convertit déjà en coordonnées logiques [0,500]
+    const pos = getMousePos(canvas, event);
+    const endPoint = getNearPoint(pos.x, pos.y, points);
 
-        if (!endPoint) {
-            toast.error("Destination invalide.", { autoClose: 1500 });
-            setCurrentCurve([]);
-            setIsDrawing(false);
-            setSelectedPoint(null);
-            return;
-        }
-
-        if (!selectedPoint || !canConnect(selectedPoint, endPoint)) {
-            toast.error("Trop de connexions sur le point.", { autoClose: 1500 });
-            setCurrentCurve([]);
-            setIsDrawing(false);
-            setSelectedPoint(null);
-            return;
-        }
-
-        const adjustedCurve = [...currentCurve, { x: endPoint.x, y: endPoint.y }];
-
-        if (curveIntersects(adjustedCurve, Array.isArray(curves) ? curves : [], points)) {
-            toast.error("Intersection détectée.", { autoClose: 1500 });
-            setCurrentCurve([]);
-        } else if (curveLength(adjustedCurve) < 15) {
-            toast.error("Courbe trop courte.", { autoClose: 1500 });
-            setCurrentCurve([]);
-        } else {
-            const updatedPoints = points.map(point => {
-                if (point.label === selectedPoint.label || point.label === endPoint.label) {
-                    return { ...point, connections: point.connections + 1 };
-                }
-                return point;
-            });
-
-            const updatedCurves = [...curves, adjustedCurve];
-
-            setPoints(updatedPoints);
-            setCurves(updatedCurves);
-            setAwaitingPointPlacement(true);
-
-            onMove({
-                type: 'draw_curve',
-                curve: adjustedCurve,
-                startPoint: selectedPoint.label,
-                endPoint: endPoint.label
-            });
-        }
-
+    if (!endPoint) {
+        toast.error("Destination invalide.", { autoClose: 1500 });
+        setCurrentCurve([]);
         setIsDrawing(false);
         setSelectedPoint(null);
-    };
+        return;
+    }
+
+    // Vérifier si on peut connecter les points
+    if (!selectedPoint) {
+        toast.error("Aucun point de départ sélectionné.", { autoClose: 1500 });
+        setCurrentCurve([]);
+        setIsDrawing(false);
+        setSelectedPoint(null);
+        return;
+    }
+
+    // Vérifier si c'est une boucle (même point de départ et d'arrivée)
+    const isSelfLoop = selectedPoint.label === endPoint.label;
+
+    // Vérification explicite des limites de connexion pour les boucles
+    if (isSelfLoop && selectedPoint.connections > 1) {
+        toast.error("Ce point a déjà trop de connexions pour créer une boucle (max 1 existante).", { autoClose: 1500 });
+        setCurrentCurve([]);
+        setIsDrawing(false);
+        setSelectedPoint(null);
+        return;
+    }
+
+    // Vérification standard des connexions maximales
+    if (!canConnect(selectedPoint, endPoint)) {
+        if (!isSelfLoop && (selectedPoint.connections >= 3 || endPoint.connections >= 3)) {
+            toast.error("L'un des points a déjà atteint le maximum de connexions (3).", { autoClose: 1500 });
+        } else {
+            toast.error("Trop de connexions sur le point.", { autoClose: 1500 });
+        }
+
+        setCurrentCurve([]);
+        setIsDrawing(false);
+        setSelectedPoint(null);
+        return;
+    }
+
+    const adjustedCurve = [...currentCurve, { x: endPoint.x, y: endPoint.y }];
+
+    // Vérifier les intersections et la longueur minimale
+    if (curveIntersects(adjustedCurve, Array.isArray(curves) ? curves : [], points)) {
+        toast.error("Intersection détectée.", { autoClose: 1500 });
+        setCurrentCurve([]);
+    } else if (curveLength(adjustedCurve) < 15) {
+        toast.error("Courbe trop courte.", { autoClose: 1500 });
+        setCurrentCurve([]);
+    } else {
+        // Mise à jour des connexions
+        const updatedPoints = points.map(point => {
+            // Pour une boucle sur un même point
+            if (point.label === selectedPoint.label && isSelfLoop) {
+                console.log(`Point ${point.label} gets +2 connections for a self-loop`);
+                return { ...point, connections: point.connections + 2 };
+            }
+            // Pour une connexion normale entre deux points différents
+            else if (point.label === selectedPoint.label || point.label === endPoint.label) {
+                console.log(`Point ${point.label} gets +1 connection for a regular connection`);
+                return { ...point, connections: point.connections + 1 };
+            }
+            return point;
+        });
+
+        const updatedCurves = [...curves, adjustedCurve];
+
+        setPoints(updatedPoints);
+        setCurves(updatedCurves);
+        setAwaitingPointPlacement(true);
+
+        onMove({
+            type: 'draw_curve',
+            curve: adjustedCurve,
+            startPoint: selectedPoint.label,
+            endPoint: endPoint.label
+        });
+    }
+
+    setIsDrawing(false);
+    setSelectedPoint(null);
+};
 
     // Fonction pour gérer le mouvement de la souris
     const handleMouseMove = (event) => {

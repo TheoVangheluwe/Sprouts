@@ -151,7 +151,10 @@ def make_move(request, game_id):
             else:
                 return JsonResponse({'error': 'Invalid number of points'}, status=400)
 
+
+
         elif move["type"] == "draw_curve":
+
             # Gestion des courbes
             start_point = next((p for p in game.state["points"] if p["label"] == move["startPoint"]), None)
             end_point = next((p for p in game.state["points"] if p["label"] == move["endPoint"]), None)
@@ -159,13 +162,21 @@ def make_move(request, game_id):
             if not start_point or not end_point:
                 return JsonResponse({'error': 'Invalid start or end point'}, status=400)
 
-            if start_point["connections"] >= 3 or end_point["connections"] >= 3:
+            # Vérifier si c'est une boucle (même point de départ et d'arrivée)
+            is_self_loop = move["startPoint"] == move["endPoint"]
+
+            # Vérifier la limite de connexions
+            if is_self_loop and start_point["connections"] > 1:
+                return JsonResponse({'error': 'Cannot create a loop on a point with more than 1 connection'},
+                                    status=400)
+            elif not is_self_loop and (start_point["connections"] >= 3 or end_point["connections"] >= 3):
                 return JsonResponse({'error': 'Maximum connections reached for a point'}, status=400)
 
             # Normaliser la structure de la courbe
             curve_to_add = None
             if isinstance(move["curve"], list):
                 curve_to_add = {"points": move["curve"], "player": request.user.id}
+
             else:
                 curve_to_add = move["curve"]
                 curve_to_add["player"] = request.user.id
@@ -192,8 +203,13 @@ def make_move(request, game_id):
             if not curve_exists:
                 game.state.setdefault("curves", []).append(curve_to_add)
 
+                # Mise à jour des connexions avec gestion des boucles
             for point in game.state["points"]:
-                if point["label"] == move["startPoint"] or point["label"] == move["endPoint"]:
+                if point["label"] == move["startPoint"] and is_self_loop:
+                    # Pour une boucle, ajouter 2 connexions
+                    point["connections"] += 2
+                elif point["label"] == move["startPoint"] or point["label"] == move["endPoint"]:
+                    # Pour des points différents, ajouter 1 connexion
                     point["connections"] += 1
 
         elif move["type"] == "place_point":

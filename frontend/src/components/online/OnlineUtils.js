@@ -68,24 +68,33 @@ export const drawGame = (canvasRef, pointsToDraw = [], curvesToDraw = [], tempCu
 
     // Dessiner les points
     safePoints.forEach(point => {
-        if (point && typeof point.x === 'number' && typeof point.y === 'number') {
-            ctx.beginPath();
-            // Convertir les coordonnées logiques en coordonnées physiques
-            const physicalPoint = toPhysicalCoords(point.x, point.y, scale);
-            // Ajuster la taille du cercle en fonction de l'échelle
-            const radius = 5 * Math.min(scale.x, scale.y);
-            ctx.arc(physicalPoint.x, physicalPoint.y, radius, 0, Math.PI * 2);
-            ctx.fillStyle = point.connections >= 3 ? "red" : "black";
-            ctx.fill();
+    if (point && typeof point.x === 'number' && typeof point.y === 'number') {
+        ctx.beginPath();
+        // Convertir les coordonnées logiques en coordonnées physiques
+        const physicalPoint = toPhysicalCoords(point.x, point.y, scale);
+        // Ajuster la taille du cercle en fonction de l'échelle
+        const radius = 5 * Math.min(scale.x, scale.y);
 
-            if (point.label) {
-                // Ajuster la taille du texte en fonction de l'échelle
-                const fontSize = 12 * Math.min(scale.x, scale.y);
-                ctx.font = `${fontSize}px Arial`;
-                ctx.fillText(point.label, physicalPoint.x + radius + 5, physicalPoint.y + 5);
-            }
+        // Changer la couleur en fonction du nombre de connexions
+        if (point.connections >= 3) {
+            ctx.fillStyle = "red";  // Maximum de connexions atteint
+
+        } else {
+            ctx.fillStyle = "black"; // Peut être connecté et faire des boucles
         }
-    });
+
+        ctx.arc(physicalPoint.x, physicalPoint.y, radius, 0, Math.PI * 2);
+        ctx.fill();
+
+        if (point.label) {
+            // Ajuster la taille du texte en fonction de l'échelle
+            const fontSize = 12 * Math.min(scale.x, scale.y);
+            ctx.font = `${fontSize}px Arial`;
+            ctx.fillStyle = "black";
+            ctx.fillText(point.label, physicalPoint.x + radius + 5, physicalPoint.y + 5);
+        }
+    }
+});
 
     // Dessiner la courbe temporaire
     if (tempCurve && tempCurve.length > 0) {
@@ -109,7 +118,7 @@ export const getMousePos = (canvas, event) => {
     const physicalX = event.clientX - rect.left;
     const physicalY = event.clientY - rect.top;
 
-    // Convertir en coordonnées logiques [0,1000]×[0,1000]
+    // Convertir en coordonnées logiques [0,500]×[0,500]
     const scale = {
         x: canvas.width / LOGICAL_WIDTH,
         y: canvas.height / LOGICAL_HEIGHT
@@ -118,17 +127,19 @@ export const getMousePos = (canvas, event) => {
     return toLogicalCoords(physicalX, physicalY, scale);
 };
 
-// Les fonctions suivantes n'ont pas besoin d'être modifiées car elles travaillent
-// déjà avec des coordonnées logiques après la conversion par getMousePos
 export const getNearPoint = (x, y, points, threshold = 15) => {
     return points.find(point => Math.hypot(point.x - x, point.y - y) <= threshold) || null;
 };
 
+// Fonction corrigée pour gérer correctement la limite de connexions
 export const canConnect = (p1, p2) => {
-    if (p1 === p2) {
+    // Vérifier si c'est une boucle (même point)
+    if (p1.label === p2.label) {
+        // Une boucle compte pour 2 connexions sur le même point
+        // Donc, un point doit avoir au maximum 1 connexion avant de faire une boucle
         return p1.connections <= 1;
     } else {
-        // Pour les connexions entre points différents, limiter à 3 connexions
+        // Pour les connexions entre points différents, limiter à 3 connexions par point
         return p1.connections < 3 && p2.connections < 3;
     }
 };
@@ -136,11 +147,18 @@ export const canConnect = (p1, p2) => {
 export const connectPoints = (p1, p2, curvePoints, points, setPoints, setCurves) => {
     console.log("Connecting points:", p1, p2);
 
+    // Vérifier s'il s'agit d'une boucle (même point)
+    const isSelfLoop = p1.label === p2.label;
+
     // Update point connections
     let updatedPoints = points.map(point => {
-        if (point.label === p1.label || point.label === p2.label) {
+        if (point.label === p1.label && isSelfLoop) {
+            // Si c'est une boucle sur le même point, ajouter 2 connexions
+            const newConnections = point.connections + 2;
+            return { ...point, connections: newConnections };
+        } else if (point.label === p1.label || point.label === p2.label) {
+            // Pour des points différents, ajouter 1 connexion à chacun
             const newConnections = point.connections + 1;
-            console.log(`Updating point ${point.label} with ${newConnections} connections`);
             return { ...point, connections: newConnections };
         }
         return point;
@@ -157,22 +175,39 @@ export const connectPoints = (p1, p2, curvePoints, points, setPoints, setCurves)
     });
 };
 
+// Fonction de détection d'intersection améliorée
 export const curveIntersects = (newCurve, curves = [], points) => {
-    // Si la courbe est invalide ou trop courte, pas d'intersection
-    if (!newCurve || newCurve.length < 2) return false;
+    console.log("Checking intersections for new curve:", newCurve);
 
-    // Fonction utilitaire pour vérifier si un point est proche d'un point officiel
-    const isNearOfficialPoint = (p) => {
-        return points.some(point =>
-            Math.hypot(point.x - p.x, point.y - p.y) < 10 // Seuil de tolérance plus élevé
-        );
+    // Si la courbe est invalide ou trop courte, pas d'intersection
+    if (!newCurve || newCurve.length < 2) {
+        console.log("Curve too short, no intersection check");
+        return false;
+    }
+
+    // Fonction pour vérifier si un point appartient à un segment
+    const pointOnSegment = (p, s1, s2, tolerance = 3) => {
+        const d1 = Math.hypot(p.x - s1.x, p.y - s1.y);
+        const d2 = Math.hypot(p.x - s2.x, p.y - s2.y);
+        const lineLength = Math.hypot(s1.x - s2.x, s1.y - s2.y);
+
+        return Math.abs(d1 + d2 - lineLength) < tolerance;
     };
 
-    // Vérifier les intersections avec les courbes existantes
+    // Vérifier si un point est près d'un point officiel
+    const isNearOfficialPoint = (p, tolerance = 15) => {
+        return points.some(point => Math.hypot(point.x - p.x, point.y - p.y) < tolerance);
+    };
+
+    // 1. Vérifier les intersections avec les courbes existantes
     for (let curve of curves) {
-        // Gérer différents formats de courbes
-        const curvePoints = Array.isArray(curve.points) ? curve.points :
-                          Array.isArray(curve) ? curve : [];
+        // Adapter en fonction du format de la courbe
+        let curvePoints = [];
+        if (curve && Array.isArray(curve)) {
+            curvePoints = curve;
+        } else if (curve && typeof curve === 'object' && Array.isArray(curve.points)) {
+            curvePoints = curve.points;
+        }
 
         if (curvePoints.length < 2) continue;
 
@@ -190,17 +225,20 @@ export const curveIntersects = (newCurve, curves = [], points) => {
                 // Ignorer les segments très courts
                 if (Math.hypot(seg2End.x - seg2Start.x, seg2End.y - seg2Start.y) < 3) continue;
 
-                // Si les segments sont aux extrémités (points de jeu), pas d'intersection
-                if ((isNearOfficialPoint(seg1Start) && isNearOfficialPoint(seg2Start)) ||
-                    (isNearOfficialPoint(seg1Start) && isNearOfficialPoint(seg2End)) ||
-                    (isNearOfficialPoint(seg1End) && isNearOfficialPoint(seg2Start)) ||
-                    (isNearOfficialPoint(seg1End) && isNearOfficialPoint(seg2End))) {
+                // Si les deux segments partagent un point d'extrémité qui est un point officiel,
+                // ce n'est pas considéré comme une intersection
+                if ((isNearOfficialPoint(seg1Start) &&
+                    (Math.hypot(seg1Start.x - seg2Start.x, seg1Start.y - seg2Start.y) < 15 ||
+                     Math.hypot(seg1Start.x - seg2End.x, seg1Start.y - seg2End.y) < 15)) ||
+                    (isNearOfficialPoint(seg1End) &&
+                    (Math.hypot(seg1End.x - seg2Start.x, seg1End.y - seg2Start.y) < 15 ||
+                     Math.hypot(seg1End.x - seg2End.x, seg1End.y - seg2End.y) < 15))) {
                     continue;
                 }
 
-                // Vérifier l'intersection
+                // Vérifier l'intersection des segments
                 if (segmentsIntersect(seg1Start, seg1End, seg2Start, seg2End)) {
-                    console.log("Intersection found between segments:",
+                    console.log("Intersection detected with existing curve at segments:",
                                 seg1Start, seg1End, "and", seg2Start, seg2End);
                     return true;
                 }
@@ -208,36 +246,55 @@ export const curveIntersects = (newCurve, curves = [], points) => {
         }
     }
 
-    // Vérifier l'auto-intersection de la nouvelle courbe
-    // On ne teste que les segments non adjacents
-    for (let i = 0; i < newCurve.length - 1; i++) {
+    // 2. Vérifier l'auto-intersection de la nouvelle courbe
+    for (let i = 0; i < newCurve.length - 2; i++) {
         const seg1Start = newCurve[i];
         const seg1End = newCurve[i + 1];
 
         // Ignorer les segments très courts
         if (Math.hypot(seg1End.x - seg1Start.x, seg1End.y - seg1Start.y) < 3) continue;
 
-        // Tester uniquement avec des segments non adjacents (au moins 2 segments d'écart)
-        for (let j = i + 3; j < newCurve.length - 1; j++) {
+        // Ne vérifier que les segments non adjacents (au moins 2 de distance)
+        for (let j = i + 2; j < newCurve.length - 1; j++) {
             const seg2Start = newCurve[j];
             const seg2End = newCurve[j + 1];
 
             // Ignorer les segments très courts
             if (Math.hypot(seg2End.x - seg2Start.x, seg2End.y - seg2Start.y) < 3) continue;
 
+            // Ignorer les connexions aux extrémités (points officiels)
+            if (i === 0 && j === newCurve.length - 2 &&
+                isNearOfficialPoint(seg1Start) && isNearOfficialPoint(seg2End)) {
+                continue;
+            }
+
             // Vérifier l'intersection
             if (segmentsIntersect(seg1Start, seg1End, seg2Start, seg2End)) {
-                console.log("Self-intersection found between segments:",
+                console.log("Self-intersection detected at segments:",
                             seg1Start, seg1End, "and", seg2Start, seg2End);
                 return true;
             }
         }
     }
 
+    // 3. Vérifier si la nouvelle courbe passe par un point officiel autre que ses extrémités
+    for (let i = 1; i < newCurve.length - 1; i++) {
+        const point = newCurve[i];
+
+        for (let officialPoint of points) {
+            // Si ce n'est pas un point d'extrémité et qu'on passe près d'un point officiel
+            if (Math.hypot(point.x - officialPoint.x, point.y - officialPoint.y) < 15 &&
+                Math.hypot(newCurve[0].x - officialPoint.x, newCurve[0].y - officialPoint.y) >= 15 &&
+                Math.hypot(newCurve[newCurve.length-1].x - officialPoint.x, newCurve[newCurve.length-1].y - officialPoint.y) >= 15) {
+                console.log("Curve passes through an official point:", officialPoint);
+                return true;
+            }
+        }
+    }
+
+    console.log("No intersections found");
     return false;
 };
-
-
 
 export const curveLength = (curve) => {
     let length = 0;
@@ -247,67 +304,16 @@ export const curveLength = (curve) => {
     return length;
 };
 
-// Nouvelle implémentation plus robuste de l'algorithme d'intersection
+// Algorithme amélioré pour la détection d'intersection de segments
 export const segmentsIntersect = (A, B, C, D) => {
-    // Epsilon pour la comparaison à virgule flottante
-    const EPSILON = 1e-9;
-
-    // Fonction pour calculer la distance entre un point et un segment
-    const distancePointToSegment = (p, s1, s2) => {
-        const lengthSquared = Math.pow(s2.x - s1.x, 2) + Math.pow(s2.y - s1.y, 2);
-        if (lengthSquared === 0) return Math.hypot(p.x - s1.x, p.y - s1.y);
-
-        let t = ((p.x - s1.x) * (s2.x - s1.x) + (p.y - s1.y) * (s2.y - s1.y)) / lengthSquared;
-        t = Math.max(0, Math.min(1, t));
-
-        const proj = {
-            x: s1.x + t * (s2.x - s1.x),
-            y: s1.y + t * (s2.y - s1.y)
-        };
-
-        return Math.hypot(p.x - proj.x, p.y - proj.y);
+    // Fonction orientée pour déterminer l'orientation de trois points
+    const ccw = (A, B, C) => {
+        return (C.y - A.y) * (B.x - A.x) > (B.y - A.y) * (C.x - A.x);
     };
 
-    // Fonction pour vérifier si deux points sont presque identiques
-    const pointsAlmostEqual = (p1, p2) => {
-        return Math.abs(p1.x - p2.x) < EPSILON && Math.abs(p1.y - p2.y) < EPSILON;
-    };
-
-    // Si deux extrémités de segments sont les mêmes, ce n'est pas considéré comme une intersection
-    if (pointsAlmostEqual(A, C) || pointsAlmostEqual(A, D) ||
-        pointsAlmostEqual(B, C) || pointsAlmostEqual(B, D)) {
-        return false;
-    }
-
-    // Vérifier si les points d'un segment sont proches de l'autre segment
-    const PROXIMITY_THRESHOLD = 1.0; // pixels logiques
-    if (distancePointToSegment(A, C, D) < PROXIMITY_THRESHOLD ||
-        distancePointToSegment(B, C, D) < PROXIMITY_THRESHOLD ||
-        distancePointToSegment(C, A, B) < PROXIMITY_THRESHOLD ||
-        distancePointToSegment(D, A, B) < PROXIMITY_THRESHOLD) {
-        return false; // Les segments sont trop proches, mais ne se croisent pas réellement
-    }
-
-    // Utiliser la méthode des déterminants pour vérifier l'intersection
-    const det = (a, b, c, d) => a * d - b * c;
-
-    const dx1 = B.x - A.x;
-    const dy1 = B.y - A.y;
-    const dx2 = D.x - C.x;
-    const dy2 = D.y - C.y;
-
-    const d = det(dx1, -dx2, dy1, -dy2);
-
-    // Si les lignes sont parallèles, elles ne s'intersectent pas (ou coïncident)
-    if (Math.abs(d) < EPSILON) return false;
-
-    const s = det(C.x - A.x, -dx2, C.y - A.y, -dy2) / d;
-    const t = det(dx1, C.x - A.x, dy1, C.y - A.y) / d;
-
-    // Vérifier si l'intersection est sur les deux segments
-    return (s >= 0 && s <= 1 && t >= 0 && t <= 1);
+    // Vérifie si les segments AB et CD s'intersectent
+    return ccw(A, C, D) !== ccw(B, C, D) && ccw(A, B, C) !== ccw(A, B, D);
 };
-
 
 export const getNextLabel = (points) => {
     const usedLabels = points.map(point => point.label);

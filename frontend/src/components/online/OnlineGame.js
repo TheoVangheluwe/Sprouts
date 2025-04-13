@@ -21,59 +21,59 @@ function OnlineGame() {
 
     // Fonction pour générer des points initiaux aléatoires
     const generateRandomInitialPoints = (numPoints) => {
-        // Si le nombre de points est inférieur à 3, utiliser au moins 3 points
-        const pointCount = Math.max(3, numPoints);
+    // Si le nombre de points est inférieur à 3, utiliser au moins 3 points
+    const pointCount = Math.max(3, numPoints);
 
-        // Canvas dimensions en coordonnées logiques [0,500]
-        const canvasWidth = 500;  // Utiliser l'espace de coordonnées logiques
-        const canvasHeight = 500; // Utiliser l'espace de coordonnées logiques
-        const padding = 100; // Espace minimum depuis les bords (10% de l'espace)
-        const minDistanceBetweenPoints = 5; // Distance minimale entre les points
+    // Canvas dimensions en coordonnées logiques [0,500]
+    const canvasWidth = 500;  // Utiliser l'espace de coordonnées logiques
+    const canvasHeight = 500; // Utiliser l'espace de coordonnées logiques
+    const padding = 50; // Espace minimum depuis les bords
+    const minDistanceBetweenPoints = 100; // Distance minimale entre les points (augmentée à 100)
 
-        const initialPoints = [];
-        const labels = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+    const initialPoints = [];
+    const labels = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
 
-        // Fonction pour vérifier si un nouveau point est trop proche des points existants
-        const isTooClose = (x, y, points) => {
-            for (const point of points) {
-                const distance = Math.sqrt(Math.pow(x - point.x, 2) + Math.pow(y - point.y, 2));
-                if (distance < minDistanceBetweenPoints) {
-                    return true;
-                }
+    // Fonction pour vérifier si un nouveau point est trop proche des points existants
+    const isTooClose = (x, y, points) => {
+        for (const point of points) {
+            const distance = Math.sqrt(Math.pow(x - point.x, 2) + Math.pow(y - point.y, 2));
+            if (distance < minDistanceBetweenPoints) {
+                return true;
             }
-            return false;
-        };
-
-        // Générer chaque point
-        for (let i = 0; i < pointCount; i++) {
-            let x, y;
-            let attempts = 0;
-            const maxAttempts = 50; // Limite pour éviter une boucle infinie
-
-            // Essayer de trouver une position valide
-            do {
-                x = padding + Math.random() * (canvasWidth - 2 * padding);
-                y = padding + Math.random() * (canvasHeight - 2 * padding);
-                attempts++;
-
-                // Si on ne trouve pas de position après plusieurs tentatives, assouplir les contraintes
-                if (attempts > maxAttempts) {
-                    console.log(`Couldn't find ideal position for point ${i}, placing it anyway`);
-                    break;
-                }
-            } while (isTooClose(x, y, initialPoints));
-
-            // Ajouter le point avec un label
-            initialPoints.push({
-                x: x,
-                y: y,
-                connections: 0,
-                label: labels[i % labels.length]
-            });
         }
-
-        return initialPoints;
+        return false;
     };
+
+    // Générer chaque point
+    for (let i = 0; i < pointCount; i++) {
+        let x, y;
+        let attempts = 0;
+        const maxAttempts = 100; // Augmenté pour donner plus de chances de trouver une position valide
+
+        // Essayer de trouver une position valide
+        do {
+            x = padding + Math.random() * (canvasWidth - 2 * padding);
+            y = padding + Math.random() * (canvasHeight - 2 * padding);
+            attempts++;
+
+            // Si on ne trouve pas de position après plusieurs tentatives, assouplir les contraintes
+            if (attempts > maxAttempts) {
+                console.log(`Couldn't find ideal position for point ${i}, placing it anyway`);
+                break;
+            }
+        } while (isTooClose(x, y, initialPoints));
+
+        // Ajouter le point avec un label
+        initialPoints.push({
+            x: x,
+            y: y,
+            connections: 0,
+            label: labels[i % labels.length]
+        });
+    }
+
+    return initialPoints;
+};
 
     useEffect(() => {
         // Récupérer les informations sur l'utilisateur
@@ -378,10 +378,6 @@ function OnlineGame() {
                     // Convertir en chaînes pour une comparaison cohérente
                     const currentPlayerStr = String(data.currentPlayer);
                     const playerIdStr = "1"; // ID défini manuellement
-
-                    console.log("Move completed - Current player now:", data.currentPlayer);
-                    console.log("Move completed - My player ID:", 1);
-                    console.log("Is it my turn after move?", currentPlayerStr === playerIdStr);
                 }
 
                 // Mettre à jour les points si renvoyés par le serveur
@@ -546,20 +542,25 @@ function OnlineGame() {
 
                     <div style={{
                         marginTop: '10px',
-                        textAlign: 'center'
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: '10px'
                     }}>
-                        <p style={{
-                            fontWeight: 'bold',
-                            color: isMyTurn === true ? 'green' : 'red',
-                            padding: '5px 10px',
-                            backgroundColor: isMyTurn === true ? '#e6ffe6' : '#ffe6e6',
+                        <div style={{
+                            padding: '10px 15px',
+                            backgroundColor: isMyTurn ? '#e6ffe6' : '#ffe6e6',
                             borderRadius: '4px',
-                            display: 'inline-block'
+                            fontWeight: 'bold',
+                            color: isMyTurn ? 'green' : 'red',
+                            boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+                            minWidth: '250px',
+                            textAlign: 'center'
                         }}>
-                            {isMyTurn === true
+                            {isMyTurn
                                 ? "C'est à votre tour de jouer"
                                 : "En attente du tour de l'adversaire"}
-                        </p>
+                        </div>
 
                         <button
                             onClick={handleLeaveGame}
@@ -573,12 +574,12 @@ function OnlineGame() {
                                 cursor: isLeaving ? 'not-allowed' : 'pointer',
                                 fontWeight: 'bold',
                                 opacity: isLeaving ? 0.7 : 1,
-                                margin: '10px 0'
+                                width: '200px'
                             }}
                         >
                             {isLeaving ? 'Sortie en cours...' : 'Quitter la partie'}
-                </button>
-                </div>
+                        </button>
+                    </div>
                 </div>
             )}
             <ToastContainer position="top-right" autoClose={1500} hideProgressBar={true} newestOnTop={false} closeOnClick={false} rtl={false} pauseOnFocusLoss={false} draggable={false} pauseOnHover={false} />
