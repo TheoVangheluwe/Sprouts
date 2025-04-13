@@ -15,7 +15,7 @@ import {
     LOGICAL_HEIGHT
 } from './OnlineUtils';
 
-const OnlineCanvas = ({ points, setPoints, curves = [], setCurves, currentPlayer, myTurn, onMove }) => {
+const OnlineCanvas = ({ points, setPoints, curves = [], setCurves, myTurn, onMove }) => {
     const canvasRef = useRef(null);
     const [selectedPoint, setSelectedPoint] = useState(null);
     const [isDrawing, setIsDrawing] = useState(false);
@@ -203,7 +203,7 @@ const OnlineCanvas = ({ points, setPoints, curves = [], setCurves, currentPlayer
         if (curveIntersects(adjustedCurve, Array.isArray(curves) ? curves : [], points)) {
             toast.error("Intersection détectée.", { autoClose: 1500 });
             setCurrentCurve([]);
-        } else if (curveLength(adjustedCurve) < 50) {
+        } else if (curveLength(adjustedCurve) < 15) {
             toast.error("Courbe trop courte.", { autoClose: 1500 });
             setCurrentCurve([]);
         } else {

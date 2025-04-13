@@ -28,7 +28,7 @@ function OnlineGame() {
         const canvasWidth = 500;  // Utiliser l'espace de coordonnées logiques
         const canvasHeight = 500; // Utiliser l'espace de coordonnées logiques
         const padding = 100; // Espace minimum depuis les bords (10% de l'espace)
-        const minDistanceBetweenPoints = 30; // Distance minimale entre les points
+        const minDistanceBetweenPoints = 5; // Distance minimale entre les points
 
         const initialPoints = [];
         const labels = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
