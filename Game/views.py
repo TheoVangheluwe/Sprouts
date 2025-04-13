@@ -20,9 +20,59 @@ logger = logging.getLogger(__name__)
 def index(request):
     return render(request, 'index.html')
 
+
+def home_view(request):
+    """Vue pour la page d'accueil"""
+    return ReactAppView(request)
+
+
+def game_view(request):
+    """Vue pour la page de jeu"""
+    return ReactAppView(request)
+
+
+def rules_view(request):
+    """Vue pour la page des règles"""
+    return ReactAppView(request)
+
+
+def waiting_room_view(request):
+    """Vue pour la salle d'attente"""
+    if not request.user.is_authenticated:
+        return redirect('login_redirect')
+    return ReactAppView(request)
+
+
+def online_game_view(request, game_id):
+    """Vue pour un jeu en ligne spécifique"""
+    if not request.user.is_authenticated:
+        return redirect('login_redirect')
+
+    # Vérifier si le jeu existe et si l'utilisateur y est autorisé
+    try:
+        game = Game.objects.get(id=game_id)
+        if request.user not in game.players.all():
+            messages.error(request, "Vous n'êtes pas autorisé à accéder à cette partie.")
+            return redirect('game')
+    except Game.DoesNotExist:
+        messages.error(request, "Cette partie n'existe pas.")
+        return redirect('game')
+
+    return ReactAppView(request)
+
+
+def react_fallback(request):
+    """Fallback pour les routes React inconnues"""
+    # Si l'URL commence par /api/, c'est une erreur 404
+    if request.path.startswith('/api/'):
+        return JsonResponse({'error': 'API endpoint not found'}, status=404)
+
+    # Sinon, renvoyer l'application React
+    return ReactAppView(request)
+
 @csrf_exempt
 @login_required(login_url='login')
-def game_view(request, game_id):
+def game_detail_view(request, game_id):
     try:
         game = Game.objects.get(id=game_id)
         return JsonResponse({
@@ -838,7 +888,7 @@ def login_view(request):
         user = authenticate(request, username=username, password=password)
         if user is not None:
             login(request, user)
-            return redirect(request.GET.get('next', '/app/'))
+            return redirect(request.GET.get('next', '/home/'))
         else:
             messages.error(request, "Identifiants invalides. Veuillez réessayer.")
     else:
@@ -850,12 +900,31 @@ def logout_view(request):
     logout(request)
     return redirect('login')
 
+
 @login_required(login_url='login')
 def ReactAppView(request):
+    """Vue pour servir l'application React"""
     react_index_path = os.path.join(settings.BASE_DIR, 'frontend', 'build', 'index.html')
     try:
         with open(react_index_path, 'r', encoding='utf-8') as f:
-            return HttpResponse(f.read(), content_type='text/html')
+            # Lire le contenu du fichier
+            html_content = f.read()
+
+            # Injecter les informations utilisateur si nécessaire
+            if request.user.is_authenticated:
+                user_data = {
+                    'username': request.user.username,
+                    'id': request.user.id,
+                }
+                user_script = f"""
+                <script>
+                window.USER_DATA = {json.dumps(user_data)};
+                </script>
+                """
+                # Insérer juste avant la balise </head>
+                html_content = html_content.replace('</head>', f'{user_script}</head>')
+
+            return HttpResponse(html_content, content_type='text/html')
     except FileNotFoundError:
         return HttpResponse(
             "Le fichier React index.html n'existe pas. Assurez-vous d'avoir exécuté 'npm run build'.",

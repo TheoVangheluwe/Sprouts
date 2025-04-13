@@ -3,8 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import OnlineCanvas from './OnlineCanvas';
 import { ToastContainer, toast } from "react-toastify";
 
-function OnlineGame() {
-    const { gameId } = useParams();
+function OnlineGame({ gameId }) {
     const navigate = useNavigate();
     const [gameState, setGameState] = useState(null);
     const [currentPlayer, setCurrentPlayer] = useState(null);
@@ -357,7 +356,7 @@ function OnlineGame() {
 
         try {
             console.log("Sending move to server:", move);
-            const response = await fetch(`http://127.0.0.1:8000/api/game/${gameId}/move/`, {
+            const response = await fetch(`/api/game/${gameId}/move/`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -428,7 +427,7 @@ function OnlineGame() {
             setGameEnded(true);
 
             try {
-                const response = await fetch(`http://127.0.0.1:8000/api/game/${gameId}/leave/`, {
+                const response = await fetch(`/api/game/${gameId}/leave/`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',

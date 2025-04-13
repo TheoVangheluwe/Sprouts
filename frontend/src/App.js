@@ -1,3 +1,4 @@
+// Version originale d'App.js
 import React from 'react';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import Header from './components/Header';
@@ -16,7 +17,7 @@ const App = () => {
         <Header />
         <main className="flex-1">
           <Routes>
-            <Route path="/" element={<HomePage />} />
+            <Route path="/home" element={<HomePage />} />
             <Route path="/game" element={<GamePage />} />
             <Route path="/rules" element={<RulesPage />} />
             <Route path="/waiting-room" element={<WaitingRoom />} />

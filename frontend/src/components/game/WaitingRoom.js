@@ -11,6 +11,14 @@ function WaitingRoom({ setInWaitingRoom }) {
     const [checkingActiveGame, setCheckingActiveGame] = useState(true);
     const navigate = useNavigate();
 
+     const navigateTo = (path) => {
+        if (navigate) {
+            navigate(path);
+        } else {
+            window.location.href = path;
+        }
+    };
+
     const pointOptions = [3, 4, 5, 6, 7];
 
     // Vérifier si le joueur a une partie active avant de lui permettre de rejoindre la file
@@ -28,7 +36,7 @@ function WaitingRoom({ setInWaitingRoom }) {
                 // Si le joueur a une partie active, le rediriger directement
                 if (data.active_game && data.game_id) {
                     console.log("Active game found, redirecting to:", data.game_id);
-                    navigate(`/online-game/${data.game_id}`);
+                    navigateTo(`/online-game/${data.game_id}`);
                     return;
                 }
 
@@ -60,7 +68,7 @@ function WaitingRoom({ setInWaitingRoom }) {
                 // Si le joueur a une partie active, le rediriger directement
                 if (data.active_game && data.game_id) {
                     console.log("Active game found during polling, redirecting to:", data.game_id);
-                    navigate(`/online-game/${data.game_id}`);
+                    navigateTo(`/online-game/${data.game_id}`);
                     return;
                 }
 
@@ -70,7 +78,7 @@ function WaitingRoom({ setInWaitingRoom }) {
                 if (data.game_created && data.game_id) {
                     console.log("Game created, redirecting to game:", data.game_id);
                     setGameId(data.game_id);
-                    navigate(`/online-game/${data.game_id}`);
+                    navigateTo(`/online-game/${data.game_id}`);
                 }
             } catch (error) {
                 console.error("Erreur récupération statut de la file:", error);
@@ -99,7 +107,7 @@ function WaitingRoom({ setInWaitingRoom }) {
         setIsLoading(true);
 
         try {
-            const response = await fetch(`http://127.0.0.1:8000/api/queue/join/`, {
+            const response = await fetch(`/api/queue/join/`, {
                 method: "POST",
                 headers: {
                     'Content-Type': 'application/json',
@@ -116,7 +124,7 @@ function WaitingRoom({ setInWaitingRoom }) {
                 // Si le joueur a une partie active, le rediriger directement
                 if (data.active_game && data.game_id) {
                     console.log("Active game found during join, redirecting to:", data.game_id);
-                    navigate(`/online-game/${data.game_id}`);
+                    navigateTo(`/online-game/${data.game_id}`);
                     return;
                 }
 
@@ -136,7 +144,7 @@ function WaitingRoom({ setInWaitingRoom }) {
 
     const setPlayerReady = async () => {
         try {
-            const response = await fetch(`http://127.0.0.1:8000/api/queue/ready/`, {
+            const response = await fetch(`/api/queue/ready/`, {
                 method: "POST",
                 headers: {
                     'Content-Type': 'application/json',
@@ -154,7 +162,7 @@ function WaitingRoom({ setInWaitingRoom }) {
                 if (data.game_id) {
                     console.log("Game created during ready call, redirecting to:", data.game_id);
                     setGameId(data.game_id);
-                    navigate(`/online-game/${data.game_id}`);
+                    navigateTo(`/online-game/${data.game_id}`);
                 }
                 // Ne pas mettre à jour queueInfo ici pour éviter de perdre les infos de match
             } else {
@@ -168,7 +176,7 @@ function WaitingRoom({ setInWaitingRoom }) {
 
     const leaveQueue = async () => {
         try {
-            const response = await fetch(`http://127.0.0.1:8000/api/queue/leave/`, {
+            const response = await fetch(`/api/queue/leave/`, {
                 method: "POST",
                 headers: {
                     'Content-Type': 'application/json',
