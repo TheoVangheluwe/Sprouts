@@ -12,20 +12,25 @@ function WaitingRoom({ setInWaitingRoom }) {
     const navigate = useNavigate();
 
      const navigateTo = (path) => {
-        if (navigate) {
-            navigate(path);
-        } else {
-            window.location.href = path;
-        }
-    };
+    // Vérifier que le chemin ne contient pas "undefined"
+    if (path.includes("undefined")) {
+        console.error("Tentative de redirection avec ID indéfini:", path);
+        return; // Ne pas rediriger si l'ID est indéfini
+    }
 
+    if (navigate) {
+        navigate(path);
+    } else {
+        window.location.href = path;
+    }
+};
     const pointOptions = [3, 4, 5, 6, 7];
 
     // Vérifier si le joueur a une partie active avant de lui permettre de rejoindre la file
     useEffect(() => {
         const checkActiveGame = async () => {
             try {
-                const response = await fetch(`http://127.0.0.1:8000/api/queue/status/`, {
+                const response = await fetch(`/api/queue/status/`, {
                     headers: {
                         'Authorization': `Bearer ${localStorage.getItem('token')}`
                     }
@@ -56,7 +61,7 @@ function WaitingRoom({ setInWaitingRoom }) {
 
         const interval = setInterval(async () => {
             try {
-                const response = await fetch(`http://127.0.0.1:8000/api/queue/status/`, {
+                const response = await fetch(`/api/queue/status/`, {
                     headers: {
                         'Authorization': `Bearer ${localStorage.getItem('token')}`
                     }

@@ -3,7 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import OnlineCanvas from './OnlineCanvas';
 import { ToastContainer, toast } from "react-toastify";
 
-function OnlineGame({ gameId }) {
+function OnlineGame() {
+    const { gameId } = useParams();
     const navigate = useNavigate();
     const [gameState, setGameState] = useState(null);
     const [currentPlayer, setCurrentPlayer] = useState(null);
@@ -75,6 +76,13 @@ function OnlineGame({ gameId }) {
 };
 
     useEffect(() => {
+        if (!gameId || gameId === 'undefined') {
+        console.error("Invalid game ID:", gameId);
+        toast.error("ID de partie invalide");
+        setGameEnded(true);
+        setTimeout(() => navigate('/game'), 2000);
+        return;
+    }
         // Récupérer les informations sur l'utilisateur
        const fetchPlayerIdAndGameState = async () => {
             try {
@@ -90,7 +98,7 @@ function OnlineGame({ gameId }) {
                     console.error("Failed to fetch player ID:", playerData.error);
                 }
 
-                const gameResponse = await fetch(`http://127.0.0.1:8000/api/game/${gameId}/state/`, {
+                const gameResponse = await fetch(`/api/game/${gameId}/state/`, {
                     headers: {
                         'Authorization': `Bearer ${localStorage.getItem('token')}`
                     }
@@ -102,7 +110,7 @@ function OnlineGame({ gameId }) {
                     if (gameResponse.status === 404) {
                         toast.error("Cette partie n'existe plus.");
                         setGameEnded(true);
-                        setTimeout(() => navigate('/'), 2000);
+                        setTimeout(() => navigate('/home'), 2000);
                         return;
                     }
 
@@ -174,7 +182,7 @@ function OnlineGame({ gameId }) {
 
                     // Envoyer les points initiaux au serveur
                     try {
-                        await fetch(`http://127.0.0.1:8000/api/game/${gameId}/move/`, {
+                        await fetch(`/api/game/${gameId}/move/`, {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',
@@ -208,11 +216,16 @@ function OnlineGame({ gameId }) {
         fetchPlayerIdAndGameState();
 
         const intervalId = setInterval(async () => {
+
+            if (!gameId || gameId === 'undefined' || gameEnded) {
+            console.log("Skipping poll - invalid gameId or game ended");
+            return;
+            }
             // Ne pas effectuer la mise à jour si le jeu est terminé
             if (gameEnded) return;
 
             try {
-                const gameResponse = await fetch(`http://127.0.0.1:8000/api/game/${gameId}/state/`, {
+                const gameResponse = await fetch(`/api/game/${gameId}/state/`, {
                     headers: {
                         'Authorization': `Bearer ${localStorage.getItem('token')}`
                     }
@@ -259,19 +272,8 @@ function OnlineGame({ gameId }) {
                 setGameState(gameData.state);
 
                 if (gameData.currentPlayer !== undefined && gameData.currentPlayer !== null) {
-                    const previousPlayer = currentPlayer;
                     setCurrentPlayer(gameData.currentPlayer);
 
-                    // Log uniquement si currentPlayer a changé
-                    if (previousPlayer !== gameData.currentPlayer) {
-                        // Convertir en chaînes pour une comparaison cohérente
-                        const currentPlayerStr = String(gameData.currentPlayer);
-                        const playerIdStr = "1"; // ID défini manuellement
-
-                        console.log("Game state update - Current player changed from:", previousPlayer, "to:", gameData.currentPlayer);
-                        console.log("Game state update - My player ID:", 1);
-                        console.log("Is it my turn now?", currentPlayerStr === playerIdStr);
-                    }
                 }
 
                 // Vérifier si les joueurs sont toujours là
@@ -318,7 +320,7 @@ function OnlineGame({ gameId }) {
                     // envoyons nos courbes locales au serveur pour synchroniser
                     if (curves.length > 0) {
                         try {
-                            await fetch(`http://127.0.0.1:8000/api/game/${gameId}/sync-curves/`, {
+                            await fetch(`/api/game/${gameId}/sync-curves/`, {
                                 method: 'POST',
                                 headers: {
                                     'Content-Type': 'application/json',
@@ -341,7 +343,7 @@ function OnlineGame({ gameId }) {
                     if (!gameEnded) {
                         setGameEnded(true);
                         toast.info("La partie n'existe plus. Votre adversaire a peut-être abandonné.");
-                        setTimeout(() => navigate('/'), 3000);
+                        setTimeout(() => navigate('/home'), 3000);
                     }
                 }
             }

@@ -94,18 +94,6 @@ def list_games(request):
     games = Game.objects.filter(status='waiting').values('id', 'status', 'player_count', 'point_options')
     return JsonResponse(list(games), safe=False)
 
-
-
-def list_games(request):
-    # Supprimer les jeux inactifs de plus de 2 heures
-    old_date = datetime.now() - timedelta(hours=2)
-    Game.objects.filter(created_at__lt=old_date).delete()
-
-    # Récupérer les jeux actifs
-    games = Game.objects.filter(status='waiting').values('id', 'status', 'player_count', 'point_options')
-    return JsonResponse(list(games), safe=False)
-
-
 @login_required(login_url='login')
 def game_status(request, game_id):
     try:
@@ -390,6 +378,7 @@ def cleanup_games():
                     processed_pairs.add(players_key)
     except Exception as e:
         logger.error(f"Error in cleanup_games: {str(e)}")
+
 def get_active_game(user):
     """Vérifier si un joueur a une partie active et retourner l'ID de cette partie"""
     active_game = Game.objects.filter(
