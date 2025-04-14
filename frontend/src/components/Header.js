@@ -22,12 +22,17 @@ const Header = () => {
               </li>*/}
               <li>
                 <a href="/game/" className="text-lightGreen hover:text-softBlue transition-colors duration-300">
-                  Game
+                  Jeu
                 </a>
               </li>
               <li>
                 <a href="/rules/" className="text-lightGreen hover:text-softBlue transition-colors duration-300">
-                  Rules
+                  Règles
+                </a>
+              </li>
+              <li>
+                <a href="/historic/" className="text-lightGreen hover:text-softBlue transition-colors duration-300">
+                  Historique
                 </a>
               </li>
             </ul>
@@ -36,7 +41,7 @@ const Header = () => {
           {/* Right Section: Login Link */}
           <div className="w-1/3 flex justify-end">
             <a href="/login/" className="text-lightGreen hover:text-softBlue transition-colors duration-300">
-              Log in
+              Connexion
             </a>
           </div>
 
