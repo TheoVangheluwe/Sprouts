@@ -8,18 +8,18 @@ const Header = () => {
 
           {/* Left Section: Logo and Sprouts Game */}
           <div className="flex items-center space-x-4 w-1/3 justify-start">
-            <img src={logo} alt="Logo" className="h-30 w-auto" />
-            <div className="text-xl font-bold text-lightGreen">Sprouts Game</div>
+            <img src={logo} alt="Logo" style={{ height: '3.5rem' }} className="w-auto" /> {/* 33px = 8.25rem */}
+            <a href="/"><div className="text-xl font-bold text-lightGreen">Sprouts Game</div></a>
           </div>
 
           {/* Center Section: Navigation Links */}
           <div className="flex w-1/3 justify-center">
             <ul className="flex space-x-6 text-lg">
-              <li>
-                <a href="/home/" className="text-lightGreen hover:text-softBlue transition-colors duration-300">
+              {/*<li>
+                <a href="/" className="text-lightGreen hover:text-softBlue transition-colors duration-300">
                   Home
                 </a>
-              </li>
+              </li>*/}
               <li>
                 <a href="/game/" className="text-lightGreen hover:text-softBlue transition-colors duration-300">
                   Game

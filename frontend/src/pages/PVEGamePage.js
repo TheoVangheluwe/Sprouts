@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import PVECanvas from '../components/PVECanvas';
+import PVECanvas from '../components/game/pve/PVECanvas';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 

@@ -9,7 +9,7 @@ urlpatterns = [
     path('logout/', views.logout_view, name='logout'),
 
     # Pages de l'application
-    path('home/', views.home_view, name='home'),
+    path('/', views.home_view, name='home'),
     path('game/', views.game_view, name='game'),  # Cette ligne reste inchangée
     path('rules/', views.rules_view, name='rules'),
     path('waiting-room/', views.waiting_room_view, name='waiting_room'),

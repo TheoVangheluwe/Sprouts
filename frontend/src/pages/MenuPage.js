@@ -20,7 +20,7 @@ const MenuPage = () => {
             Joueur contre IA (Local)
           </Link>
           <Link
-            to="/multi"
+            to="/waiting-room"
             className="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 block"
           >
             Jeux Multi
