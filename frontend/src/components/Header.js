@@ -9,7 +9,7 @@ const Header = () => {
           {/* Left Section: Logo and Sprouts Game */}
           <div className="flex items-center space-x-4 w-1/3 justify-start">
             <img src={logo} alt="Logo" style={{ height: '3.5rem' }} className="w-auto" /> {/* 33px = 8.25rem */}
-            <a href="/"><div className="text-xl font-bold text-lightGreen">Sprouts Game</div></a>
+            <a href="/home"><div className="text-xl font-bold text-lightGreen">Sprouts Game</div></a>
           </div>
 
           {/* Center Section: Navigation Links */}
