@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import Canvas from '../components/game/Canvas';
+import PVECanvas from '../components/PVECanvas';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
@@ -10,9 +10,9 @@ const PVEGamePage = () => {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 p-4">
         <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-screen-lg">
-          <h1 className="text-2xl font-bold mb-4 text-center">Joueur contre IA</h1>
+          <h1 className="text-2xl font-bold mb-4 text-center">Joueur contre Joueur</h1>
           <div className="w-full max-w-screen-md aspect-square bg-gray-50">
-            <Canvas
+            <PVECanvas
               points={points}
               setPoints={setPoints}
               curves={curves}

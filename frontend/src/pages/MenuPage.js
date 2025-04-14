@@ -8,10 +8,16 @@ const MenuPage = () => {
         <h1 className="text-4xl font-bold mb-6">Menu Principal</h1>
         <div className="space-y-4">
           <Link
-            to="/local"
+            to="/pve"
             className="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 block"
           >
-            Jeux Local
+            Joueur contre Joueur (Local)
+          </Link>
+          <Link
+            to="/ai"
+            className="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 block"
+          >
+            Joueur contre IA (Local)
           </Link>
           <Link
             to="/multi"

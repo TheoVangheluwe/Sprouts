@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { toast } from 'react-toastify';
 import { drawGame, getMousePos, getNearPoint, canConnect, connectPoints, curveIntersects, curveLength, getNextLabel, getClosestPointOnCurve, isPointTooClose, generateInitialGraphString, generateGraphString, updateCurveMap } from './Utils';
 
-const Canvas = ({ points, setPoints, curves, setCurves }) => {
+const PVECanvas = ({ points, setPoints, curves, setCurves }) => {
   const canvasRef = useRef(null);
   const [selectedPoint, setSelectedPoint] = useState(null);
   const [isDrawing, setIsDrawing] = useState(false);
@@ -196,4 +196,4 @@ const Canvas = ({ points, setPoints, curves, setCurves }) => {
   );
 };
 
-export default Canvas;
+export default PVECanvas;
