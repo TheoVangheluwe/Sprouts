@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { toast } from 'react-toastify';
 import { drawGame, getMousePos, getNearPoint, canConnect, connectPoints, curveIntersects, curveLength, getNextLabel, getClosestPointOnCurve, isPointTooClose, generateInitialGraphString, generateGraphString, updateCurveMap } from './Utils';
 
-const Canvas = ({ points, setPoints, curves, setCurves }) => {
+const PVECanvas = ({ points, setPoints, curves, setCurves }) => {
   const canvasRef = useRef(null);
   const [selectedPoint, setSelectedPoint] = useState(null);
   const [isDrawing, setIsDrawing] = useState(false);
@@ -16,9 +16,8 @@ const Canvas = ({ points, setPoints, curves, setCurves }) => {
     const resizeCanvas = () => {
       const canvas = canvasRef.current;
       if (canvas) {
-        const container = canvas.parentElement;
-        canvas.width = container.clientWidth;
-        canvas.height = container.clientHeight;
+        canvas.width = 800;
+        canvas.height = 500;
         drawGame(canvasRef, points, curves, currentCurve);
       }
     };
@@ -182,10 +181,12 @@ const Canvas = ({ points, setPoints, curves, setCurves }) => {
   };
 
   return (
-    <div id="canvas-container">
+    <div id="canvas-container" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
       <canvas
         ref={canvasRef}
-        style={{ border: "1px solid black" }}
+        width="1000"
+        height="1000"
+        style={{ border: "1px solid black", backgroundColor: '#fff' }}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
@@ -195,4 +196,4 @@ const Canvas = ({ points, setPoints, curves, setCurves }) => {
   );
 };
 
-export default Canvas;
+export default PVECanvas;

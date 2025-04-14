@@ -1,5 +1,5 @@
 import React from 'react';
-import logo from './sprouts.png';
+import logo from '../assets/sprouts.png'
 
 const Header = () => {
   return (
