@@ -193,10 +193,17 @@ const Canvas = ({ points, setPoints, curves, setCurves }) => {
       />
       <p>Chaîne de caractères: {graphString}</p>
       <button
-      onClick={() => autoConnectPoints(points, curves, setPoints, setCurves, graphString, setGraphString, curveMap, setCurveMap)}
-    >
-      Jouer un coup automatique
-    </button>
+  onClick={() => {
+    const canvas = canvasRef.current; // Obtenir la référence au canvas
+    if (canvas) {
+      autoConnectPoints(points, curves, setPoints, setCurves, graphString, setGraphString, curveMap, setCurveMap, canvas.width, canvas.height);
+    } else {
+      console.error("Canvas non trouvé.");
+    }
+  }}
+>
+  Jouer un coup automatique
+</button>
     </div>
   );
 };

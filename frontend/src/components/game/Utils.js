@@ -1046,95 +1046,172 @@ function isGameOver(chain) {
 
 export { isGameOver };
 
+const isValidCurve = (curve, canvasWidth, canvasHeight) => {
+  const margin = 5;
+  return curve.every(point => point.x >= margin && point.x <= canvasWidth - margin && point.y >= margin && point.y <= canvasHeight - margin);
+};
+
+
 
 
 /**
  * Relie automatiquement deux points via une courbe en respectant les règles du jeu.
  */
-export const autoConnectPoints = (points, curves, setPoints, setCurves, graphString, setGraphString, curveMap, setCurveMap) => {
-  // Générer les coups possibles
-  const possibleMoves = generatePossibleMoves(graphString);
+export const autoConnectPoints = (points, curves, setPoints, setCurves, graphString, setGraphString, curveMap, setCurveMap, canvasWidth, canvasHeight) => {
+  if (isGameOver(graphString)) {
+    console.log("Le jeu est terminé. Aucun coup possible.");
+    return;
+  }
 
-  if (possibleMoves.length === 0) {
+  // Récupérer un coup possible
+  const move = chooseMove(graphString);
+  if (!move) {
     console.log("Aucun coup possible.");
     return;
   }
 
-  // Choisir un coup valide
-  for (const [startLabel, endLabel] of possibleMoves) {
-    const startPoint = points.find(point => point.label === startLabel);
-    const endPoint = points.find(point => point.label === endLabel);
+  const [startLabel, endLabel] = move;
+  const startPoint = points.find(point => point.label === startLabel);
+  const endPoint = points.find(point => point.label === endLabel);
 
-    if (!startPoint || !endPoint) continue;
-
-    // Vérifier si les points peuvent être connectés
-    if (startPoint.connections >= 3 || endPoint.connections >= 3) continue;
-
-    // Générer une courbe plus naturelle
-    const midX = (startPoint.x + endPoint.x) / 2;
-    const midY = (startPoint.y + endPoint.y) / 2;
-
-    // Ajouter un décalage pour éloigner le point intermédiaire des courbes existantes
-    const offset = 50; // Ajustez cette valeur pour contrôler la courbure
-    const dx = endPoint.x - startPoint.x;
-    const dy = endPoint.y - startPoint.y;
-    const length = Math.sqrt(dx * dx + dy * dy);
-    const offsetX = (dy / length) * offset; // Perpendiculaire au segment
-    const offsetY = -(dx / length) * offset;
-
-    const controlPoint = {
-      x: midX + offsetX,
-      y: midY + offsetY,
-    };
-
-    const curve = [
-      { x: startPoint.x, y: startPoint.y },
-      controlPoint, // Point de contrôle pour la courbure
-      { x: endPoint.x, y: endPoint.y },
-    ];
-
-    // Vérifier si la courbe croise d'autres courbes
-    if (curveIntersects(curve, curves, points)) {
-      console.log("Intersection détectée, tentative avec un autre coup.");
-      continue;
-    }
-
-    // Vérifier si le coup est valide pour la chaîne de caractères
-    const addedPoint = {
-      x: controlPoint.x,
-      y: controlPoint.y,
-      connections: 2,
-      label: getNextLabel(points),
-    };
-
-    const updatedGraphString = generateGraphString(startPoint, addedPoint, endPoint, graphString, curveMap, points);
-    if (!isValidMove(graphString, updatedGraphString)) {
-      console.log("Coup invalide pour la chaîne de caractères.");
-      continue;
-    }
-
-    // Mettre à jour les points et les courbes
-    const updatedPoints = points.map(point => {
-      if (point.label === startPoint.label || point.label === endPoint.label) {
-        return { ...point, connections: point.connections + 1 };
-      }
-      return point;
-    });
-    updatedPoints.push(addedPoint);
-
-    const updatedCurves = [...curves, curve];
-    const updatedCurveMap = updateCurveMap(curveMap, startPoint, endPoint, curve);
-
-    // Mettre à jour les états
-    setPoints(updatedPoints);
-    setCurves(updatedCurves);
-    setGraphString(updatedGraphString);
-    setCurveMap(updatedCurveMap);
-
-    console.log("Coup joué :", { startPoint, endPoint, addedPoint });
-    console.log("Chaîne mise à jour :", updatedGraphString);
+  if (!startPoint || !endPoint) {
+    console.error("Points invalides pour le coup choisi.");
     return;
   }
 
-  console.log("Aucun coup valide trouvé.");
+  // Vérifier les connexions
+  if (startPoint.connections >= 3 || endPoint.connections >= 3) {
+    console.error(`Les points ${startLabel} et ${endLabel} ne peuvent pas être connectés (trop de connexions).`);
+    return;
+  }
+
+  // Déterminer s'il s'agit d'une boucle (self-loop)
+  const isSelfLoop = startPoint === endPoint;
+
+  // Générer une courbe valide
+  let validCurve = null;
+  let addedPoint = null;
+  let attempt = 0;
+
+  while (!validCurve) {
+    attempt++;
+
+    // Générer une courbe (self-loop ou entre deux points)
+    const candidateCurve = isSelfLoop
+      ? generateSelfLoopBezierCurve(startPoint, attempt, canvasWidth, canvasHeight)
+      : generateBezierCurve(startPoint, endPoint, attempt, canvasWidth, canvasHeight);
+
+    // Vérifier si la courbe est valide
+    const curveValid = !curveIntersects(candidateCurve, curves, points) && isValidCurve(candidateCurve, canvasWidth, canvasHeight);
+
+    if (curveValid) {
+      // Ajouter un point intermédiaire au milieu de la courbe
+      const middleIndex = Math.floor(candidateCurve.length / 2);
+      addedPoint = {
+        x: Math.round(candidateCurve[middleIndex].x),
+        y: Math.round(candidateCurve[middleIndex].y),
+        connections: 2,
+        label: getNextLabel(points),
+      };
+
+      // Vérifier si le mouvement est valide
+      const testPoints = [...points, addedPoint];
+      const updatedGraphString = generateGraphString(startPoint, addedPoint, endPoint, graphString, curveMap, testPoints);
+
+      if (isValidMove(graphString, updatedGraphString)) {
+        validCurve = candidateCurve;
+        graphString = updatedGraphString;
+        break;
+      } else {
+        console.warn(`Tentative ${attempt}: Mouvement invalide.`);
+      }
+    } else {
+      console.warn(`Tentative ${attempt}: Courbe rejetée (intersection ou hors canvas).`);
+    }
+
+    // Si trop de tentatives, forcer un coup
+    if (attempt > 1000) {
+      console.error("Forçage d'un coup après 1000 tentatives.");
+      validCurve = candidateCurve;
+      const middleIndex = Math.floor(candidateCurve.length / 2);
+      addedPoint = {
+        x: Math.round(candidateCurve[middleIndex].x),
+        y: Math.round(candidateCurve[middleIndex].y),
+        connections: 2,
+        label: getNextLabel(points),
+      };
+      graphString = generateGraphString(startPoint, addedPoint, endPoint, graphString, curveMap, [...points, addedPoint]);
+      break;
+    }
+  }
+
+  // Mettre à jour les états
+  const updatedPoints = points.map(point => {
+    if (point.label === startPoint.label || point.label === endPoint.label) {
+      return { ...point, connections: point.connections + 1 };
+    }
+    return point;
+  });
+  updatedPoints.push(addedPoint);
+
+  const updatedCurves = [...curves, validCurve];
+  const updatedCurveMap = updateCurveMap(new Map(curveMap), startPoint, endPoint, validCurve);
+
+  setPoints(updatedPoints);
+  setCurves(updatedCurves);
+  setGraphString(graphString);
+  setCurveMap(updatedCurveMap);
+
+  console.log("Coup joué :", { startPoint, endPoint, addedPoint });
+  console.log("Chaîne mise à jour :", graphString);
+};
+
+const generateBezierCurve = (startPoint, endPoint, attempt, canvasWidth, canvasHeight) => {
+  const curve = [startPoint];
+  const dx = endPoint.x - startPoint.x;
+  const dy = endPoint.y - startPoint.y;
+
+  // Points de contrôle pour la courbe
+  const controlPoint1 = {
+    x: startPoint.x + dx * 0.25 + (Math.random() - 0.5) * 50 * (attempt % 10),
+    y: startPoint.y + dy * 0.25 + (Math.random() - 0.5) * 50 * (attempt % 10),
+  };
+  const controlPoint2 = {
+    x: startPoint.x + dx * 0.75 + (Math.random() - 0.5) * 50 * (attempt % 10),
+    y: startPoint.y + dy * 0.75 + (Math.random() - 0.5) * 50 * (attempt % 10),
+  };
+
+  // Générer des points intermédiaires
+  for (let t = 0; t <= 1; t += 0.1) {
+    const x =
+      Math.pow(1 - t, 3) * startPoint.x +
+      3 * Math.pow(1 - t, 2) * t * controlPoint1.x +
+      3 * (1 - t) * Math.pow(t, 2) * controlPoint2.x +
+      Math.pow(t, 3) * endPoint.x;
+    const y =
+      Math.pow(1 - t, 3) * startPoint.y +
+      3 * Math.pow(1 - t, 2) * t * controlPoint1.y +
+      3 * (1 - t) * Math.pow(t, 2) * controlPoint2.y +
+      Math.pow(t, 3) * endPoint.y;
+    curve.push({ x, y });
+  }
+
+  curve.push(endPoint);
+  return curve;
+};
+
+const generateSelfLoopBezierCurve = (point, attempt, canvasWidth, canvasHeight) => {
+  const curve = [point];
+  const radius = 30 + (attempt % 5) * 10; // Rayon de la boucle
+  const segments = 20; // Nombre de segments pour la boucle
+
+  for (let i = 0; i <= segments; i++) {
+    const angle = (i / segments) * Math.PI * 2;
+    const x = point.x + Math.cos(angle) * radius;
+    const y = point.y + Math.sin(angle) * radius;
+    curve.push({ x, y });
+  }
+
+  curve.push(point); // Fermer la boucle
+  return curve;
 };
