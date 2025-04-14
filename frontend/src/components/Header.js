@@ -1,6 +1,5 @@
 import React from 'react';
 import logo from '../assets/sprouts.png'
-//import { Link } from 'react-router-dom';
 
 const Header = () => {
   return (
@@ -17,17 +16,17 @@ const Header = () => {
           <div className="flex w-1/3 justify-center">
             <ul className="flex space-x-6 text-lg">
               <li>
-                <a href="/" className="text-lightGreen hover:text-softBlue transition-colors duration-300">
+                <a href="/home/" className="text-lightGreen hover:text-softBlue transition-colors duration-300">
                   Home
                 </a>
               </li>
               <li>
-                <a href="/game" className="text-lightGreen hover:text-softBlue transition-colors duration-300">
+                <a href="/game/" className="text-lightGreen hover:text-softBlue transition-colors duration-300">
                   Game
                 </a>
               </li>
               <li>
-                <a href="/rules" className="text-lightGreen hover:text-softBlue transition-colors duration-300">
+                <a href="/rules/" className="text-lightGreen hover:text-softBlue transition-colors duration-300">
                   Rules
                 </a>
               </li>
@@ -36,7 +35,7 @@ const Header = () => {
 
           {/* Right Section: Login Link */}
           <div className="w-1/3 flex justify-end">
-            <a href="/login" className="text-lightGreen hover:text-softBlue transition-colors duration-300">
+            <a href="/login/" className="text-lightGreen hover:text-softBlue transition-colors duration-300">
               Log in
             </a>
           </div>

@@ -1,3 +1,4 @@
+// Version originale d'App.js
 import React from 'react';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import './App.css';
@@ -9,6 +10,8 @@ import MenuPage from './pages/MenuPage';
 import PVEGamePage from './pages/PVEGamePage'
 import AIGamePage from './pages/AIGamePage'
 import MultiplayerGamePage from './pages/MultiplayerGamePage'
+import WaitingRoom from './components/game/WaitingRoom';
+import OnlineGame from './components/online/OnlineGame';
 
 const App = () => {
   return (
@@ -23,6 +26,8 @@ const App = () => {
             <Route path="/ai" element={<AIGamePage />} />
             <Route path="/multiplayer" element={<MultiplayerGamePage />} />
             <Route path="/rules" element={<RulesPage />} />
+            <Route path="/waiting-room" element={<WaitingRoom />} />
+            <Route path="/online-game/:gameId" element={<OnlineGame />} />
           </Routes>
         </main>
         <Footer />
