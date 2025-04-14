@@ -98,12 +98,6 @@ def playable_vertices(chain):
 """
 Détermine à partir de deux chaînes de caractères (chaine actuelle et chaine du tour precedent) si le coup est valide ou non
 """
-#TODO #possiblement changer la manière dont ca marche :
-#possible nouvelle methode
-# 1. on test quel point est nouveau 
-# 2. & ses deux connexions (attention self loop)
-# 3. on essaye de simuler le coup avec la chaine de charactère n-1 et verifie si ca marche
-# possible truc à verif : un coup entre deux points peut prendre plusieurs formes (dépend de quel region est joué et le decoupage de region)
 def is_valid_move(old_chain, new_chain):
     old_boundaries = parse_boundaries(old_chain)
     new_boundaries = parse_boundaries(new_chain)
@@ -176,4 +170,91 @@ def is_valid_move(old_chain, new_chain):
             return False
 
     #6. Verifier que les régions créés soient valides
+    return True
+
+#TODO #possiblement changer la manière dont ca marche :
+#possible nouvelle methode
+# 1. on test quel point est nouveau 
+# 2. & ses deux connexions (attention self loop)
+# 3. on essaye de simuler le coup avec la chaine de charactère n-1 et verifie si ca marche
+# possible truc à verif : un coup entre deux points peut prendre plusieurs formes (dépend de quel region est joué et le decoupage de region)
+def is_valid_move2(old_chain, new_chain):
+    old_boundaries = parse_boundaries(old_chain)
+    new_boundaries = parse_boundaries(new_chain)
+
+    old_degrees = get_vertex_degrees(old_chain)
+    new_degrees = get_vertex_degrees(new_chain)
+
+    old_regions = parse_regions(old_chain)
+    new_regions = parse_regions(new_chain)
+
+    old_vertices = set(old_degrees.keys())
+    new_vertices = set(new_degrees.keys())
+
+    #1: Vérification de la présence d’un nouveau sommet 
+    added_vertices = new_vertices - old_vertices
+    if len(added_vertices) != 1:
+        print("Plus d’un nouveau sommet ou aucun n’a été ajouté.")
+        return False
+
+    new_vertex = list(added_vertices)[0]
+
+    #2: Vérification du degré (2) du nouveau sommet
+    if new_degrees[new_vertex] != 2:
+        print("Le nouveau sommet n’a pas exactement 2 connexions.")
+        return False
+
+    #3 Recuperer les sommets connectés au nouveau sommet
+    connections = []
+    for boundary in new_boundaries:
+        if new_vertex in boundary:
+            indices = [i for i, x in enumerate(boundary) if x == new_vertex]
+            for idx in indices:
+                if idx > 0:
+                    v_before = boundary[idx - 1]
+                    if v_before != new_vertex:
+                        connections.append(v_before)
+                if idx + 1 < len(boundary):
+                    v_after = boundary[idx + 1]
+                    if v_after != new_vertex:
+                        connections.append(v_after)
+
+    connected_vertices = [v for v in connections if v in old_vertices]
+    # enleve les duplicats (des cas en ont comme quand on a un point sur une boundary mais connecté à 1 seul sommet) (n'affecte pas les self loop)
+    connected_vertices = list(dict.fromkeys(connected_vertices))
+    #pour les self loops (if the new vertex is connected to itself it has only one connection)	
+    if len(connected_vertices) == 1 and new_degrees[connected_vertices[0]] == 2: 
+        connected_vertices.append(connected_vertices[0]) #on duplique le sommet connecté unique juste pour pas s'embeter après
+    #check
+    if len(connected_vertices) != 2 :
+        print("Le nouveau sommet n’est pas connecté à exactement deux anciens sommets.")
+        return False
+
+    #cas sans nouvelles regions (donc pas de split) (meme compte de } )
+    old_count = old_chain.count('}')
+    new_count = new_chain.count('}')
+    if new_count == old_count:
+        #check if new choosen region and old choosen region have the same verteces + the new
+        old_region = next((region for region in old_regions if connected_vertices[0] in region and connected_vertices[1] in region), None)
+        new_region = next((region for region in new_regions if connected_vertices[0] in region and connected_vertices[1] in region and new_vertex in region), None)
+
+        if old_region is None or new_region is None:
+            print("Impossible de trouver les régions correspondantes.")
+            return False
+
+        if set(old_region) | {new_vertex} != set(new_region):
+            print("Les sommets de la région choisie ne correspondent pas après le coup.")
+            return False
+
+    #cas avec nouvelles regions (donc split)
+    if new_count != old_count:
+        print(f"Le nombre de régions a changé : {old_count} -> {new_count}.")
+        return False
+
+
+    print(old_count, new_count)
+    print("nv pt:", new_vertex)
+    print("connections:", connected_vertices)
+
+
     return True
