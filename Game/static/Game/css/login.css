@@ -1,7 +1,7 @@
 /* Style pour le corps de la page */
 body {
     font-family: Arial, sans-serif;
-    background-color: #BACDB0; /* Couleur de fond douce */
+    background-color: #171738; /* Couleur de fond douce */
     margin: 0;
     padding: 0;
     display: flex;
@@ -65,7 +65,7 @@ button {
 }
 
 button:hover {
-    background-color: #434190; /* Bleu plus foncé au survol */
+    background-color: #3423A6; /* Bleu plus foncé au survol */
 }
 
 /* Lien "Register" */
