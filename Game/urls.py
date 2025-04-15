@@ -21,9 +21,10 @@ urlpatterns = [
     #path('historic/<int:game_id>/', views.historic_view, name='legal'),
 
     # APIs pour avoir infos sur le joueur connecté
-    path('api/player/id/', views.get_user_id, name='player_id'),
-    path('api/player/name/', views.get_user_name, name='player_name'),
-    path('api/player/games/', views.get_user_games, name='player_games'),
+    path('api/player/id/', views.get_user_id, name='player_id'), #revois id
+    path('api/player/name/', views.get_user_name, name='player_name'), #revois nom
+    path('api/player/info/', views.get_user_info, name='player_games'), #renvois les deux
+    path('api/player/games/', views.get_user_games, name='player_games'), #revois les games du joueur connecté
 
     # APIs pour la gestion des jeux - Mise à jour du nom de la fonction ici
     path('api/game/<int:game_id>/', views.game_detail_view, name='game_detail'),  # Mise à jour ici

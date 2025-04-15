@@ -1,4 +1,3 @@
-// Version originale d'App.js
 import React from 'react';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import './App.css';
@@ -7,13 +6,14 @@ import Footer from './components/Footer';
 import HomePage from './pages/HomePage';
 import RulesPage from './pages/RulesPage';
 import MenuPage from './pages/MenuPage';
-import PVEGamePage from './pages/PVEGamePage'
-import AIGamePage from './pages/AIGamePage'
-import MultiplayerGamePage from './pages/MultiplayerGamePage'
+import PVEGamePage from './pages/PVEGamePage';
+import AIGamePage from './pages/AIGamePage';
+import MultiplayerGamePage from './pages/MultiplayerGamePage';
 import WaitingRoom from './components/game/WaitingRoom';
 import OnlineGame from './components/online/OnlineGame';
 import LegalPage from './pages/LegalPage';
 import HistoricPage from './pages/HistoricPage';
+import { Toaster } from 'react-hot-toast';
 
 const App = () => {
   return (
@@ -35,6 +35,7 @@ const App = () => {
           </Routes>
         </main>
         <Footer />
+        <Toaster position="top-right" reverseOrder={false} />
       </div>
     </Router>
   );

@@ -930,22 +930,24 @@ def login_redirect_with_message(request):
 @login_required
 def get_user_id(request):
     """Obtenir l'id de l'utilisateur connecté"""
-    if request.user.is_authenticated:
-        return JsonResponse({
-            'id': request.user.id,
-        })
-    else:
-        return JsonResponse({'error': 'User not authenticated'}, status=401)
+    return JsonResponse({
+        "id": request.user.id,
+    })
     
 @login_required
 def get_user_name(request):
     """Obtenir le nom d'utilisateur de l'utilisateur connecté"""
-    if request.user.is_authenticated:
+    return JsonResponse({
+        "username": request.user.username,
+    })
+    
+@login_required
+def get_user_info(request):
+        """Obtenir le nom d'utilisateur & id de l'utilisateur connecté"""
         return JsonResponse({
-            'username': request.user.username,
-        })
-    else:
-        return JsonResponse({'error': 'User not authenticated'}, status=401)
+        "id": request.user.id,
+        "username": request.user.username,
+    })
     
 @login_required
 @transaction.atomic
