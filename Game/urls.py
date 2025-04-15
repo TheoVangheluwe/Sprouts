@@ -15,7 +15,15 @@ urlpatterns = [
     path('waiting-room/', views.waiting_room_view, name='waiting_room'),
     path('online-game/<int:game_id>/', views.online_game_view, name='online_game'),
     path('legal/', views.legal_view, name='legal'),
+
+    # Historique player / game indiv
     path('historic/', views.historic_view, name='legal'),
+    #path('historic/<int:game_id>/', views.historic_view, name='legal'),
+
+    # APIs pour avoir infos sur le joueur connecté
+    path('api/player/id/', views.get_user_id, name='player_id'),
+    path('api/player/name/', views.get_user_name, name='player_name'),
+    path('api/player/games/', views.get_user_games, name='player_games'),
 
     # APIs pour la gestion des jeux - Mise à jour du nom de la fonction ici
     path('api/game/<int:game_id>/', views.game_detail_view, name='game_detail'),  # Mise à jour ici
