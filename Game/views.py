@@ -35,6 +35,13 @@ def rules_view(request):
     """Vue pour la page des règles"""
     return ReactAppView(request)
 
+def legal_view(request):
+    """Vue pour la page d'accueil"""
+    return ReactAppView(request)
+
+def historic_view(request):
+    """Vue pour la page d'accueil"""
+    return ReactAppView(request)
 
 def waiting_room_view(request):
     """Vue pour la salle d'attente"""

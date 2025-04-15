@@ -14,6 +14,8 @@ urlpatterns = [
     path('rules/', views.rules_view, name='rules'),
     path('waiting-room/', views.waiting_room_view, name='waiting_room'),
     path('online-game/<int:game_id>/', views.online_game_view, name='online_game'),
+    path('legal/', views.legal_view, name='legal'),
+    path('historic/', views.historic_view, name='legal'),
 
     # APIs pour la gestion des jeux - Mise à jour du nom de la fonction ici
     path('api/game/<int:game_id>/', views.game_detail_view, name='game_detail'),  # Mise à jour ici

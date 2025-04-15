@@ -12,6 +12,8 @@ import AIGamePage from './pages/AIGamePage'
 import MultiplayerGamePage from './pages/MultiplayerGamePage'
 import WaitingRoom from './components/game/WaitingRoom';
 import OnlineGame from './components/online/OnlineGame';
+import LegalPage from './pages/LegalPage';
+import HistoricPage from './pages/HistoricPage';
 
 const App = () => {
   return (
@@ -28,6 +30,8 @@ const App = () => {
             <Route path="/rules" element={<RulesPage />} />
             <Route path="/waiting-room" element={<WaitingRoom />} />
             <Route path="/online-game/:gameId" element={<OnlineGame />} />
+            <Route path="/legal" element={<LegalPage />} />
+            <Route path="/historic" element={<HistoricPage />} />
           </Routes>
         </main>
         <Footer />
