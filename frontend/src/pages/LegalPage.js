@@ -11,7 +11,7 @@ const LegalPage = () => {
 
         <h2 className="text-xl font-semibold mt-6 mb-2">Responsables du projet</h2>
         <p className="text-gray-700 mb-2">
-          Ce projet a été réalisé par des étudiants de M1 ISEN dans le cadre d'un travail encadré.
+          Ce projet a été réalisé par ces étudiants de M1 :
         </p>
         <ul className="list-disc list-inside text-gray-700 mb-4">
           <li>Théo DANIEL</li>
@@ -21,6 +21,9 @@ const LegalPage = () => {
           <li>Théo STOORDER</li>
           <li>Théo VANGHELUWE</li>
         </ul>
+        <p className="text-gray-700 mb-2">
+          Sous la superivsion de Mme. BAUDEL Manon, enseignante à l'ISEN Lille.
+        </p>
 
         <h2 className="text-xl font-semibold mt-6 mb-2">Hébergement</h2>
         <p className="text-gray-700 mb-2">
