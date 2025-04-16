@@ -570,7 +570,8 @@ export const generateGraphString = (startPoint, addedPoint, endPoint, currentGra
         if (!boundariesObj || Object.keys(boundariesObj).length === 0) {
             console.warn("Aucune frontière trouvée");
             // Solution simplifiée: créer une nouvelle chaîne directement
-            const newGraphString = `${isolatedPoint.label}${addedPoint.label}${connectedPoint.label}.}${nonRelevantAreas.join('}')}`;
+            const mergedRegion = `${isolatedPoint.label}${addedPoint.label}${connectedPoint.label}.}`;
+            const newGraphString = `${relevantArea.join('')}${mergedRegion}${nonRelevantAreas.join('}')}`;
             return newGraphString;
         }
 
@@ -580,7 +581,8 @@ export const generateGraphString = (startPoint, addedPoint, endPoint, currentGra
         if (!boundaries || boundaries.length === 0) {
             console.warn("Aucune frontière n'a été extraite");
             // Solution simplifiée: créer une nouvelle chaîne directement
-            const newGraphString = `${isolatedPoint.label}${addedPoint.label}${connectedPoint.label}.}${nonRelevantAreas.join('}')}`;
+            const mergedRegion = `${isolatedPoint.label}${addedPoint.label}${connectedPoint.label}.}`;
+            const newGraphString = `${relevantArea.join('')}${mergedRegion}${nonRelevantAreas.join('}')}`;
             return newGraphString;
         }
 
@@ -593,7 +595,8 @@ export const generateGraphString = (startPoint, addedPoint, endPoint, currentGra
         if (!relevantBoundarie) {
             console.warn("Frontière pertinente non trouvée pour le point connecté");
             // Solution simplifiée: créer une nouvelle chaîne directement
-            const newGraphString = `${isolatedPoint.label}${addedPoint.label}${connectedPoint.label}.}${nonRelevantAreas.join('}')}`;
+            const mergedRegion = `${isolatedPoint.label}${addedPoint.label}${connectedPoint.label}.}`;
+            const newGraphString = `${relevantArea.join('')}${mergedRegion}${nonRelevantAreas.join('}')}`;
             return newGraphString;
         }
 
@@ -613,7 +616,8 @@ export const generateGraphString = (startPoint, addedPoint, endPoint, currentGra
         if (insertIndex === -1) {
             console.warn("Point connecté non trouvé dans la frontière pertinente");
             // Solution simplifiée: créer une nouvelle chaîne directement
-            const newGraphString = `${isolatedPoint.label}${addedPoint.label}${connectedPoint.label}.}${nonRelevantAreas.join('}')}`;
+            const mergedRegion = `${isolatedPoint.label}${addedPoint.label}${connectedPoint.label}.}`;
+            const newGraphString = `${relevantArea.join('')}${mergedRegion}${nonRelevantAreas.join('}')}`;
             return newGraphString;
         }
 
@@ -879,15 +883,18 @@ export const generateGraphString = (startPoint, addedPoint, endPoint, currentGra
                 console.log(region2);
             } else {
                 console.log("Un cas non prévu est apparu !");
+                // Inclure les anciens points pour éviter de perdre les régions importantes
+                const merged = `${startPoint.label}${addedPoint.label}${endPoint.label}`;
 
-                // Solution de secours: préserver au moins les points de départ et d'arrivée
-                region1 = `${startPoint.label}${addedPoint.label}${endPoint.label}`;
-                region2 = `${startPoint.label}${addedPoint.label}${endPoint.label}`;
+                // Utilise la région existante comme base
+                region1 = `${regionString.includes(startPoint.label) ? regionString : merged}`;
+                region2 = `${regionString.includes(endPoint.label) ? regionString : merged}`;
 
                 console.log("Solution de secours appliquée:");
                 console.log("Région 1:", region1);
                 console.log("Région 2:", region2);
             }
+
 
             nonRelevantBoundariesArea.forEach(frontiere => {
                 if (isFrontiereInRegion(frontiere, region1, curveMap, points)) {
@@ -901,14 +908,14 @@ export const generateGraphString = (startPoint, addedPoint, endPoint, currentGra
             console.log(region2);
 
             // Construire la nouvelle chaîne
-            const newGraphString = `${region1}.}${region2}.}${nonRelevantAreas.join('.}')}`;
+            const newGraphString = `${region1}.}${region2}.}${nonRelevantAreas.join('}')}`;
 
             console.log("Chaîne mise à jour:", newGraphString);
             return newGraphString;
         }
     }
     // Cas n°4: Le point de départ est le point d'arrivée (boucle)
-    else if (startPoint === endPoint) {
+    else if (startPoint.label === endPoint.label) {
         console.log("Cas où les points de départ et d'arrivé sont les mêmes");
 
         const regionString = `${startPoint.label}${addedPoint.label}`;

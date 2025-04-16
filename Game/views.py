@@ -14,6 +14,7 @@ import json
 from django.db.models import Q
 from datetime import datetime, timedelta
 from django.db import transaction
+from .utils.move_over import is_game_over
 
 # Configure the logger
 logger = logging.getLogger(__name__)
@@ -300,12 +301,7 @@ def make_move(request, game_id):
             graph_string = game.state.get("graphString", "")
             print(f"Vérification de fin de partie avec graphString: {graph_string}")
 
-            if is_valid_graph_string(graph_string):
-                game_over = is_game_over(graph_string)
-
-            else:
-                print(f"Chaîne graphString invalide: {graph_string}, la partie continue")
-                game_over = False
+            game_over = is_game_over(graph_string)
 
 
 
