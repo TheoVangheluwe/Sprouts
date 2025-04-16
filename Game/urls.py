@@ -11,6 +11,8 @@ urlpatterns = [
     # Pages de l'application
     path('home/', views.home_view, name='home'),
     path('game/', views.game_view, name='game'),  # Cette ligne reste inchangée
+    path('pve/', views.pve_view, name='rules'),
+    path('ai/', views.ai_view, name='rules'),
     path('rules/', views.rules_view, name='rules'),
     path('waiting-room/', views.waiting_room_view, name='waiting_room'),
     path('online-game/<int:game_id>/', views.online_game_view, name='online_game'),

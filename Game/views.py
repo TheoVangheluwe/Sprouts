@@ -32,6 +32,13 @@ def game_view(request):
     """Vue pour la page de jeu"""
     return ReactAppView(request)
 
+def pve_view(request):
+    """Vue pour la page de jeu"""
+    return ReactAppView(request)
+
+def ai_view(request):
+    """Vue pour la page de jeu"""
+    return ReactAppView(request)
 
 def rules_view(request):
     """Vue pour la page des règles"""
