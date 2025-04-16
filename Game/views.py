@@ -13,9 +13,11 @@ import logging
 import json
 from django.db.models import Q
 from datetime import datetime, timedelta
+from .utils.move_over import is_game_over
 
 # Configure the logger
 logger = logging.getLogger(__name__)
+
 
 def index(request):
     return render(request, 'index.html')
@@ -70,6 +72,7 @@ def react_fallback(request):
     # Sinon, renvoyer l'application React
     return ReactAppView(request)
 
+
 @csrf_exempt
 @login_required(login_url='login')
 def game_detail_view(request, game_id):
@@ -84,7 +87,6 @@ def game_detail_view(request, game_id):
         return JsonResponse({'error': 'Game not found'}, status=404)
 
 
-
 def list_games(request):
     # Supprimer les jeux inactifs de plus de 2 heures
     old_date = datetime.now() - timedelta(hours=2)
@@ -93,6 +95,7 @@ def list_games(request):
     # Récupérer les jeux actifs
     games = Game.objects.filter(status='waiting').values('id', 'status', 'player_count', 'point_options')
     return JsonResponse(list(games), safe=False)
+
 
 @login_required(login_url='login')
 def game_status(request, game_id):
@@ -137,6 +140,7 @@ def game_status(request, game_id):
     except Game.DoesNotExist:
         return JsonResponse({'error': 'Waiting room not found'}, status=404)
 
+
 @login_required(login_url='login')
 def game_state(request, game_id):
     try:
@@ -166,6 +170,23 @@ def start_game(request, game_id):
     except Game.DoesNotExist:
         return JsonResponse({'error': 'Game not found'}, status=404)
 
+
+def is_valid_graph_string(graph_string):
+    """Vérifie si la chaîne graphString est valide pour déterminer la fin de partie"""
+    if not graph_string:
+        return False
+
+    # Une chaîne valide doit contenir au moins un point (A, B, C, etc.)
+    if not any(c.isalpha() for c in graph_string):
+        return False
+
+    # Vérifier s'il y a des motifs suspects comme des points multiples consécutifs
+    if '...' in graph_string:
+        return False
+
+    return True
+
+
 @csrf_exempt
 @login_required(login_url='login')
 def make_move(request, game_id):
@@ -182,6 +203,10 @@ def make_move(request, game_id):
         if not game.state:
             game.state = {"curves": [], "points": []}
 
+        # Initialiser les variables de fin de partie
+        game_over = False
+        winner = None
+
         if move["type"] == "initialize_points":
             # Initialisation des points avec vérification des préférences
             if len(move["points"]) in game.point_options:
@@ -189,11 +214,8 @@ def make_move(request, game_id):
             else:
                 return JsonResponse({'error': 'Invalid number of points'}, status=400)
 
-
-
         elif move["type"] == "draw_curve":
-
-            # Gestion des courbes
+            # Gestion des courbes (code existant)
             start_point = next((p for p in game.state["points"] if p["label"] == move["startPoint"]), None)
             end_point = next((p for p in game.state["points"] if p["label"] == move["endPoint"]), None)
 
@@ -214,13 +236,11 @@ def make_move(request, game_id):
             curve_to_add = None
             if isinstance(move["curve"], list):
                 curve_to_add = {"points": move["curve"], "player": request.user.id}
-
             else:
                 curve_to_add = move["curve"]
                 curve_to_add["player"] = request.user.id
 
             # Vérifier si la courbe existe déjà pour éviter les doublons
-            # Cette vérification est simplifiée pour plus de fiabilité
             curve_exists = False
             for i, existing_curve in enumerate(game.state.get("curves", [])):
                 # Vérifier la structure
@@ -241,7 +261,7 @@ def make_move(request, game_id):
             if not curve_exists:
                 game.state.setdefault("curves", []).append(curve_to_add)
 
-                # Mise à jour des connexions avec gestion des boucles
+            # Mise à jour des connexions avec gestion des boucles
             for point in game.state["points"]:
                 if point["label"] == move["startPoint"] and is_self_loop:
                     # Pour une boucle, ajouter 2 connexions
@@ -250,18 +270,55 @@ def make_move(request, game_id):
                     # Pour des points différents, ajouter 1 connexion
                     point["connections"] += 1
 
+            if "graphString" in move:
+                game.state["graphString"] = move["graphString"]
+                print(f"graphString reçue: {move['graphString']}")
+            else:
+                print("Aucune graphString dans le mouvement")
+
+                # Ne pas vérifier la fin de partie ici - attendre le placement du point
+            game_over = False
+
+
         elif move["type"] == "place_point":
+
             # Ajout d'un point
             game.state["points"].append(move["point"])
+            # Récupérer la chaîne graphString depuis le mouvement si disponible
 
-            # Ne pas ajouter la courbe ici, car elle a déjà été ajoutée lors du draw_curve
-            # Les courbes ne doivent pas être modifiées quand un point est placé
+            if "graphString" in move:
+                game.state["graphString"] = move["graphString"]
 
-            # Gestion du joueur suivant
-            players = list(game.players.all())
-            current_player_index = players.index(game.current_player)
-            next_player_index = (current_player_index + 1) % len(players)
-            game.current_player = players[next_player_index]
+            # Vérifier la validité de la chaîne avant de déterminer si la partie est terminée
+            graph_string = game.state.get("graphString", "")
+            print(f"Vérification de fin de partie avec graphString: {graph_string}")
+
+            if is_valid_graph_string(graph_string):
+                game_over = is_game_over(graph_string)
+
+            else:
+                print(f"Chaîne graphString invalide: {graph_string}, la partie continue")
+                game_over = False
+
+
+
+            if game_over:
+                print("La partie est terminée!")
+                # Le gagnant est le joueur qui a joué le dernier coup
+                winner = request.user.username
+                print(f"Le gagnant est: {winner}")
+                game.status = 'completed'
+                # Assurez-vous de stocker le gagnant dans l'état du jeu
+                game.state["winner"] = winner
+
+            else:
+
+                # Ce n'est qu'après le placement d'un point que le tour change
+                players = list(game.players.all())
+                current_player_index = players.index(game.current_player)
+                next_player_index = (current_player_index + 1) % len(players)
+                game.current_player = players[next_player_index]
+
 
         else:
             return JsonResponse({'error': 'Invalid move type'}, status=400)
@@ -273,7 +330,10 @@ def make_move(request, game_id):
             'state': game.state,
             'currentPlayer': game.current_player.id,
             'curves': game.state.get('curves', []),
-            'points': game.state.get('points', [])
+            'points': game.state.get('points', []),
+            'graphString': game.state.get('graphString', ''),
+            'isGameOver': game_over,
+            'winner': winner
         })
 
     except Game.DoesNotExist:
@@ -354,7 +414,6 @@ def create_game(request):
         return JsonResponse({'error': 'Invalid request method'}, status=405)
 
 
-
 def cleanup_games():
     """Nettoyer les parties non utilisées ou incohérentes"""
     try:
@@ -379,6 +438,7 @@ def cleanup_games():
     except Exception as e:
         logger.error(f"Error in cleanup_games: {str(e)}")
 
+
 def get_active_game(user):
     """Vérifier si un joueur a une partie active et retourner l'ID de cette partie"""
     active_game = Game.objects.filter(
@@ -387,6 +447,7 @@ def get_active_game(user):
     ).order_by('-created_at').first()
 
     return active_game
+
 
 @csrf_exempt
 @login_required(login_url='login')
@@ -701,6 +762,8 @@ def queue_status(request):
     except Exception as e:
         logger.error(f"Error in queue_status: {str(e)}")
         return JsonResponse({'error': f'An error occurred: {str(e)}'}, status=500)
+
+
 @csrf_exempt
 @login_required(login_url='login')
 def leave_queue(request):
@@ -727,6 +790,7 @@ def leave_queue(request):
 
     except Exception as e:
         return JsonResponse({'error': f'An error occurred: {str(e)}'}, status=500)
+
 
 @csrf_exempt
 @login_required(login_url='login')
@@ -767,7 +831,6 @@ def join_specific_game(request, game_id):
                 game.current_player = game.players.first()
 
         game.save()
-
 
         return JsonResponse({
             'game_id': game.id,
@@ -870,6 +933,7 @@ def register(request):
         form = UserCreationForm()
     return render(request, 'register.html', {'form': form})
 
+
 def login_view(request):
     if request.method == 'POST':
         username = request.POST['username']
@@ -884,6 +948,7 @@ def login_view(request):
         if 'next' in request.GET:
             messages.error(request, "Vous devez être connecté pour accéder à cette page.")
     return render(request, 'login.html')
+
 
 def logout_view(request):
     logout(request)
@@ -919,6 +984,7 @@ def ReactAppView(request):
             "Le fichier React index.html n'existe pas. Assurez-vous d'avoir exécuté 'npm run build'.",
             status=404,
         )
+
 
 def login_redirect_with_message(request):
     messages.error(request, "Vous devez être connecté pour accéder à cette page.")

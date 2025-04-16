@@ -1,10 +1,10 @@
-import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import React, {useEffect, useState} from 'react';
+import {useParams, useNavigate} from 'react-router-dom';
 import OnlineCanvas from './OnlineCanvas';
-import { ToastContainer, toast } from "react-toastify";
+import {ToastContainer, toast} from "react-toastify";
 
 function OnlineGame() {
-    const { gameId } = useParams();
+    const {gameId} = useParams();
     const navigate = useNavigate();
     const [gameState, setGameState] = useState(null);
     const [currentPlayer, setCurrentPlayer] = useState(null);
@@ -15,76 +15,79 @@ function OnlineGame() {
     const [gameEnded, setGameEnded] = useState(false);
     const [username, setUsername] = useState("");
     const [gameInitialized, setGameInitialized] = useState(false); // Nouvel état pour suivre l'initialisation
+    const [graphString, setGraphString] = useState('');
+    const [isGameOver, setIsGameOver] = useState(false);
+    const [winner, setWinner] = useState(null);
 
     const [points, setPoints] = useState([]);
     const [curves, setCurves] = useState([]);
 
     // Fonction pour générer des points initiaux aléatoires
     const generateRandomInitialPoints = (numPoints) => {
-    // Si le nombre de points est inférieur à 3, utiliser au moins 3 points
-    const pointCount = Math.max(3, numPoints);
+        // Si le nombre de points est inférieur à 3, utiliser au moins 3 points
+        const pointCount = Math.max(3, numPoints);
 
-    // Canvas dimensions en coordonnées logiques [0,500]
-    const canvasWidth = 500;  // Utiliser l'espace de coordonnées logiques
-    const canvasHeight = 500; // Utiliser l'espace de coordonnées logiques
-    const padding = 50; // Espace minimum depuis les bords
-    const minDistanceBetweenPoints = 100; // Distance minimale entre les points (augmentée à 100)
+        // Canvas dimensions en coordonnées logiques [0,500]
+        const canvasWidth = 500;  // Utiliser l'espace de coordonnées logiques
+        const canvasHeight = 500; // Utiliser l'espace de coordonnées logiques
+        const padding = 50; // Espace minimum depuis les bords
+        const minDistanceBetweenPoints = 100; // Distance minimale entre les points (augmentée à 100)
 
-    const initialPoints = [];
-    const labels = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+        const initialPoints = [];
+        const labels = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'.split('');
 
-    // Fonction pour vérifier si un nouveau point est trop proche des points existants
-    const isTooClose = (x, y, points) => {
-        for (const point of points) {
-            const distance = Math.sqrt(Math.pow(x - point.x, 2) + Math.pow(y - point.y, 2));
-            if (distance < minDistanceBetweenPoints) {
-                return true;
+        // Fonction pour vérifier si un nouveau point est trop proche des points existants
+        const isTooClose = (x, y, points) => {
+            for (const point of points) {
+                const distance = Math.sqrt(Math.pow(x - point.x, 2) + Math.pow(y - point.y, 2));
+                if (distance < minDistanceBetweenPoints) {
+                    return true;
+                }
             }
+            return false;
+        };
+
+        // Générer chaque point
+        for (let i = 0; i < pointCount; i++) {
+            let x, y;
+            let attempts = 0;
+            const maxAttempts = 100; // Augmenté pour donner plus de chances de trouver une position valide
+
+            // Essayer de trouver une position valide
+            do {
+                x = padding + Math.random() * (canvasWidth - 2 * padding);
+                y = padding + Math.random() * (canvasHeight - 2 * padding);
+                attempts++;
+
+                // Si on ne trouve pas de position après plusieurs tentatives, assouplir les contraintes
+                if (attempts > maxAttempts) {
+                    console.log(`Couldn't find ideal position for point ${i}, placing it anyway`);
+                    break;
+                }
+            } while (isTooClose(x, y, initialPoints));
+
+            // Ajouter le point avec un label
+            initialPoints.push({
+                x: x,
+                y: y,
+                connections: 0,
+                label: labels[i % labels.length]
+            });
         }
-        return false;
+
+        return initialPoints;
     };
-
-    // Générer chaque point
-    for (let i = 0; i < pointCount; i++) {
-        let x, y;
-        let attempts = 0;
-        const maxAttempts = 100; // Augmenté pour donner plus de chances de trouver une position valide
-
-        // Essayer de trouver une position valide
-        do {
-            x = padding + Math.random() * (canvasWidth - 2 * padding);
-            y = padding + Math.random() * (canvasHeight - 2 * padding);
-            attempts++;
-
-            // Si on ne trouve pas de position après plusieurs tentatives, assouplir les contraintes
-            if (attempts > maxAttempts) {
-                console.log(`Couldn't find ideal position for point ${i}, placing it anyway`);
-                break;
-            }
-        } while (isTooClose(x, y, initialPoints));
-
-        // Ajouter le point avec un label
-        initialPoints.push({
-            x: x,
-            y: y,
-            connections: 0,
-            label: labels[i % labels.length]
-        });
-    }
-
-    return initialPoints;
-};
 
     useEffect(() => {
         if (!gameId || gameId === 'undefined') {
-        console.error("Invalid game ID:", gameId);
-        toast.error("ID de partie invalide");
-        setGameEnded(true);
-        setTimeout(() => navigate('/game'), 2000);
-        return;
-    }
+            console.error("Invalid game ID:", gameId);
+            toast.error("ID de partie invalide");
+            setGameEnded(true);
+            setTimeout(() => navigate('/game'), 2000);
+            return;
+        }
         // Récupérer les informations sur l'utilisateur
-       const fetchPlayerIdAndGameState = async () => {
+        const fetchPlayerIdAndGameState = async () => {
             try {
                 const playerResponse = await fetch('/api/game/create', {
                     headers: {
@@ -110,7 +113,7 @@ function OnlineGame() {
                     if (gameResponse.status === 404) {
                         toast.error("Cette partie n'existe plus.");
                         setGameEnded(true);
-                        setTimeout(() => navigate('/home'), 2000);
+                        setTimeout(() => navigate('/game'), 2000);
                         return;
                     }
 
@@ -123,6 +126,12 @@ function OnlineGame() {
                 // Définir l'état du jeu et le joueur actuel
                 setGameState(gameData.state);
 
+                if (gameData.graphString) {
+                    setGraphString(gameData.graphString);
+                } else if (gameData.state && gameData.state.graphString) {
+                    setGraphString(gameData.state.graphString);
+                }
+
                 if (gameData.currentPlayer !== undefined && gameData.currentPlayer !== null) {
                     setCurrentPlayer(gameData.currentPlayer);
                     console.log("Current player set to:", gameData.currentPlayer, "Type:", typeof gameData.currentPlayer);
@@ -133,9 +142,8 @@ function OnlineGame() {
                 // Vérifier si le jeu a été abandonné
                 if (gameData.state && gameData.state.abandoned_by) {
                     console.log(`Game was abandoned by ${gameData.state.abandoned_by}`);
-                    toast.warning(`${gameData.state.abandoned_by} a abandonné la partie !`);
                     setGameEnded(true);
-                    setTimeout(() => navigate('/'), 3000);
+                    setTimeout(() => navigate('/game'), 3000);
                     return;
                 }
 
@@ -144,7 +152,7 @@ function OnlineGame() {
                     console.log("Game status is 'abandoned'");
                     toast.warning("La partie a été abandonnée !");
                     setGameEnded(true);
-                    setTimeout(() => navigate('/'), 3000);
+                    setTimeout(() => navigate('/game'), 3000);
                     return;
                 }
 
@@ -173,8 +181,8 @@ function OnlineGame() {
                 } else {
                     // Aucun point n'existe, en créer de nouveaux en fonction du nombre sélectionné
                     const numPoints = gameData.selected_points ||
-                                     (gameData.point_options && gameData.point_options.length > 0 ?
-                                      gameData.point_options[0] : 3);
+                        (gameData.point_options && gameData.point_options.length > 0 ?
+                            gameData.point_options[0] : 3);
 
                     const initialPoints = generateRandomInitialPoints(numPoints);
                     console.log(`Generating ${numPoints} random initial points:`, initialPoints);
@@ -205,6 +213,38 @@ function OnlineGame() {
                     setCurves(gameData.state.curves);
                 }
 
+                // Vérifier si la partie est terminée
+                if (gameData.isGameOver) {
+                    console.log("Jeu terminé détecté dans gameData:", gameData);
+                    setIsGameOver(true);
+
+                    // Récupérer le gagnant à partir de plusieurs sources possibles
+                    const winnerFromData = gameData.winner ||
+                        (gameData.state && gameData.state.winner) ||
+                        null;
+
+                    console.log("Gagnant détecté:", winnerFromData);
+                    setWinner(winnerFromData);
+
+                    // Message différent selon qu'il y a un gagnant ou non
+                    if (winnerFromData) {
+                        toast.info(`Partie terminée! ${winnerFromData} a gagné!`);
+                    } else {
+                        // Dans Sprouts, il devrait toujours y avoir un gagnant
+                        // Si aucun gagnant n'est détecté, considérer le joueur actuel comme perdant
+                        const players = opponents.map(p => p.username).concat([username]);
+                        const otherPlayer = players.find(p => p !== username);
+
+                        console.log("Aucun gagnant détecté, déterminant par défaut:", otherPlayer);
+                        setWinner(otherPlayer || "Adversaire");
+                        toast.info(`Partie terminée! ${otherPlayer || "Adversaire"} a gagné!`);
+                    }
+
+                    setGameEnded(true);
+                    setTimeout(() => navigate('/game'), 5000);
+                    return;
+                }
+
                 // Marquer le jeu comme initialisé une fois que nous avons toutes les données
                 setGameInitialized(true);
 
@@ -218,8 +258,8 @@ function OnlineGame() {
         const intervalId = setInterval(async () => {
 
             if (!gameId || gameId === 'undefined' || gameEnded) {
-            console.log("Skipping poll - invalid gameId or game ended");
-            return;
+                console.log("Skipping poll - invalid gameId or game ended");
+                return;
             }
             // Ne pas effectuer la mise à jour si le jeu est terminé
             if (gameEnded) return;
@@ -238,7 +278,7 @@ function OnlineGame() {
                         if (!gameEnded) {
                             setGameEnded(true);
                             toast.info("La partie n'existe plus. Votre adversaire a peut-être abandonné.");
-                            setTimeout(() => navigate('/'), 3000);
+                            setTimeout(() => navigate('/game'), 3000);
                         }
                         return;
                     }
@@ -254,7 +294,7 @@ function OnlineGame() {
                         console.log(`Game was abandoned by ${gameData.state.abandoned_by}`);
                         toast.warning(`${gameData.state.abandoned_by} a abandonné la partie !`);
                         setGameEnded(true);
-                        setTimeout(() => navigate('/'), 3000);
+                        setTimeout(() => navigate('/game'), 3000);
                         return;
                     }
                 }
@@ -264,7 +304,7 @@ function OnlineGame() {
                     console.log("Game status is 'abandoned'");
                     toast.warning("La partie a été abandonnée !");
                     setGameEnded(true);
-                    setTimeout(() => navigate('/'), 3000);
+                    setTimeout(() => navigate('/game'), 3000);
                     return;
                 }
 
@@ -285,7 +325,7 @@ function OnlineGame() {
                         console.log("Opponent left the game");
                         toast.warning("Votre adversaire a quitté la partie !");
                         setGameEnded(true);
-                        setTimeout(() => navigate('/'), 3000);
+                        setTimeout(() => navigate('/game'), 3000);
                         return;
                     }
 
@@ -326,13 +366,29 @@ function OnlineGame() {
                                     'Content-Type': 'application/json',
                                     'Authorization': `Bearer ${localStorage.getItem('token')}`
                                 },
-                                body: JSON.stringify({ curves: curves })
+                                body: JSON.stringify({curves: curves})
                             });
                             console.log("Synchronized curves with server");
                         } catch (error) {
                             console.error("Error synchronizing curves:", error);
                         }
                     }
+                }
+                // Récupérer la chaîne de caractères mise à jour
+                if (gameData.graphString) {
+                    setGraphString(gameData.graphString);
+                } else if (gameData.state && gameData.state.graphString) {
+                    setGraphString(gameData.state.graphString);
+                }
+
+                // Vérifier si la partie est terminée
+                if (gameData.isGameOver) {
+                    setIsGameOver(true);
+                    setWinner(gameData.winner);
+                    toast.info(`Partie terminée! ${gameData.winner ? `${gameData.winner} a gagné!` : 'Match nul!'}`);
+                    setGameEnded(true);
+                    setTimeout(() => navigate('/game'), 5000);
+                    return;
                 }
             } catch (error) {
                 console.error("Error fetching game state:", error);
@@ -343,7 +399,7 @@ function OnlineGame() {
                     if (!gameEnded) {
                         setGameEnded(true);
                         toast.info("La partie n'existe plus. Votre adversaire a peut-être abandonné.");
-                        setTimeout(() => navigate('/home'), 3000);
+                        setTimeout(() => navigate('/game'), 3000);
                     }
                 }
             }
@@ -353,75 +409,166 @@ function OnlineGame() {
     }, [gameId, selectedPoints, navigate, opponents, gameEnded, username]);
     // Retiré playerId et currentPlayer des dépendances pour éviter les rendus inutiles
 
+    const updateGraphString = (data) => {
+        if (data.graphString) {
+            setGraphString(data.graphString);
+        } else if (data.state && data.state.graphString) {
+            setGraphString(data.state.graphString);
+        }
+    };
+
     const handleMove = async (move) => {
         if (gameEnded) return;
 
         try {
             console.log("Sending move to server:", move);
-            const response = await fetch(`/api/game/${gameId}/move/`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
-                },
-                body: JSON.stringify(move),
-            });
 
-            const data = await response.json();
-            console.log("Server response:", data);
+            // Traitement spécifique selon le type de mouvement
+            if (move.type === 'draw_curve') {
+                // Pour le dessin de courbe, ne pas vérifier la fin de partie
+                const response = await fetch(`/api/game/${gameId}/move/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    },
+                    body: JSON.stringify(move),
+                });
 
-            if (response.ok) {
-                setGameState(data.state);
+                const data = await response.json();
+                console.log("Server response:", data);
 
-                if (data.currentPlayer !== undefined && data.currentPlayer !== null) {
-                    setCurrentPlayer(data.currentPlayer);
-
-                    // Convertir en chaînes pour une comparaison cohérente
-                    const currentPlayerStr = String(data.currentPlayer);
-                    const playerIdStr = "1"; // ID défini manuellement
-                }
-
-                // Mettre à jour les points si renvoyés par le serveur
-                if (data.points) {
-                    console.log("Updated points from server:", data.points);
-                    setPoints(data.points);
-                } else if (data.state && data.state.points) {
-                    console.log("Updated points from server state:", data.state.points);
-                    setPoints(data.state.points);
-                }
-
-                // Mettre à jour les courbes
-                let updatedCurves = [];
-                if (data.curves) {
-                    updatedCurves = data.curves;
-                } else if (data.state && data.state.curves) {
-                    updatedCurves = data.state.curves;
-                }
-
-                // Si c'est un mouvement de type 'place_point', s'assurer que la courbe est incluse
-                if (move.type === 'place_point' && move.curve && move.curve.length > 0) {
-                    // Vérifier si la courbe existe déjà dans les courbes mises à jour
-                    const curveExists = updatedCurves.some(curve =>
-                        JSON.stringify(curve) === JSON.stringify(move.curve)
-                    );
-
-                    // Si elle n'existe pas, l'ajouter
-                    if (!curveExists) {
-                        updatedCurves = [...updatedCurves, move.curve];
+                if (response.ok) {
+                    setGameState(data.state);
+                    if (data.currentPlayer !== undefined && data.currentPlayer !== null) {
+                        setCurrentPlayer(data.currentPlayer);
                     }
-                }
 
-                // Mettre à jour les courbes dans l'état
-                setCurves(updatedCurves);
+                    // Mettre à jour les points si renvoyés par le serveur
+                    if (data.points) {
+                        console.log("Updated points from server:", data.points);
+                        setPoints(data.points);
+                    } else if (data.state && data.state.points) {
+                        console.log("Updated points from server state:", data.state.points);
+                        setPoints(data.state.points);
+                    }
+
+                    // Mettre à jour les courbes
+                    updateCurves(data);
+
+                    // Mettre à jour la chaîne graphString
+                    updateGraphString(data);
+
+                    // Ignorer intentionnellement isGameOver pour les draw_curve
+                    // La fin de partie ne sera vérifiée qu'après place_point
+                }
             } else {
-                console.error("Failed to make move:", data.error);
-                toast.error(`Erreur: ${data.error || 'Impossible de jouer ce coup'}`);
+                // Code existant pour les autres types de move (comme place_point)
+                const response = await fetch(`/api/game/${gameId}/move/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    },
+                    body: JSON.stringify(move),
+                });
+
+                const data = await response.json();
+                console.log("Server response:", data);
+
+                if (response.ok) {
+                    setGameState(data.state);
+                    if (data.currentPlayer !== undefined && data.currentPlayer !== null) {
+                        setCurrentPlayer(data.currentPlayer);
+                    }
+
+                    // Mettre à jour les points si renvoyés par le serveur
+                    if (data.points) {
+                        console.log("Updated points from server:", data.points);
+                        setPoints(data.points);
+                    } else if (data.state && data.state.points) {
+                        console.log("Updated points from server state:", data.state.points);
+                        setPoints(data.state.points);
+                    }
+
+                    // Mettre à jour les courbes
+                    let updatedCurves = [];
+                    if (data.curves) {
+                        updatedCurves = data.curves;
+                    } else if (data.state && data.state.curves) {
+                        updatedCurves = data.state.curves;
+                    }
+
+                    // Si c'est un mouvement de type 'place_point', s'assurer que la courbe est incluse
+                    if (move.type === 'place_point' && move.curve && move.curve.length > 0) {
+                        // Vérifier si la courbe existe déjà dans les courbes mises à jour
+                        const curveExists = updatedCurves.some(curve =>
+                            JSON.stringify(curve) === JSON.stringify(move.curve)
+                        );
+
+                        // Si elle n'existe pas, l'ajouter
+                        if (!curveExists) {
+                            updatedCurves = [...updatedCurves, move.curve];
+                        }
+                    }
+
+                    // Mettre à jour les courbes dans l'état
+                    setCurves(updatedCurves);
+
+                    // Mettre à jour la chaîne graphString
+                    updateGraphString(data);
+
+                    // Vérifier si la partie est terminée seulement ici (place_point)
+                    if (data.isGameOver) {
+                        console.log("Jeu terminé détecté dans la réponse:", data);
+                        setIsGameOver(true);
+
+                        // Récupérer le gagnant
+                        const winnerFromData = data.winner ||
+                            (data.state && data.state.winner) ||
+                            null;
+
+                        console.log("Gagnant détecté:", winnerFromData);
+                        setWinner(winnerFromData);
+
+                        // Message pour l'utilisateur
+                        if (winnerFromData) {
+                            toast.info(`Partie terminée! ${winnerFromData} a gagné!`);
+                        } else {
+                            // Déterminer le gagnant par défaut
+                            const players = opponents.map(p => p.username).concat([username]);
+                            const otherPlayer = players.find(p => p !== username);
+
+                            console.log("Aucun gagnant détecté, déterminant par défaut:", otherPlayer);
+                            setWinner(otherPlayer || "Adversaire");
+                            toast.info(`Partie terminée! ${otherPlayer || "Adversaire"} a gagné!`);
+                        }
+
+                        setGameEnded(true);
+                        setTimeout(() => navigate('/game'), 5000);
+                        return;
+                    }
+                } else {
+                    console.error("Failed to make move:", data.error);
+                    toast.error(`Erreur: ${data.error || 'Impossible de jouer ce coup'}`);
+                }
             }
         } catch (error) {
             console.error("Error making move:", error);
             toast.error("Une erreur est survenue lors de l'envoi du coup.");
         }
     };
+
+    const updateCurves = (data) => {
+        let updatedCurves = [];
+        if (data.curves) {
+            updatedCurves = data.curves;
+        } else if (data.state && data.state.curves) {
+            updatedCurves = data.state.curves;
+        }
+        setCurves(updatedCurves);
+    };
+
 
     const handleLeaveGame = async () => {
         if (window.confirm("Êtes-vous sûr de vouloir quitter la partie ? Cela comptera comme un abandon.")) {
@@ -443,7 +590,7 @@ function OnlineGame() {
                     toast.success("Vous avez quitté la partie.");
                     // Rediriger vers la page d'accueil ou le lobby après quelques secondes
                     setTimeout(() => {
-                        navigate('/');
+                        navigate('/game');
                     }, 1500);
                 } else {
                     toast.error(`Erreur: ${data.error || 'Impossible de quitter la partie'}`);
@@ -459,8 +606,9 @@ function OnlineGame() {
         }
     };
 
-    // Afficher un message si le jeu est terminé
-    if (gameEnded) {
+    // Ajouter l'affichage du message de fin de partie dans le rendu
+    // Dans la partie return du composant, ajoutez ceci
+    if (isGameOver) {
         return (
             <div style={{
                 textAlign: 'center',
@@ -471,21 +619,19 @@ function OnlineGame() {
                 maxWidth: '500px'
             }}>
                 <h2>Partie terminée</h2>
+                {winner && <p>Félicitations à {winner} pour sa victoire!</p>}
+                {!winner && <p>La partie est terminée. Impossible de déterminer le gagnant.</p>}
                 <p>Vous allez être redirigé vers l'accueil...</p>
-                <ToastContainer position="top-right" autoClose={3000} hideProgressBar={false} />
+                <ToastContainer position="top-right" autoClose={3000} hideProgressBar={false}/>
             </div>
         );
     }
 
     // Vérification des valeurs et conversion explicite pour myTurn avec vérification plus stricte
     const isMyTurn = currentPlayer !== null &&
-                     currentPlayer !== undefined &&
-                     currentPlayer == playerId; // Comparer directement avec l'ID défini manuellement
+        currentPlayer !== undefined &&
+        currentPlayer == playerId; // Comparer directement avec l'ID défini manuellement
 
-    // Logs pour déboguer l'état du tour
-    console.log("Render - Current Player:", currentPlayer, "Type:", typeof currentPlayer);
-    console.log("Render - Player ID:", playerId, "Type:", typeof playerId);
-    console.log("Render - Is my turn?", isMyTurn);
 
     // Afficher un message de chargement pendant l'initialisation
     if (!gameInitialized) {
@@ -500,7 +646,7 @@ function OnlineGame() {
             }}>
                 <h2>Initialisation de la partie...</h2>
                 <p>Veuillez patienter pendant le chargement du jeu.</p>
-                <ToastContainer position="top-right" autoClose={1500} hideProgressBar={true} />
+                <ToastContainer position="top-right" autoClose={1500} hideProgressBar={true}/>
             </div>
         );
     }
@@ -583,7 +729,9 @@ function OnlineGame() {
                     </div>
                 </div>
             )}
-            <ToastContainer position="top-right" autoClose={1500} hideProgressBar={true} newestOnTop={false} closeOnClick={false} rtl={false} pauseOnFocusLoss={false} draggable={false} pauseOnHover={false} />
+            <ToastContainer position="top-right" autoClose={1500} hideProgressBar={true} newestOnTop={false}
+                            closeOnClick={false} rtl={false} pauseOnFocusLoss={false} draggable={false}
+                            pauseOnHover={false}/>
         </div>
     );
 }

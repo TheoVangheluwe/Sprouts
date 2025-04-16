@@ -1,4 +1,4 @@
-from move_verification import parse_boundaries, parse_regions, get_vertex_degrees, is_valid_move,playable_vertices
+from .move_verification import parse_boundaries, parse_regions, get_vertex_degrees, is_valid_move,playable_vertices
 import random
 
 """

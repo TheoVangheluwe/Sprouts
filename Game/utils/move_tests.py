@@ -1,6 +1,6 @@
-from move_verification import parse_boundaries, parse_regions, get_vertex_degrees, is_valid_move,playable_vertices
-from move_generator import generate_possible_moves, choose_move
-from move_over import is_game_over
+from .move_verification import parse_boundaries, parse_regions, get_vertex_degrees, is_valid_move,playable_vertices
+from .move_generator import generate_possible_moves, choose_move
+from .move_over import is_game_over
 
 chain_doc = "AL.}AL.BNMCMN.}D.COFPGQFOCM.}E.HRISJSIUKTKUIR.FQGP.}KT.}!" #chaine du pdf
 

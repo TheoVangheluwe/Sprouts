@@ -156,7 +156,7 @@ export const segmentsIntersect = (A, B, C, D) => {
 
 export const getNextLabel = (points) => {
   const usedLabels = points.map(point => point.label);
-  const alphabet = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'; // Inclut les lettres majuscules et minuscules
+  const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'; // Inclut les lettres majuscules et minuscules
 
   for (let letter of alphabet) {
     if (!usedLabels.includes(letter)) {

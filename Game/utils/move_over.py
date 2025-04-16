@@ -1,12 +1,12 @@
-from move_verification import playable_vertices, parse_regions, parse_boundaries, get_vertex_degrees
+from .move_verification import playable_vertices, parse_regions, parse_boundaries, get_vertex_degrees
 
 """
 Vérifie si le jeu est terminé en fonction de la chaîne en argument
 """
 def is_game_over(chain):
-    regions = parse_regions(chain) 
+    regions = parse_regions(chain)
     all_degrees = get_vertex_degrees(chain)
-    
+
     #on regarde dans chaque région s'il y a un coup possible, 2 cas
     # 1. il y a au moins un point de degré = 1 ou 0, self loop jouable
     # 2. il y a au moins 2 points de degré <= 2, on peu jouer un coup
