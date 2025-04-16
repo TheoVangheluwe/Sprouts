@@ -631,7 +631,7 @@ export const generateGraphString = (startPoint, addedPoint, endPoint, currentGra
       console.log(region2);
 
       // Construire la nouvelle chaîne
-      const newGraphString = `${region1}.}${region2}.}${nonRelevantAreas.join('.}')}`;
+      const newGraphString = `${region1}.}${region2}.}${nonRelevantAreas.join('}')}`;
 
       console.log("Chaîne mise à jour:", newGraphString);
       return newGraphString;
