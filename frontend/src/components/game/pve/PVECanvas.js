@@ -11,6 +11,7 @@ const PVECanvas = ({ points, setPoints, curves, setCurves }) => {
   const [graphString, setGraphString] = useState(''); // État pour stocker la chaîne de caractères
   const [curveMap, setCurveMap] = useState(new Map()); // État pour stocker la curveMap
   const [endPoint, setEndPoint] = useState(null); // État pour stocker endPoint
+  const [gameOver, setGameOver] = useState(false);
 
   useEffect(() => {
     const resizeCanvas = () => {
@@ -31,6 +32,10 @@ const PVECanvas = ({ points, setPoints, curves, setCurves }) => {
     initializePoints();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    checkGameOver();
+  }, [graphString]);
 
   const initializePoints = () => {
     const canvas = canvasRef.current;
@@ -65,6 +70,28 @@ const PVECanvas = ({ points, setPoints, curves, setCurves }) => {
     }
 
     return newPoints;
+  };
+
+  const checkGameOver = async () => {
+    try {
+      const response = await fetch('http://localhost:8000/api/is_game_over/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ chain: graphString }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Network response was not ok');
+      }
+
+      const data = await response.json();
+      console.log(data.game_over);
+      setGameOver(data.game_over);
+    } catch (error) {
+      console.error('Error checking game over:', error);
+    }
   };
 
   const handleMouseDown = (event) => {
