@@ -4,19 +4,34 @@ export const drawGame = (canvasRef, pointsToDraw, curvesToDraw, tempCurve = null
     const ctx = canvas.getContext("2d");
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Draw curves
     curvesToDraw.forEach(curve => {
-      ctx.beginPath();
-      ctx.moveTo(curve[0].x, curve[0].y);
-      for (let i = 1; i < curve.length; i++) {
-        ctx.lineTo(curve[i].x, curve[i].y);
+      if (curve.length === 1) {
+        const point = curve[0];
+        ctx.beginPath();
+        ctx.arc(point.x, point.y, 20, 0, Math.PI * 2); // Rayon de 20
+        ctx.strokeStyle = "blue";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        const angle = Math.PI / 4; // Angle arbitraire pour placer le point
+        const x = point.x + 20 * Math.cos(angle);
+        const y = point.y + 20 * Math.sin(angle);
+        ctx.beginPath();
+        ctx.arc(x, y, 5, 0, Math.PI * 2);
+        ctx.fillStyle = "black";
+        ctx.fill();
+      } else {
+        ctx.beginPath();
+        ctx.moveTo(curve[0].x, curve[0].y);
+        for (let i = 1; i < curve.length; i++) {
+          ctx.lineTo(curve[i].x, curve[i].y);
+        }
+        ctx.strokeStyle = "blue";
+        ctx.lineWidth = 2;
+        ctx.stroke();
       }
-      ctx.strokeStyle = "blue";
-      ctx.lineWidth = 2;
-      ctx.stroke();
     });
 
-    // Draw points
     pointsToDraw.forEach(point => {
       ctx.beginPath();
       ctx.arc(point.x, point.y, 5, 0, Math.PI * 2);
@@ -25,7 +40,6 @@ export const drawGame = (canvasRef, pointsToDraw, curvesToDraw, tempCurve = null
       ctx.fillText(point.label, point.x + 10, point.y + 5);
     });
 
-    // Draw temporary curve
     if (tempCurve && tempCurve.length > 0) {
       ctx.beginPath();
       ctx.moveTo(tempCurve[0].x, tempCurve[0].y);
@@ -85,6 +99,15 @@ export const connectPoints = (p1, p2, curvePoints, points, setPoints, setCurves)
 };
 
 export const curveIntersects = (newCurve, curves, points) => {
+  const areSegmentsClose = (A, B, C, D, threshold = 5) => {
+    const dist = (p1, p2) => Math.hypot(p1.x - p2.x, p1.y - p2.y);
+    return (
+      dist(A, C) < threshold || dist(A, D) < threshold ||
+      dist(B, C) < threshold || dist(B, D) < threshold
+    );
+  };
+
+  // Vérifie intersection avec les courbes existantes
   for (let curve of curves) {
     for (let i = 0; i < newCurve.length - 1; i++) {
       const seg1Start = newCurve[i];
@@ -93,21 +116,15 @@ export const curveIntersects = (newCurve, curves, points) => {
         const seg2Start = curve[j];
         const seg2End = curve[j + 1];
 
-        // Ignore intersections at start and end points
-        if (points.some(point => point.x === seg1Start.x && point.y === seg1Start.y) ||
-            points.some(point => point.x === seg1End.x && point.y === seg1End.y) ||
-            points.some(point => point.x === seg2Start.x && point.y === seg2Start.y) ||
-            points.some(point => point.x === seg2End.x && point.y === seg2End.y)) {
-          continue;
-        }
-
-        if (segmentsIntersect(seg1Start, seg1End, seg2Start, seg2End)) {
+        if (segmentsIntersect(seg1Start, seg1End, seg2Start, seg2End) ||
+            areSegmentsClose(seg1Start, seg1End, seg2Start, seg2End)) {
           return true;
         }
       }
     }
   }
 
+  // Vérifie auto-intersection dans la courbe elle-même
   for (let i = 0; i < newCurve.length - 1; i++) {
     const seg1Start = newCurve[i];
     const seg1End = newCurve[i + 1];
@@ -115,11 +132,13 @@ export const curveIntersects = (newCurve, curves, points) => {
       const seg2Start = newCurve[j];
       const seg2End = newCurve[j + 1];
 
-      // Ignore intersections at start and end points
-      if (points.some(point => point.x === seg1Start.x && point.y === seg1Start.y) ||
-          points.some(point => point.x === seg1End.x && point.y === seg1End.y) ||
-          points.some(point => point.x === seg2Start.x && point.y === seg2Start.y) ||
-          points.some(point => point.x === seg2End.x && point.y === seg2End.y)) {
+      // Ignore intersections aux extrémités
+      if (
+        points.some(point => point.x === seg1Start.x && point.y === seg1Start.y) ||
+        points.some(point => point.x === seg1End.x && point.y === seg1End.y) ||
+        points.some(point => point.x === seg2Start.x && point.y === seg2Start.y) ||
+        points.some(point => point.x === seg2End.x && point.y === seg2End.y)
+      ) {
         continue;
       }
 
@@ -128,8 +147,10 @@ export const curveIntersects = (newCurve, curves, points) => {
       }
     }
   }
+
   return false;
 };
+
 
 export const curveLength = (curve) => {
   let length = 0;
@@ -142,7 +163,7 @@ export const curveLength = (curve) => {
 export const segmentsIntersect = (A, B, C, D) => {
   const orientation = (p, q, r) => {
     const val = (q.y - p.y) * (r.x - q.x) - (q.x - p.x) * (r.y - q.y);
-    if (Math.abs(val) < 1e-6) return 0;
+    if (Math.abs(val) < 1e-6) return 0; // Tolérance pour les valeurs proches de zéro
     return val > 0 ? 1 : 2;
   };
 
@@ -691,39 +712,65 @@ export const generateGraphString = (startPoint, addedPoint, endPoint, currentGra
 
   
 
-const isFrontiereInRegion = (frontiere, region, curveMap, points) => {
-
-  // Obtenir la première lettre de la frontière
-  const firstPointLabel = frontiere[0];
-
-  // Obtenir les coordonnées du premier point de la frontière
-  const firstPoint = points.find(point => point.label === firstPointLabel);
-  if (!firstPoint) {
-    return false; // Si le point n'est pas trouvé, il n'est pas dans la région
-  }
-
-  // Obtenir les courbes associées à la région
-  const regionCurves = [];
-  region.split('').forEach((pointLabel, i) => {
-    // Calculer l'index pour i+2 en tenant compte de la longueur de la région
-    const nextIndex = i + 2 < region.length ? i + 2 : i;
-
-    const curves = curveMap.get(pointLabel) || [];
-    curves.forEach(curveInfo => {
-      // Vérifier si le dernier point de la courbe est égal au label de region[nextIndex]
-      if (curveInfo.role === 'start' && curveInfo.curve[curveInfo.curve.length - 1].label === region[nextIndex] && curveInfo.curve[curveInfo.curve.length - 2].label !== firstPointLabel) {
-        regionCurves.push(...curveInfo.curve);
-      }
+  const isFrontiereInRegion = (frontiere, region, curveMap, points) => {
+    // Obtenir le premier point de la frontière
+    const firstPointLabel = frontiere[0];
+    const firstPoint = points.find(p => p.label === firstPointLabel);
+    if (!firstPoint) return false; // Si le point n'est pas trouvé, retourner false
+  
+    // Construire les courbes de la région
+    const regionCurves = [];
+    const regionLabels = region.split('');
+  
+    for (let i = 0; i < regionLabels.length; i++) {
+      const currentLabel = regionLabels[i];
+      const nextLabel = regionLabels[(i + 1) % regionLabels.length]; // Boucle pour fermer la région
+  
+      // Récupérer les courbes associées au point actuel
+      const curveInfos = curveMap.get(currentLabel) || [];
+      curveInfos.forEach(curveInfo => {
+        const curve = curveInfo.curve;
+  
+        // Vérifier si la courbe connecte le point actuel au point suivant (dans les deux sens)
+        const connectsForward =
+          curve[0].label === currentLabel && curve[curve.length - 1].label === nextLabel;
+        const connectsBackward =
+          curve[0].label === nextLabel && curve[curve.length - 1].label === currentLabel;
+  
+        if (connectsForward || connectsBackward) {
+          // Ajouter la courbe dans le bon sens pour former un contour cohérent
+          regionCurves.push(connectsForward ? curve : [...curve].reverse());
+        }
+      });
+    }
+  
+    // Construire le polygone de la région à partir des courbes
+    const regionPolygon = [];
+    regionCurves.forEach(curve => {
+      curve.forEach(point => {
+        // Ajouter les points au polygone, en évitant les doublons
+        if (
+          regionPolygon.length === 0 ||
+          regionPolygon[regionPolygon.length - 1][0] !== point.x ||
+          regionPolygon[regionPolygon.length - 1][1] !== point.y
+        ) {
+          regionPolygon.push([point.x, point.y]);
+        }
+      });
     });
-  });
-
-  // Calculer l'espace formé par les courbes de la région
-  const regionPolygon = regionCurves.flat().map(point => [point.x, point.y]);
-
-  // Vérifier si le premier point de la frontière est dans l'espace de la région
-  const isInRegion = isPointInPolygon([firstPoint.x, firstPoint.y], regionPolygon);
-  return isInRegion;
-};
+  
+    // Vérifier si le polygone est fermé (ajouter le premier point à la fin si nécessaire)
+    if (
+      regionPolygon.length > 0 &&
+      (regionPolygon[0][0] !== regionPolygon[regionPolygon.length - 1][0] ||
+        regionPolygon[0][1] !== regionPolygon[regionPolygon.length - 1][1])
+    ) {
+      regionPolygon.push(regionPolygon[0]);
+    }
+  
+    // Vérifier si le premier point de la frontière est dans le polygone de la région
+    return isPointInPolygon([firstPoint.x, firstPoint.y], regionPolygon);
+  };
 
 // Fonction pour vérifier si un point est dans un polygone
 const isPointInPolygon = (point, polygon) => {
@@ -1171,7 +1218,6 @@ const generateBezierCurve = (startPoint, endPoint, attempt, canvasWidth, canvasH
   const dx = endPoint.x - startPoint.x;
   const dy = endPoint.y - startPoint.y;
 
-  // Points de contrôle pour la courbe
   const controlPoint1 = {
     x: startPoint.x + dx * 0.25 + (Math.random() - 0.5) * 50 * (attempt % 10),
     y: startPoint.y + dy * 0.25 + (Math.random() - 0.5) * 50 * (attempt % 10),
@@ -1181,8 +1227,7 @@ const generateBezierCurve = (startPoint, endPoint, attempt, canvasWidth, canvasH
     y: startPoint.y + dy * 0.75 + (Math.random() - 0.5) * 50 * (attempt % 10),
   };
 
-  // Générer des points intermédiaires
-  for (let t = 0; t <= 1; t += 0.1) {
+  for (let t = 0; t <= 1; t += 0.05) { // Augmentez la résolution
     const x =
       Math.pow(1 - t, 3) * startPoint.x +
       3 * Math.pow(1 - t, 2) * t * controlPoint1.x +
@@ -1201,17 +1246,62 @@ const generateBezierCurve = (startPoint, endPoint, attempt, canvasWidth, canvasH
 };
 
 const generateSelfLoopBezierCurve = (point, attempt, canvasWidth, canvasHeight) => {
-  const curve = [point];
-  const radius = 30 + (attempt % 5) * 10; // Rayon de la boucle
-  const segments = 20; // Nombre de segments pour la boucle
+  const radius = 20 + attempt * 2; // Ajuster le rayon en fonction des tentatives
+  const angleOffset = (Math.PI / 4) * (attempt % 8); // Décaler l'angle pour éviter les intersections
 
-  for (let i = 0; i <= segments; i++) {
-    const angle = (i / segments) * Math.PI * 2;
-    const x = point.x + Math.cos(angle) * radius;
-    const y = point.y + Math.sin(angle) * radius;
+  const controlPoint1 = {
+    x: point.x + radius * Math.cos(angleOffset),
+    y: point.y + radius * Math.sin(angleOffset),
+  };
+  const controlPoint2 = {
+    x: point.x + radius * Math.cos(angleOffset + Math.PI),
+    y: point.y + radius * Math.sin(angleOffset + Math.PI),
+  };
+
+  const curve = [point];
+  for (let t = 0; t <= 1; t += 0.05) { // Augmentez la résolution
+    const x =
+      Math.pow(1 - t, 3) * point.x +
+      3 * Math.pow(1 - t, 2) * t * controlPoint1.x +
+      3 * (1 - t) * Math.pow(t, 2) * controlPoint2.x +
+      Math.pow(t, 3) * point.x;
+    const y =
+      Math.pow(1 - t, 3) * point.y +
+      3 * Math.pow(1 - t, 2) * t * controlPoint1.y +
+      3 * (1 - t) * Math.pow(t, 2) * controlPoint2.y +
+      Math.pow(t, 3) * point.y;
     curve.push({ x, y });
   }
+  curve.push(point);
 
-  curve.push(point); // Fermer la boucle
   return curve;
+};
+
+export const drawSafeCurve = (startPoint, endPoint, existingCurves, canvasWidth, canvasHeight, maxAttempts = 100) => {
+  let attempt = 0;
+  let validCurve = null;
+
+  while (!validCurve && attempt < maxAttempts) {
+    attempt++;
+
+    // Générer une courbe Bézier candidate
+    const candidateCurve = generateBezierCurve(startPoint, endPoint, attempt, canvasWidth, canvasHeight);
+
+    // Vérifier si la courbe intersecte une courbe existante
+    const intersects = curveIntersects(candidateCurve, existingCurves);
+
+    if (!intersects) {
+      validCurve = candidateCurve;
+    } else {
+      console.warn(`Tentative ${attempt}: Intersection détectée, ajustement de la courbe.`);
+    }
+  }
+
+  if (!validCurve) {
+    console.error("Impossible de générer une courbe valide après plusieurs tentatives.");
+    return null;
+  }
+
+  console.log(`Courbe valide générée après ${attempt} tentatives.`);
+  return validCurve;
 };
