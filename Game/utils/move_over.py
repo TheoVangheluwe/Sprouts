@@ -1,4 +1,4 @@
-from move_verification import playable_vertices, parse_regions, parse_boundaries, get_vertex_degrees
+from .move_verification import playable_vertices, parse_regions, parse_boundaries, get_vertex_degrees
 
 """
 Vérifie si le jeu est terminé en fonction de la chaîne en argument

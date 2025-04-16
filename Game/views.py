@@ -14,6 +14,7 @@ import json
 from django.db.models import Q
 from datetime import datetime, timedelta
 from django.db import transaction
+from .utils.move_over import is_game_over
 
 # Configure the logger
 logger = logging.getLogger(__name__)
@@ -967,3 +968,19 @@ def get_user_games(request):
     ]
 
     return JsonResponse(data, safe=False)
+
+@login_required
+@csrf_exempt
+def check_game_over(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            chain = data.get('chain')
+            if not chain:
+                return JsonResponse({'error': 'Chain is required'}, status=400)
+
+            game_over = is_game_over(chain)
+            return JsonResponse({'game_over': game_over})
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'Invalid JSON'}, status=400)
+    return JsonResponse({'error': 'Invalid request method'}, status=405)
