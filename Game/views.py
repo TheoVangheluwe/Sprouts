@@ -13,7 +13,7 @@ import logging
 import json
 from django.db.models import Q
 from datetime import datetime, timedelta
-from .utils.move_over import is_game_over
+from django.db import transaction
 
 # Configure the logger
 logger = logging.getLogger(__name__)
@@ -37,6 +37,13 @@ def rules_view(request):
     """Vue pour la page des règles"""
     return ReactAppView(request)
 
+def legal_view(request):
+    """Vue pour la page d'accueil"""
+    return ReactAppView(request)
+
+def historic_view(request):
+    """Vue pour la page d'accueil"""
+    return ReactAppView(request)
 
 def waiting_room_view(request):
     """Vue pour la salle d'attente"""
@@ -356,8 +363,6 @@ def create_game(request):
 
     elif request.method == 'POST':
         try:
-            from django.db import transaction
-
             with transaction.atomic():
                 data = json.loads(request.body.decode('utf-8'))
                 point_options = data.get('pointOptions', [3])  # Par défaut, 3 points si non spécifié
@@ -544,7 +549,6 @@ def set_ready(request):
 
     try:
         # Utiliser un verrou global pour cette action critique
-        from django.db import transaction
         from django.core.cache import cache
         import time
 
@@ -856,8 +860,6 @@ def leave_game(request, game_id):
 
     try:
         # Utiliser un verrou pour éviter les concurrences
-        from django.db import transaction
-
         with transaction.atomic():
             game = Game.objects.select_for_update().get(id=game_id)
 
@@ -989,3 +991,44 @@ def ReactAppView(request):
 def login_redirect_with_message(request):
     messages.error(request, "Vous devez être connecté pour accéder à cette page.")
     return redirect('login')
+
+@login_required
+def get_user_id(request):
+    """Obtenir l'id de l'utilisateur connecté"""
+    return JsonResponse({
+        "id": request.user.id,
+    })
+    
+@login_required
+def get_user_name(request):
+    """Obtenir le nom d'utilisateur de l'utilisateur connecté"""
+    return JsonResponse({
+        "username": request.user.username,
+    })
+    
+@login_required
+def get_user_info(request):
+        """Obtenir le nom d'utilisateur & id de l'utilisateur connecté"""
+        return JsonResponse({
+        "id": request.user.id,
+        "username": request.user.username,
+    })
+    
+@login_required
+@transaction.atomic
+def get_user_games(request):
+    user = request.user
+
+    # Récupère tous les jeux où l'utilisateur est dans la relation ManyToMany
+    games = Game.objects.filter(players=user)
+
+    data = [
+        {
+            "game_id": game.id,
+            "created_at": game.created_at.strftime("%Y-%m-%d %H:%M") if game.created_at else None,
+            "status": game.status if hasattr(game, "status") else "inconnu",
+        }
+        for game in games
+    ]
+
+    return JsonResponse(data, safe=False)
