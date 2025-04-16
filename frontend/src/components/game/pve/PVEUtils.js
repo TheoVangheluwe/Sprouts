@@ -84,51 +84,130 @@ export const connectPoints = (p1, p2, curvePoints, points, setPoints, setCurves)
   });
 };
 
-export const curveIntersects = (newCurve, curves, points) => {
-  for (let curve of curves) {
-    for (let i = 0; i < newCurve.length - 1; i++) {
-      const seg1Start = newCurve[i];
-      const seg1End = newCurve[i + 1];
-      for (let j = 0; j < curve.length - 1; j++) {
-        const seg2Start = curve[j];
-        const seg2End = curve[j + 1];
+export const curveIntersects = (newCurve, existingCurves, points) => {
 
-        // Ignore intersections at start and end points
-        if (points.some(point => point.x === seg1Start.x && point.y === seg1Start.y) ||
-            points.some(point => point.x === seg1End.x && point.y === seg1End.y) ||
-            points.some(point => point.x === seg2Start.x && point.y === seg2Start.y) ||
-            points.some(point => point.x === seg2End.x && point.y === seg2End.y)) {
-          continue;
+    // Filtrer les points de la nouvelle courbe pour enlever les doublons consécutifs
+    const filteredNewCurve = [newCurve[0]];
+    for (let i = 1; i < newCurve.length; i++) {
+        const lastPoint = filteredNewCurve[filteredNewCurve.length - 1];
+        const currentPoint = newCurve[i];
+
+        // Si le point est différent du dernier point ajouté
+        if (lastPoint.x !== currentPoint.x || lastPoint.y !== currentPoint.y) {
+            filteredNewCurve.push(currentPoint);
+        }
+    }
+
+    // Si la courbe filtrée est trop courte, pas d'intersection
+    if (filteredNewCurve.length < 2) {
+        return false;
+    }
+
+    // Récupérer les points de départ et de fin de la nouvelle courbe
+    const startPoint = filteredNewCurve[0];
+    const endPoint = filteredNewCurve[filteredNewCurve.length - 1];
+
+    // Fonction pour vérifier si un point est près d'un point officiel
+    const isNearOfficialPoint = (point) => {
+        for (const officialPoint of points) {
+            const dx = officialPoint.x - point.x;
+            const dy = officialPoint.y - point.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            if (distance < 15) {
+                return true;
+            }
+        }
+        return false;
+    };
+
+    // Vérifier les intersections avec les courbes existantes
+    for (let curveIndex = 0; curveIndex < existingCurves.length; curveIndex++) {
+        const curve = existingCurves[curveIndex];
+
+        // Extraire les points de la courbe existante
+        let curvePoints = [];
+        if (Array.isArray(curve)) {
+            curvePoints = curve;
+        } else if (curve && curve.points) {
+            curvePoints = curve.points;
         }
 
-        if (segmentsIntersect(seg1Start, seg1End, seg2Start, seg2End)) {
-          return true;
+        // Filtrer les points consécutifs identiques
+        const filteredCurvePoints = [curvePoints[0]];
+        for (let i = 1; i < curvePoints.length; i++) {
+            const lastPoint = filteredCurvePoints[filteredCurvePoints.length - 1];
+            const currentPoint = curvePoints[i];
+
+            if (lastPoint.x !== currentPoint.x || lastPoint.y !== currentPoint.y) {
+                filteredCurvePoints.push(currentPoint);
+            }
         }
-      }
+
+        // Si la courbe filtrée est trop courte, passer à la suivante
+        if (filteredCurvePoints.length < 2) continue;
+
+
+        // Vérifier chaque segment de la nouvelle courbe avec chaque segment de la courbe existante
+        for (let i = 0; i < filteredNewCurve.length - 1; i++) {
+            const seg1Start = filteredNewCurve[i];
+            const seg1End = filteredNewCurve[i + 1];
+
+            // Ignorer les segments aux points officiels
+            const isStartSegment = i === 0;
+            const isEndSegment = i === filteredNewCurve.length - 2;
+
+            for (let j = 0; j < filteredCurvePoints.length - 1; j++) {
+                const seg2Start = filteredCurvePoints[j];
+                const seg2End = filteredCurvePoints[j + 1];
+
+                // Ignorer l'intersection aux points officiels
+                if ((isStartSegment && isNearOfficialPoint(seg1Start)) ||
+                    (isEndSegment && isNearOfficialPoint(seg1End))) {
+                    // Si c'est un segment d'extrémité et qu'il est proche d'un point officiel,
+                    // vérifier s'il partage un point avec le segment de la courbe existante
+                    const isConnectedToSeg2 =
+                        (Math.abs(seg1Start.x - seg2Start.x) < 5 && Math.abs(seg1Start.y - seg2Start.y) < 5) ||
+                        (Math.abs(seg1Start.x - seg2End.x) < 5 && Math.abs(seg1Start.y - seg2End.y) < 5) ||
+                        (Math.abs(seg1End.x - seg2Start.x) < 5 && Math.abs(seg1End.y - seg2Start.y) < 5) ||
+                        (Math.abs(seg1End.x - seg2End.x) < 5 && Math.abs(seg1End.y - seg2End.y) < 5);
+
+                    if (isConnectedToSeg2) {
+                        continue;  // Ignorer les connexions légitimes
+                    }
+                }
+
+                // Vérifier l'intersection
+                if (segmentsIntersect(seg1Start, seg1End, seg2Start, seg2End)) {
+                    return true;
+                }
+            }
+        }
     }
-  }
 
-  for (let i = 0; i < newCurve.length - 1; i++) {
-    const seg1Start = newCurve[i];
-    const seg1End = newCurve[i + 1];
-    for (let j = i + 2; j < newCurve.length - 1; j++) {
-      const seg2Start = newCurve[j];
-      const seg2End = newCurve[j + 1];
+    // Vérifier l'auto-intersection
+    for (let i = 0; i < filteredNewCurve.length - 3; i++) {
+        const seg1Start = filteredNewCurve[i];
+        const seg1End = filteredNewCurve[i + 1];
 
-      // Ignore intersections at start and end points
-      if (points.some(point => point.x === seg1Start.x && point.y === seg1Start.y) ||
-          points.some(point => point.x === seg1End.x && point.y === seg1End.y) ||
-          points.some(point => point.x === seg2Start.x && point.y === seg2Start.y) ||
-          points.some(point => point.x === seg2End.x && point.y === seg2End.y)) {
-        continue;
-      }
+        for (let j = i + 2; j < filteredNewCurve.length - 1; j++) {
+            // Exception spéciale pour le premier et dernier segment (boucle)
+            if (i === 0 && j === filteredNewCurve.length - 2) {
+                if (isNearOfficialPoint(startPoint) && isNearOfficialPoint(endPoint)) {
+                    continue; // Boucle légitime
+                }
+            }
 
-      if (segmentsIntersect(seg1Start, seg1End, seg2Start, seg2End)) {
-        return true;
-      }
+            const seg2Start = filteredNewCurve[j];
+            const seg2End = filteredNewCurve[j + 1];
+
+            if (segmentsIntersect(seg1Start, seg1End, seg2Start, seg2End)) {
+                return true;
+            }
+        }
     }
-  }
-  return false;
+
+    console.log("Aucune intersection détectée");
+    return false;
 };
 
 export const curveLength = (curve) => {
@@ -566,9 +645,12 @@ export const generateGraphString = (startPoint, addedPoint, endPoint, currentGra
           region2 = `${regionString}${endToEnd}${endPoint.label}${endToDepart}${startPoint.label}${departToDepart}`;
         } else if (departToDepart !== '') {
           // Cas n°3.2: départ-départ: non vide, arrivé-arrivé: vide
-          region2 = `${regionString}${endToDepart}${startPoint.label}${departToDepart}`;
+          let reversedDepartToEnd = departToEnd.split('').reverse().join('');
+          region2 = `${regionString}${reversedDepartToEnd}${startPoint.label}${departToDepart}`;
+          //region2 = `${regionString}${endToDepart}${startPoint.label}${departToDepart}`;
         } else if (endToEnd !== '') {
           // Cas n°3.3: départ-départ: vide, arrivé-arrivé: non vide
+          region1 = `${regionString}${departToEnd}`;
           region2 = `${regionString}${endToEnd}${endPoint.label}${endToDepart}`;
         } else {
           // Cas n°3.4: départ-départ: vide, arrivé-arrivé: vide
