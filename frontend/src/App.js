@@ -34,7 +34,7 @@ const App = () => {
             <Route path="/online-game/:gameId" element={<OnlineGame />} />
             <Route path="/legal" element={<LegalPage />} />
             <Route path="/historic" element={<HistoricPage />} />
-            <Route path="/game-summary/:gameId" element={<GameSummaryPage />} />
+            <Route path="/historic/:gameId" element={<GameSummaryPage />} />
           </Routes>
         </main>
         <Footer />

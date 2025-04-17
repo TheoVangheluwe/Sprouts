@@ -19,8 +19,8 @@ urlpatterns = [
     path('legal/', views.legal_view, name='legal'),
 
     # Historique player / game indiv
-    path('historic/', views.historic_view, name='legal'),
-    #path('historic/<int:game_id>/', views.historic_view, name='legal'),
+    path('historic/', views.historic_view, name='historic'),
+    path('historic/<int:game_id>/', views.historic_id_view, name='historic_id'),
 
     # APIs pour avoir infos sur le joueur connecté
     path('api/player/id/', views.get_user_id, name='player_id'), #revois id

@@ -53,6 +53,10 @@ def historic_view(request):
     """Vue pour la page d'accueil"""
     return ReactAppView(request)
 
+def historic_id_view(request, game_id):
+    """Vue pour game recap"""
+    return ReactAppView(request)
+
 def waiting_room_view(request):
     """Vue pour la salle d'attente"""
     if not request.user.is_authenticated:
