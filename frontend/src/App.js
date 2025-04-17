@@ -1,6 +1,8 @@
 import React from 'react';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import { Toaster } from 'react-hot-toast';
 import './App.css';
+//pages
 import Header from './components/Header';
 import Footer from './components/Footer';
 import HomePage from './pages/HomePage';
@@ -13,7 +15,7 @@ import WaitingRoom from './components/game/WaitingRoom';
 import OnlineGame from './components/online/OnlineGame';
 import LegalPage from './pages/LegalPage';
 import HistoricPage from './pages/HistoricPage';
-import { Toaster } from 'react-hot-toast';
+import GameSummaryPage from './pages/GameSummaryPage';
 
 const App = () => {
   return (
@@ -32,6 +34,7 @@ const App = () => {
             <Route path="/online-game/:gameId" element={<OnlineGame />} />
             <Route path="/legal" element={<LegalPage />} />
             <Route path="/historic" element={<HistoricPage />} />
+            <Route path="/game-summary/:gameId" element={<GameSummaryPage />} />
           </Routes>
         </main>
         <Footer />

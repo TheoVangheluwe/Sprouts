@@ -1,6 +1,6 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login
-from django.http import JsonResponse, HttpResponse
+from django.http import Http404, JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from .models import Game, QueueEntry
 from django.contrib.auth.forms import UserCreationForm
@@ -1051,3 +1051,19 @@ def check_game_over(request):
         except json.JSONDecodeError:
             return JsonResponse({'error': 'Invalid JSON'}, status=400)
     return JsonResponse({'error': 'Invalid request method'}, status=405)
+
+@login_required
+def game_summary(request, game_id):
+    try:
+        game = Game.objects.get(id=game_id)
+    except Game.DoesNotExist:
+        raise Http404("Partie non trouvée")
+
+    data = {
+        "game_id": game.id,
+        "status": game.status if hasattr(game, 'status') else "inconnu",
+        "created_at": game.created_at.strftime("%Y-%m-%d %H:%M") if hasattr(game, 'created_at') else "inconnu",
+        "players": [player.username for player in game.players.all()]  # relation ManyToMany
+    }
+
+    return JsonResponse(data)

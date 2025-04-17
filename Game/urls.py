@@ -38,6 +38,7 @@ urlpatterns = [
     path('api/game/create/', views.create_game, name='create_game'),
     path('api/game/<int:game_id>/join/', views.join_specific_game, name='join_specific_game'),
     path('api/game/<int:game_id>/leave/', views.leave_game, name='leave_game'),
+    path('api/game/<int:game_id>/summary/', views.game_summary, name='game_sumary'), #Envois recap de game pour historic
 
     #API pour la fin du jeu
     path('api/is_game_over/', views.check_game_over, name='check_game_over'),

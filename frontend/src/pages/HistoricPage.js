@@ -1,53 +1,37 @@
 import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 
 const HistoricPage = () => {
   const [userId, setUserId] = useState(null);
   const [games, setGames] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Récupération de l'ID utilisateur
   useEffect(() => {
     fetch('/api/player/id/', {
       method: 'GET',
       credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json'
-      }
     })
-      .then(res => {
-        if (!res.ok) {
-          throw new Error('Utilisateur non connecté');
-        }
+      .then((res) => {
+        if (!res.ok) throw new Error();
         return res.json();
       })
-      .then(data => {
-        setUserId(data.id);
-      })
-      .catch(err => {
-        console.error('Erreur lors de la récupération de l’ID utilisateur :', err);
-      });
+      .then((data) => setUserId(data.id))
+      .catch(() => setUserId(null));
   }, []);
 
-  // Récupération des parties après obtention de l'ID
   useEffect(() => {
     if (!userId) return;
 
     fetch('/api/player/games/', {
       method: 'GET',
       credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json'
-      }
     })
-      .then(res => res.json())
-      .then(data => {
+      .then((res) => res.json())
+      .then((data) => {
         setGames(data);
         setLoading(false);
       })
-      .catch(err => {
-        console.error('Erreur lors du chargement des parties :', err);
-        setLoading(false);
-      });
+      .catch(() => setLoading(false));
   }, [userId]);
 
   return (
@@ -63,11 +47,14 @@ const HistoricPage = () => {
           {games.length > 0 ? (
             <ul className="space-y-2">
               {games.map((game, index) => (
-                <li key={index} className="bg-white shadow p-4 rounded">
-                  <p><strong>Partie #{game.game_id}</strong></p>
-                  <p>Statut : {game.status}</p>
-                  <p>Date de création : {game.created_at || "inconnue"}</p>
-                </li>
+                <li key={index} className="bg-white shadow rounded hover:bg-gray-100 transition">
+                <Link
+                  to={`/game-summary/${game.game_id}`}
+                  className="block w-full h-full p-4"
+                >
+                  <strong>Partie #{game.game_id}</strong> — Status : {game.status} — Créée le : {game.created_at || "inconnue"}
+                </Link>
+              </li>              
               ))}
             </ul>
           ) : (
