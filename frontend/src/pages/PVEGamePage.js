@@ -11,8 +11,8 @@ const PVEGamePage = () => {
     const [currentPlayer, setCurrentPlayer] = useState(1);
     const [gameOver, setGameOver] = useState(false);
 
-    const [timer1, setTimer1] = useState(10); // 10 minutes en secondes
-    const [timer2, setTimer2] = useState(10);
+    const [timer1, setTimer1] = useState(600); // 10 minutes en secondes
+    const [timer2, setTimer2] = useState(600);
 
     const timerInterval = useRef(null);
 
@@ -63,7 +63,7 @@ const PVEGamePage = () => {
         setPoints([]);
         setCurves([]);
         setCurrentPlayer(1);
-        setTimer1(10);
+        setTimer1(600);
         setTimer2(600);
     };
 
