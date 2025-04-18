@@ -8,5 +8,6 @@ pip install django
 pip install channels
 pip install requests
 pip install django-webpack-loader
+pip install django-cors-headers
 
 ```
