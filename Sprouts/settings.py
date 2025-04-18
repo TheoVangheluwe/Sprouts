@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     'Game',
     'webpack_loader',
     'channels',
+    'corsheaders',
 ]
 
 MIDDLEWARE = [
@@ -51,6 +52,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
 ]
 
 ROOT_URLCONF = 'Sprouts.urls'
@@ -145,6 +147,9 @@ STATICFILES_DIRS = [
 
 ASGI_APPLICATION = 'Sprouts.asgi.application'
 
+CORS_ALLOWED_ORIGINS = [
+    "http://127.0.0.1:8000",  # Replace with your frontend's origin
+]
 
 CHANNEL_LAYERS = {
     'default': {
