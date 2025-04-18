@@ -25,7 +25,7 @@ const App = () => {
         <main className="flex-1">
           <Routes>
             <Route path="/home" element={<HomePage />} />
-            <Route path="/game" element={<MenuPage />} />
+            <Route path="/menu" element={<MenuPage />} />
             <Route path="/pve" element={<PVEGamePage />} />
             <Route path="/ai" element={<AIGamePage />} />
             <Route path="/multiplayer" element={<MultiplayerGamePage />} />

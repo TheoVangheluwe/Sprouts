@@ -161,7 +161,7 @@ const PVEGamePage = () => {
                             </button>
                             <button
                                 className="px-6 py-2 bg-gray-600 hover:bg-gray-500 text-white rounded border-2 border-white"
-                                onClick={() => window.location.href = '/game'}
+                                onClick={() => window.location.href = '/menu'}
                             >
                                 ❌ Quitter
                             </button>
