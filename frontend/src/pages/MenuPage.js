@@ -23,7 +23,7 @@ const MenuPage = () => {
             to="/waiting-room"
             className="bg-purple-600 text-white py-3 px-6 rounded-lg hover:bg-purple-500 transform transition hover:scale-105 shadow-md w-full block"
           >
-            Jeux Multi
+            Multijoueur
           </Link>
           <Link
             to="/rules"
