@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { toast } from 'react-toastify';
 import { drawGame, getMousePos, getNearPoint, canConnect, connectPoints, curveIntersects, curveLength, getNextLabel, getClosestPointOnCurve, isPointTooClose, generateInitialGraphString, generateGraphString, updateCurveMap } from './PVEUtils';
 
-const PVECanvas = ({ points, setPoints, curves, setCurves }) => {
+const PVECanvas = ({ points, setPoints, curves, setCurves, currentPlayer, handlePlayerChange, handleGameOver, initialPointCount}) => {
   const canvasRef = useRef(null);
   const [selectedPoint, setSelectedPoint] = useState(null);
   const [isDrawing, setIsDrawing] = useState(false);
@@ -11,36 +11,40 @@ const PVECanvas = ({ points, setPoints, curves, setCurves }) => {
   const [graphString, setGraphString] = useState(''); // État pour stocker la chaîne de caractères
   const [curveMap, setCurveMap] = useState(new Map()); // État pour stocker la curveMap
   const [endPoint, setEndPoint] = useState(null); // État pour stocker endPoint
-  const [gameOver, setGameOver] = useState(false);
 
   useEffect(() => {
     const resizeCanvas = () => {
       const canvas = canvasRef.current;
-      if (canvas) {
-        canvas.width = 800;
+      const container = document.getElementById("canvas-container");
+      if (canvas && container) {
+        // 🔒 Dimensions fixes en pixels
+        canvas.width = container.clientWidth;
         canvas.height = 500;
         drawGame(canvasRef, points, curves, currentCurve);
       }
     };
-
+  
     resizeCanvas();
     window.addEventListener('resize', resizeCanvas);
     return () => window.removeEventListener('resize', resizeCanvas);
   }, [points, curves, currentCurve]);
+  
+  
 
   useEffect(() => {
-    initializePoints();
+    initializePoints(initialPointCount);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
+    console.log("Chaîne mise à jour: ", graphString);
     checkGameOver();
   }, [graphString]);
 
-  const initializePoints = () => {
+  const initializePoints = (initialPointCount) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const newPoints = generateInitialPoints(canvas);
+    const newPoints = generateInitialPoints(canvas, initialPointCount);
     setPoints(newPoints);
 
     const initialGraphString = generateInitialGraphString(newPoints);
@@ -48,7 +52,7 @@ const PVECanvas = ({ points, setPoints, curves, setCurves }) => {
     console.log("Initial graph as string:", initialGraphString);
   };
 
-  const generateInitialPoints = (canvas) => {
+  const generateInitialPoints = (canvas, initialPointCount) => {
     const minDistance = 100; // Distance minimale entre les points
     const width = canvas.width;
     const height = canvas.height;
@@ -60,7 +64,7 @@ const PVECanvas = ({ points, setPoints, curves, setCurves }) => {
       return { x, y };
     };
 
-    while (newPoints.length < 4) {
+    while (newPoints.length < initialPointCount) {
       const newPoint = generateRandomPoint();
       if (newPoints.every(point => Math.hypot(point.x - newPoint.x, point.y - newPoint.y) >= minDistance)) {
         newPoint.connections = 0;
@@ -74,7 +78,7 @@ const PVECanvas = ({ points, setPoints, curves, setCurves }) => {
 
   const checkGameOver = async () => {
     try {
-      const response = await fetch('http://localhost:8000/api/is_game_over/', {
+      const response = await fetch('http://127.0.0.1:8000/api/is_game_over/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -87,8 +91,8 @@ const PVECanvas = ({ points, setPoints, curves, setCurves }) => {
       }
 
       const data = await response.json();
-      console.log(data.game_over);
-      setGameOver(data.game_over);
+      console.log("la partie est finie:", data.game_over);
+      handleGameOver(data.game_over);
     } catch (error) {
       console.error('Error checking game over:', error);
     }
@@ -105,7 +109,6 @@ const PVECanvas = ({ points, setPoints, curves, setCurves }) => {
       if (closestPoint) {
         if (!isPointTooClose(Math.round(closestPoint.x), Math.round(closestPoint.y), points)) {
           const newPoint = { x: Math.round(closestPoint.x), y: Math.round(closestPoint.y), connections: 2, label: getNextLabel(points) };
-          //setPoints(prevPoints => [...prevPoints, newPoint]);
           setCurves(prevCurves => [...prevCurves, currentCurve]);
 
           const test = points;
@@ -118,6 +121,7 @@ const PVECanvas = ({ points, setPoints, curves, setCurves }) => {
           setAwaitingPointPlacement(false);
           setCurrentCurve([]);
           toast.success("Point placé.", { autoClose: 1500 });
+          handlePlayerChange(); // Changer de joueur après avoir placé le point
         } else {
           toast.error("Le point est trop proche d'un autre.", { autoClose: 1500 });
         }
@@ -208,19 +212,26 @@ const PVECanvas = ({ points, setPoints, curves, setCurves }) => {
   };
 
   return (
-    <div id="canvas-container" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+    <div
+    id="canvas-container"
+    className="relative flex items-center justify-center w-full p-2 rounded-xl border-4 border-yellow-400 shadow-[0_0_25px_#facc15] bg-gray-900"
+    style={{ height: '500px' }}>
       <canvas
-        ref={canvasRef}
-        width="1000"
-        height="1000"
-        style={{ border: "1px solid black", backgroundColor: '#fff' }}
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
-      />
-      <p>Chaîne de caractères: {graphString}</p>
+      ref={canvasRef}
+      className="w-full h-full rounded-md shadow-inner"
+      style={{
+        backgroundColor: '#fff',
+        border: 'none',
+        cursor: 'url("/assets/cursor-cross.png") 20 20, crosshair' // 16 16 = point central de l’image
+      }}
+      onMouseDown={handleMouseDown}
+      onMouseMove={handleMouseMove}
+      onMouseUp={handleMouseUp}
+/>
+
     </div>
   );
+  
 };
 
 export default PVECanvas;
