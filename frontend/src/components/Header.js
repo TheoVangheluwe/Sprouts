@@ -72,8 +72,6 @@ const Header = () => {
 
         <div className="flex w-1/3 justify-center">
           <ul className="flex space-x-6 text-lg">
-            <li><a href="/menu/" className="text-lightGreen hover:text-softBlue transition-colors duration-300">Jeu</a></li>
-            <li><a href="/rules/" className="text-lightGreen hover:text-softBlue transition-colors duration-300">Règles</a></li>
             <li><a href="/historic/" className="text-lightGreen hover:text-softBlue transition-colors duration-300">Historique</a></li>
           </ul>
         </div>
