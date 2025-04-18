@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { toast } from 'react-toastify';
 import { drawGame, getMousePos, getNearPoint, canConnect, connectPoints, curveIntersects, curveLength, getNextLabel, getClosestPointOnCurve, isPointTooClose, generateInitialGraphString, generateGraphString, updateCurveMap } from './PVEUtils';
 
-const PVECanvas = ({ points, setPoints, curves, setCurves, currentPlayer, handlePlayerChange, handleGameOver, initialPointCount}) => {
+const PVECanvas = ({ points, setPoints, curves, setCurves, currentPlayer, handlePlayerChange, handleGameOver, initialPointCount, addMove }) => {
   const canvasRef = useRef(null);
   const [selectedPoint, setSelectedPoint] = useState(null);
   const [isDrawing, setIsDrawing] = useState(false);
@@ -23,13 +23,11 @@ const PVECanvas = ({ points, setPoints, curves, setCurves, currentPlayer, handle
         drawGame(canvasRef, points, curves, currentCurve);
       }
     };
-  
+
     resizeCanvas();
     window.addEventListener('resize', resizeCanvas);
     return () => window.removeEventListener('resize', resizeCanvas);
   }, [points, curves, currentCurve]);
-  
-  
 
   useEffect(() => {
     initializePoints(initialPointCount);
@@ -118,6 +116,9 @@ const PVECanvas = ({ points, setPoints, curves, setCurves, currentPlayer, handle
           const updatedGraphString = generateGraphString(selectedPoint, newPoint, endPoint, graphString, curveMap, test);
           setGraphString(updatedGraphString);
 
+          // Ajouter le coup à l'historique
+          //addMove(`${selectedPoint.label} -> ${newPoint.label} : ${closestPoint.label}`);
+
           setAwaitingPointPlacement(false);
           setCurrentCurve([]);
           toast.success("Point placé.", { autoClose: 1500 });
@@ -175,7 +176,15 @@ const PVECanvas = ({ points, setPoints, curves, setCurves, currentPlayer, handle
         setCurveMap(updatedCurveMap);
 
         connectPoints(selectedPoint, end, adjustedCurve, points, setPoints, setCurves);
+
+        if(!awaitingPointPlacement) {
+          // Ajouter le coup à l'historique
+          addMove(`${selectedPoint.label} -> ${end.label} : ${addedPoint.label}`);
+        }
+
         setAwaitingPointPlacement(true);
+
+        
       }
     } else {
       if (!end) {
@@ -213,25 +222,23 @@ const PVECanvas = ({ points, setPoints, curves, setCurves, currentPlayer, handle
 
   return (
     <div
-    id="canvas-container"
-    className="relative flex items-center justify-center w-full p-2 rounded-xl border-4 border-yellow-400 shadow-[0_0_25px_#facc15] bg-gray-900"
-    style={{ height: '500px' }}>
+      id="canvas-container"
+      className="relative flex items-center justify-center w-full p-2 rounded-xl border-4 border-yellow-400 shadow-[0_0_25px_#facc15] bg-gray-900"
+      style={{ height: '500px' }}>
       <canvas
-      ref={canvasRef}
-      className="w-full h-full rounded-md shadow-inner"
-      style={{
-        backgroundColor: '#fff',
-        border: 'none',
-        cursor: 'url("/assets/cursor-cross.png") 20 20, crosshair' // 16 16 = point central de l’image
-      }}
-      onMouseDown={handleMouseDown}
-      onMouseMove={handleMouseMove}
-      onMouseUp={handleMouseUp}
-/>
-
+        ref={canvasRef}
+        className="w-full h-full rounded-md shadow-inner"
+        style={{
+          backgroundColor: '#fff',
+          border: 'none',
+          //cursor: 'url("/assets/cursor-cross.png") 20 20, crosshair' // 16 16 = point central de l’image
+        }}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+      />
     </div>
   );
-  
 };
 
 export default PVECanvas;
