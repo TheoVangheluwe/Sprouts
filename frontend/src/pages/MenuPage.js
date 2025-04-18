@@ -26,6 +26,12 @@ const MenuPage = () => {
             Jeux Multi
           </Link>
           <Link
+            to="/rules"
+            className="bg-red-600 text-white py-3 px-6 rounded-lg hover:bg-gray-500 transform transition hover:scale-105 shadow-md w-full block"
+          >
+            Règles du jeu
+          </Link>
+          <Link
             to="/settings"
             className="bg-gray-600 text-white py-3 px-6 rounded-lg hover:bg-gray-500 transform transition hover:scale-105 shadow-md w-full block"
           >
