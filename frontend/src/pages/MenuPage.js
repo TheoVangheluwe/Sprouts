@@ -32,6 +32,12 @@ const MenuPage = () => {
             Règles du jeu
           </Link>
           <Link
+            to="/historic"
+            className="bg-pink-600 text-white py-3 px-6 rounded-lg hover:bg-gray-500 transform transition hover:scale-105 shadow-md w-full block"
+          >
+            Profil
+          </Link>
+          <Link
             to="/settings"
             className="bg-gray-600 text-white py-3 px-6 rounded-lg hover:bg-gray-500 transform transition hover:scale-105 shadow-md w-full block"
           >
