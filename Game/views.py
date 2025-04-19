@@ -70,6 +70,13 @@ def waiting_room_view(request):
         return redirect('login_redirect')
     return ReactAppView(request)
 
+def menu_view(request):
+    """Vue pour game recap"""
+    return ReactAppView(request)
+
+def profil_view(request):
+    """Vue pour game recap"""
+    return ReactAppView(request)
 
 def online_game_view(request, game_id):
     """Vue pour un jeu en ligne spécifique"""
@@ -1027,7 +1034,7 @@ def login_view(request):
             messages.error(request, "Vous devez être connecté pour accéder à cette page.")
     return render(request, 'login.html')
 
-
+@csrf_exempt
 def logout_view(request):
     logout(request)
     return redirect('login')

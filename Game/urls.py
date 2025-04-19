@@ -17,6 +17,8 @@ urlpatterns = [
     path('waiting-room/', views.waiting_room_view, name='waiting_room'),
     path('online-game/<int:game_id>/', views.online_game_view, name='online_game'),
     path('legal/', views.legal_view, name='legal'),
+    path('menu/', views.menu_view, name='menu'),
+    path('profil/', views.profil_view, name='profil'),
 
     # Historique player / game indiv
     path('historic/', views.historic_view, name='historic'),

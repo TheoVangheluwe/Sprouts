@@ -16,6 +16,7 @@ import OnlineGame from './components/online/OnlineGame';
 import LegalPage from './pages/LegalPage';
 import HistoricPage from './pages/HistoricPage';
 import GameSummaryPage from './pages/GameSummaryPage';
+import MenuProfilPage from './pages/MenuProfilPage';
 
 const App = () => {
   return (
@@ -35,6 +36,7 @@ const App = () => {
             <Route path="/legal" element={<LegalPage />} />
             <Route path="/historic" element={<HistoricPage />} />
             <Route path="/historic/:gameId" element={<GameSummaryPage />} />
+            <Route path="/profil" element={<MenuProfilPage />} />
           </Routes>
         </main>
         <Footer />

@@ -42,33 +42,34 @@ const HistoricPage = () => {
   }, [userId]);
 
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold mb-4">Historique de: {username}</h1>
-      
-      {loading ? (
-        <p>Chargement...</p>
-      ) : userId ? (
-        <div>
-          {games.length > 0 ? (
-            <ul className="space-y-2">
-              {games.map((game, index) => (
-                <li key={index} className="bg-white shadow rounded hover:bg-gray-100 transition">
+    <div className="bg-gradient-to-br from-gray-900 to-black flex flex-col items-center justify-center min-h-screen p-4 font-arcade">
+      <div className="bg-gray-800 border-4 border-yellow-400 p-8 rounded-lg shadow-2xl text-center max-w-md w-full">
+        <h1 className="text-4xl font-bold mb-8 text-yellow-300 animate-pulse">
+          🕹️ Historique de : {username}
+        </h1>
+
+        {loading ? (
+          <p className="text-white">Chargement...</p>
+        ) : userId ? (
+          <div className="space-y-4">
+            {games.length > 0 ? (
+              games.map((game, index) => (
                 <Link
+                  key={index}
                   to={`/historic/${game.game_id}`}
-                  className="block w-full h-full p-4"
+                  className="bg-blue-600 text-white py-3 px-6 rounded-lg hover:bg-blue-500 transform transition hover:scale-105 shadow-md w-full block"
                 >
-                  <strong>Partie #{game.game_id}</strong> — Statut : {game.status} — Créée le : {game.created_at || "inconnue"}
+                  Partie #{game.game_id} — {game.status} — {game.created_at || "inconnue"}
                 </Link>
-              </li>              
-              ))}
-            </ul>
-          ) : (
-            <p>Aucune partie trouvée.</p>
-          )}
-        </div>
-      ) : (
-        <p>Utilisateur non connecté</p>
-      )}
+              ))
+            ) : (
+              <p className="text-white">Aucune partie trouvée.</p>
+            )}
+          </div>
+        ) : (
+          <p className="text-white">Utilisateur non connecté</p>
+        )}
+      </div>
     </div>
   );
 };
