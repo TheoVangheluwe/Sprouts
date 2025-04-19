@@ -11,22 +11,20 @@ function WaitingRoom({ setInWaitingRoom }) {
     const [checkingActiveGame, setCheckingActiveGame] = useState(true);
     const navigate = useNavigate();
 
-     const navigateTo = (path) => {
-    // Vérifier que le chemin ne contient pas "undefined"
-    if (path.includes("undefined")) {
-        console.error("Tentative de redirection avec ID indéfini:", path);
-        return; // Ne pas rediriger si l'ID est indéfini
-    }
+    const navigateTo = (path) => {
+        if (path.includes("undefined")) {
+            return;
+        }
 
-    if (navigate) {
-        navigate(path);
-    } else {
-        window.location.href = path;
-    }
-};
+        if (navigate) {
+            navigate(path);
+        } else {
+            window.location.href = path;
+        }
+    };
+
     const pointOptions = [3, 4, 5, 6, 7];
 
-    // Vérifier si le joueur a une partie active avant de lui permettre de rejoindre la file
     useEffect(() => {
         const checkActiveGame = async () => {
             try {
@@ -38,16 +36,13 @@ function WaitingRoom({ setInWaitingRoom }) {
 
                 const data = await response.json();
 
-                // Si le joueur a une partie active, le rediriger directement
                 if (data.active_game && data.game_id) {
-                    console.log("Active game found, redirecting to:", data.game_id);
                     navigateTo(`/online-game/${data.game_id}`);
                     return;
                 }
 
                 setCheckingActiveGame(false);
             } catch (error) {
-                console.error("Error checking active game:", error);
                 setCheckingActiveGame(false);
             }
         };
@@ -55,7 +50,6 @@ function WaitingRoom({ setInWaitingRoom }) {
         checkActiveGame();
     }, [navigate]);
 
-    // Vérifier régulièrement l'état de la file d'attente
     useEffect(() => {
         if (!hasJoinedQueue || checkingActiveGame) return;
 
@@ -68,25 +62,20 @@ function WaitingRoom({ setInWaitingRoom }) {
                 });
 
                 const data = await response.json();
-                console.log("Queue Status:", data);
 
-                // Si le joueur a une partie active, le rediriger directement
                 if (data.active_game && data.game_id) {
-                    console.log("Active game found during polling, redirecting to:", data.game_id);
                     navigateTo(`/online-game/${data.game_id}`);
                     return;
                 }
 
                 setQueueInfo(data);
 
-                // Si un jeu a été créé, rediriger vers la page de jeu
                 if (data.game_created && data.game_id) {
-                    console.log("Game created, redirecting to game:", data.game_id);
                     setGameId(data.game_id);
                     navigateTo(`/online-game/${data.game_id}`);
                 }
             } catch (error) {
-                console.error("Erreur récupération statut de la file:", error);
+                // Erreur silencieuse
             }
         }, 2000);
 
@@ -126,21 +115,17 @@ function WaitingRoom({ setInWaitingRoom }) {
             const data = await response.json();
 
             if (response.ok) {
-                // Si le joueur a une partie active, le rediriger directement
                 if (data.active_game && data.game_id) {
-                    console.log("Active game found during join, redirecting to:", data.game_id);
                     navigateTo(`/online-game/${data.game_id}`);
                     return;
                 }
 
                 setHasJoinedQueue(true);
                 setQueueInfo(data);
-                console.log("Joined queue with points:", selectedPoints);
             } else {
                 throw new Error(data.error || "Impossible de rejoindre la file d'attente");
             }
         } catch (error) {
-            console.error("Erreur lors de la mise en file d'attente:", error);
             alert("Une erreur est survenue. Veuillez réessayer.");
         } finally {
             setIsLoading(false);
@@ -161,20 +146,15 @@ function WaitingRoom({ setInWaitingRoom }) {
 
             if (response.ok) {
                 setReady(true);
-                console.log("Player ready, response:", data);
 
-                // Si un jeu a été créé, rediriger vers la page de jeu
                 if (data.game_id) {
-                    console.log("Game created during ready call, redirecting to:", data.game_id);
                     setGameId(data.game_id);
                     navigateTo(`/online-game/${data.game_id}`);
                 }
-                // Ne pas mettre à jour queueInfo ici pour éviter de perdre les infos de match
             } else {
                 throw new Error(data.error || "Erreur lors de la déclaration de l'état de préparation");
             }
         } catch (error) {
-            console.error("Erreur lors de la déclaration de l'état de préparation:", error);
             alert("Une erreur est survenue. Veuillez réessayer.");
         }
     };
@@ -191,12 +171,10 @@ function WaitingRoom({ setInWaitingRoom }) {
 
             if (response.ok) {
                 resetState();
-                console.log("Left the queue successfully.");
             } else {
                 throw new Error("Erreur lors de la sortie de la file d'attente");
             }
         } catch (error) {
-            console.error("Erreur lors de la sortie de la file d'attente:", error);
             alert("Une erreur est survenue. Veuillez réessayer.");
         }
     };
@@ -209,135 +187,107 @@ function WaitingRoom({ setInWaitingRoom }) {
         setInWaitingRoom(false);
     };
 
-    // Afficher un écran de chargement pendant la vérification de partie active
     if (checkingActiveGame) {
         return (
-            <div style={{ textAlign: "center", padding: "20px" }}>
-                <h2>Vérification de partie en cours...</h2>
-                <p>Veuillez patienter pendant que nous vérifions si vous avez une partie active.</p>
+            <div className="bg-gradient-to-br from-gray-900 to-black flex flex-col items-center justify-center min-h-screen p-4 font-arcade">
+                <div className="bg-gray-800 border-4 border-yellow-400 p-8 rounded-lg shadow-2xl text-center max-w-md w-full">
+                    <h2 className="text-2xl font-bold text-yellow-300 mb-4">Vérification de partie en cours...</h2>
+                    <p className="text-white">Veuillez patienter pendant que nous vérifions si vous avez une partie active.</p>
+                </div>
             </div>
         );
     }
 
     if (!hasJoinedQueue) {
         return (
-            <div style={{ textAlign: "center", padding: "20px", maxWidth: "500px", margin: "0 auto" }}>
-                <h2>Sélectionner le nombre de points</h2>
-                <p>Choisissez une ou plusieurs options pour être mis en correspondance avec d'autres joueurs:</p>
+            <div className="bg-gradient-to-br from-gray-900 to-black flex flex-col items-center justify-center min-h-screen p-4 font-arcade">
+                <div className="bg-gray-800 border-4 border-yellow-400 p-8 rounded-lg shadow-2xl text-center max-w-md w-full">
+                    <h2 className="text-2xl font-bold text-yellow-300 mb-4">Sélectionner le nombre de points</h2>
+                    <p className="text-white mb-6">Choisissez une ou plusieurs options pour être mis en correspondance avec d'autres joueurs:</p>
 
-                <div style={{ display: "flex", justifyContent: "center", flexWrap: "wrap", gap: "10px", margin: "20px 0" }}>
-                    {pointOptions.map(option => (
-                        <button
-                            key={option}
-                            onClick={() => togglePointSelection(option)}
-                            style={{
-                                padding: "10px 15px",
-                                margin: "5px",
-                                backgroundColor: selectedPoints.includes(option) ? "#4CAF50" : "#f1f1f1",
-                                color: selectedPoints.includes(option) ? "white" : "black",
-                                border: "1px solid #ddd",
-                                borderRadius: "5px",
-                                cursor: "pointer",
-                                fontWeight: selectedPoints.includes(option) ? "bold" : "normal"
-                            }}
-                        >
-                            {option} points
-                        </button>
-                    ))}
+                    <div className="flex justify-center flex-wrap gap-2 mb-6">
+                        {pointOptions.map(option => (
+                            <button
+                                key={option}
+                                onClick={() => togglePointSelection(option)}
+                                className={`py-2 px-4 rounded-lg transform transition hover:scale-105 ${
+                                    selectedPoints.includes(option) 
+                                        ? "bg-green-600 text-white font-bold" 
+                                        : "bg-gray-600 text-white"
+                                }`}
+                            >
+                                {option} points
+                            </button>
+                        ))}
+                    </div>
+
+                    <button
+                        onClick={joinQueue}
+                        disabled={isLoading || selectedPoints.length === 0}
+                        className={`py-3 px-6 rounded-lg transform transition w-full ${
+                            selectedPoints.length > 0 
+                                ? "bg-blue-600 text-white hover:bg-blue-500 hover:scale-105" 
+                                : "bg-gray-500 text-gray-300 cursor-not-allowed"
+                        }`}
+                    >
+                        {isLoading ? "Recherche en cours..." : "Rejoindre la file d'attente"}
+                    </button>
                 </div>
-
-                <button
-                    onClick={joinQueue}
-                    disabled={isLoading || selectedPoints.length === 0}
-                    style={{
-                        marginTop: "20px",
-                        padding: "12px 25px",
-                        fontSize: "18px",
-                        backgroundColor: selectedPoints.length > 0 ? "#2196F3" : "#cccccc",
-                        color: "white",
-                        border: "none",
-                        borderRadius: "5px",
-                        cursor: selectedPoints.length > 0 ? "pointer" : "not-allowed"
-                    }}
-                >
-                    {isLoading ? "Recherche en cours..." : "Rejoindre la file d'attente"}
-                </button>
             </div>
         );
     }
 
     return (
-        <div style={{ textAlign: "center", padding: "20px" }}>
-            <h2>Salle d'Attente</h2>
-            {queueInfo && (
-                <p>Joueurs en file d'attente: {queueInfo.queue_count || 0}</p>
-            )}
+        <div className="bg-gradient-to-br from-gray-900 to-black flex flex-col items-center justify-center min-h-screen p-4 font-arcade">
+            <div className="bg-gray-800 border-4 border-yellow-400 p-8 rounded-lg shadow-2xl text-center max-w-md w-full">
+                <h2 className="text-3xl font-bold text-yellow-300 mb-6">Salle d'Attente</h2>
 
-            <div style={{
-                backgroundColor: "#f5f5f5",
-                padding: "15px",
-                borderRadius: "8px",
-                margin: "20px auto",
-                maxWidth: "300px"
-            }}>
-                <h3>Préférences de points</h3>
-                <p>{selectedPoints.join(", ")} points</p>
-            </div>
-
-            <div style={{
-                backgroundColor: "#f9f9f9",
-                padding: "15px",
-                borderRadius: "8px",
-                margin: "20px auto",
-                maxWidth: "300px"
-            }}>
-                <h3>Statut</h3>
-                {queueInfo && queueInfo.matched ? (
-                    <div>
-                        <p>Adversaire trouvé: <strong>{queueInfo.matched_with.username}</strong></p>
-                        <p>Statut: {queueInfo.matched_with.ready ? 'Prêt ✅' : 'En attente'}</p>
-                        {ready && <p>Vous êtes: <strong>Prêt ✅</strong></p>}
-                    </div>
-                ) : (
-                    <p>En attente d'un adversaire...</p>
+                {queueInfo && (
+                    <p className="text-white mb-4">Joueurs en file d'attente: {queueInfo.queue_count || 0}</p>
                 )}
-            </div>
 
-            <div style={{ marginTop: "30px", display: "flex", justifyContent: "center", gap: "15px" }}>
-                {queueInfo && queueInfo.matched && !ready && (
+                <div className="bg-gray-700 p-4 rounded-lg mb-4">
+                    <h3 className="text-xl text-yellow-300 mb-2">Préférences de points</h3>
+                    <p className="text-white">{selectedPoints.join(", ")} points</p>
+                </div>
+
+                <div className="bg-gray-700 p-4 rounded-lg mb-6">
+                    <h3 className="text-xl text-yellow-300 mb-2">Statut</h3>
+                    {queueInfo && queueInfo.matched ? (
+                        <div className="text-white">
+                            <p>Adversaire trouvé: <strong>{queueInfo.matched_with.username}</strong></p>
+                            <p>Statut: {queueInfo.matched_with.ready ? 'Prêt ✅' : 'En attente'}</p>
+                            {ready && <p>Vous êtes: <strong>Prêt ✅</strong></p>}
+                        </div>
+                    ) : (
+                        <p className="text-white">En attente d'un adversaire...</p>
+                    )}
+                </div>
+
+                <div className="flex justify-center gap-3">
+                    {queueInfo && queueInfo.matched && !ready && (
+                        <button
+                            onClick={setPlayerReady}
+                            className="bg-green-600 text-white py-3 px-6 rounded-lg hover:bg-green-500 transform transition hover:scale-105 shadow-md"
+                        >
+                            Prêt
+                        </button>
+                    )}
+
                     <button
-                        onClick={setPlayerReady}
-                        style={{
-                            padding: "10px 20px",
-                            fontSize: "16px",
-                            backgroundColor: "green",
-                            color: "white",
-                            border: "none",
-                            borderRadius: "5px",
-                            cursor: "pointer"
-                        }}
+                        onClick={leaveQueue}
+                        className="bg-red-600 text-white py-3 px-6 rounded-lg hover:bg-red-500 transform transition hover:scale-105 shadow-md"
                     >
-                        Prêt
+                        Quitter la file
                     </button>
+                </div>
+
+                {ready && (
+                    <p className="text-white mt-4 animate-pulse">
+                        En attente que votre adversaire soit prêt...
+                    </p>
                 )}
-
-                <button
-                    onClick={leaveQueue}
-                    style={{
-                        padding: "10px 20px",
-                        fontSize: "16px",
-                        backgroundColor: "#f44336",
-                        color: "white",
-                        border: "none",
-                        borderRadius: "5px",
-                        cursor: "pointer"
-                    }}
-                >
-                    Quitter la file
-                </button>
             </div>
-
-            {ready && <p style={{ marginTop: "20px" }}>En attente que votre adversaire soit prêt...</p>}
         </div>
     );
 }

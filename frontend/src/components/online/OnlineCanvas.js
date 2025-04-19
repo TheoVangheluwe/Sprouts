@@ -46,8 +46,109 @@ const OnlineCanvas = ({points, setPoints, curves = [], setCurves, myTurn, onMove
         };
     };
 
+    // Fonction améliorée pour valider et nettoyer les chaînes graphString
+    const validateGraphString = (graphString, pointsArray = points) => {
+        if (!graphString) {
+            return generateInitialGraphString(pointsArray); // Générer une nouvelle chaîne si vide
+        }
+
+        // Nettoyage des problèmes connus
+        graphString = graphString
+            .replace(/^\.\}/g, '')          // Supprimer .} au début
+            .replace(/\.\.\}/g, '.}')       // Corriger les doubles points
+            .replace(/\}\}/g, '}')          // Corriger les doubles accolades
+            .replace(/\.+\}/g, '.}')        // Corriger les multiples points avant }
+            .replace(/\.\./g, '.')          // Corriger les points consécutifs
+            .replace(/\s/g, '');            // Supprimer les espaces
+
+        // Si après correction, la chaîne commence par }, la considérer comme invalide
+        if (graphString.startsWith('}')) {
+            return generateInitialGraphString(pointsArray);
+        }
+
+        // S'assurer que la chaîne se termine correctement
+        if (!graphString.endsWith('!')) {
+            graphString = graphString.endsWith('}') ? graphString + '!' : graphString + '}!';
+        }
+
+        // Vérifier que la chaîne contient au moins une région valide
+        if (!graphString.includes('.}')) {
+            // Créer une chaîne de base avec tous les points
+            const baseChain = pointsArray.map(p => p.label).join('.') + '.}!';
+            return baseChain;
+        }
+
+        // NOUVEAU: Vérifier que tous les points sont présents dans la chaîne
+        if (pointsArray && pointsArray.length > 0) {
+            // Obtenir tous les labels de points
+            const pointLabels = pointsArray.map(p => p.label);
+
+            // Vérifier quels points sont absents de la chaîne
+            const missingPoints = pointLabels.filter(label => !graphString.includes(label));
+
+            // Si des points sont manquants, les ajouter
+            if (missingPoints.length > 0) {
+                console.warn("Points manquants dans la chaîne:", missingPoints);
+
+                // Ajouter les points manquants sous forme de régions isolées
+                let correctedGraphString = graphString;
+
+                // Si la chaîne se termine par !
+                if (correctedGraphString.endsWith('!')) {
+                    correctedGraphString = correctedGraphString.substring(0, correctedGraphString.length - 1);
+                }
+
+                // Ajouter chaque point manquant comme une région isolée
+                missingPoints.forEach(label => {
+                    correctedGraphString += `${label}.}`;
+                });
+
+                // Terminer la chaîne correctement
+                if (!correctedGraphString.endsWith('!')) {
+                    correctedGraphString += '!';
+                }
+
+                return correctedGraphString;
+            }
+        }
+
+        return graphString;
+    };
+
+    // Fonction pour vérifier si le jeu est terminé
+    const checkGameOver = async (graphString) => {
+    try {
+        // Valider la chaîne avant de l'envoyer
+        graphString = validateGraphString(graphString);
+
+        const response = await fetch('/api/is_game_over/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            },
+            body: JSON.stringify({chain: graphString})
+        });
+
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+
+        const data = await response.json();
+        console.log(`Vérification de fin de partie: ${data.game_over ? 'OUI' : 'NON'}`);
+
+        if (data.game_over) {
+            console.log("Le jeu est terminé - le joueur actuel ne peut plus jouer");
+        }
+
+        return data.game_over;
+    } catch (error) {
+        console.error('Error checking game over:', error);
+        return false;
+    }
+};
+
     // Fonction sécurisée pour générer la chaîne graphString
-// Fonction sécurisée pour générer la chaîne graphString
     const safeGenerateGraphString = (startPoint, addedPoint, endPoint, currentString, curveMapData, pointsData) => {
         try {
             console.log("Génération de chaîne avec:", {
@@ -62,40 +163,87 @@ const OnlineCanvas = ({points, setPoints, curves = [], setCurves, myTurn, onMove
             // Vérifier que tous les paramètres nécessaires sont valides
             if (!startPoint || !startPoint.label) {
                 console.warn("safeGenerateGraphString: startPoint invalide");
-                return currentString;
+                return validateGraphString(currentString, pointsData);
             }
             if (!addedPoint || !addedPoint.label) {
                 console.warn("safeGenerateGraphString: addedPoint invalide");
-                return currentString;
+                return validateGraphString(currentString, pointsData);
             }
             if (!endPoint || !endPoint.label) {
                 console.warn("safeGenerateGraphString: endPoint invalide");
-                return currentString;
+                return validateGraphString(currentString, pointsData);
             }
+
+            // Valider le format de la chaîne d'entrée
             if (!currentString) {
-                console.warn("safeGenerateGraphString: currentString invalide, utilisation d'une chaîne vide");
-                currentString = '';
+                console.warn("safeGenerateGraphString: currentString invalide, génération d'une chaîne initiale");
+                currentString = generateInitialGraphString(pointsData);
+            } else {
+                currentString = validateGraphString(currentString, pointsData);
             }
+
             if (!curveMapData) {
                 console.warn("safeGenerateGraphString: curveMap invalide, utilisation d'une Map vide");
                 curveMapData = new Map();
             }
+
             if (!pointsData || !Array.isArray(pointsData) || pointsData.length === 0) {
                 console.warn("safeGenerateGraphString: points invalides");
-                return currentString;
+                return validateGraphString(currentString, pointsData);
+            }
+
+            // Vérifier que les points existent bien dans la liste des points
+            const startExists = pointsData.some(p => p.label === startPoint.label);
+            const endExists = pointsData.some(p => p.label === endPoint.label);
+
+            if (!startExists || !endExists) {
+                console.warn(`safeGenerateGraphString: les points ne sont pas dans la liste (start: ${startExists}, end: ${endExists})`);
+                return validateGraphString(currentString, pointsData);
             }
 
             // Appel sécurisé à la fonction generateGraphString
-            const newString = generateGraphString(
-                startPoint,
-                addedPoint,
-                endPoint,
-                currentString,
-                curveMapData,
-                pointsData
-            );
+            let newString;
+            try {
+                newString = generateGraphString(
+                    startPoint,
+                    addedPoint,
+                    endPoint,
+                    currentString,
+                    curveMapData,
+                    pointsData
+                );
 
-            console.log("Nouvelle chaîne générée:", newString);
+                // Validation finale de la chaîne générée
+                newString = validateGraphString(newString, pointsData);
+
+                // NOUVEAU: Vérification supplémentaire
+                // S'assurer que la nouvelle chaîne contient tous les points
+                const allPointsIncluded = pointsData.every(p => newString.includes(p.label));
+                if (!allPointsIncluded) {
+                    console.error("La chaîne générée ne contient pas tous les points, reconstruction nécessaire");
+                    // Reconstruire une chaîne correcte à partir de zéro
+                    const baseChain = pointsData.map(p => p.label).join('.') + '.}';
+                    newString = `${startPoint.label}${addedPoint.label}${endPoint.label}.}${baseChain}!`;
+                    newString = validateGraphString(newString, pointsData);
+                }
+            } catch (error) {
+                console.error("Erreur dans generateGraphString:", error);
+                // En cas d'erreur, générer une chaîne simplifiée qui inclut tous les points
+                newString = `${startPoint.label}${addedPoint.label}${endPoint.label}.}`;
+
+                // Ajouter tous les autres points comme régions isolées
+                pointsData.forEach(p => {
+                    if (p.label !== startPoint.label && p.label !== endPoint.label && p.label !== addedPoint.label) {
+                        newString += `${p.label}.}`;
+                    }
+                });
+
+                newString += '!';
+
+                // Valider cette chaîne simplifiée
+                newString = validateGraphString(newString, pointsData);
+            }
+
             return newString;
         } catch (error) {
             console.error("Erreur dans safeGenerateGraphString:", error);
@@ -107,7 +255,30 @@ const OnlineCanvas = ({points, setPoints, curves = [], setCurves, myTurn, onMove
                 curveMapSize: curveMapData ? curveMapData.size : 'null',
                 pointsLength: pointsData ? pointsData.length : 'null'
             });
-            return currentString; // Retourner la chaîne d'origine en cas d'erreur
+
+            // En cas d'erreur générale, générer une chaîne qui inclut explicitement tous les points
+            let safeString = `${startPoint ? startPoint.label : ''}${addedPoint ? addedPoint.label : ''}${endPoint ? endPoint.label : ''}.}`;
+
+            // Ajouter tous les points pour s'assurer qu'aucun n'est perdu
+            if (pointsData && Array.isArray(pointsData)) {
+                const usedLabels = [
+                    startPoint ? startPoint.label : '',
+                    endPoint ? endPoint.label : '',
+                    addedPoint ? addedPoint.label : ''
+                ];
+
+                pointsData.forEach(p => {
+                    if (!usedLabels.includes(p.label)) {
+                        safeString += `${p.label}.}`;
+                    }
+                });
+            }
+
+            if (!safeString.endsWith('!')) {
+                safeString += '!';
+            }
+
+            return validateGraphString(safeString, pointsData);
         }
     };
 
@@ -165,11 +336,50 @@ const OnlineCanvas = ({points, setPoints, curves = [], setCurves, myTurn, onMove
                 newPoints.push({x, y, connections: 0, label: alphabet[i]});
             }
             setPoints(newPoints);
-            setGraphString(generateInitialGraphString(newPoints));
+            const initialGraphString = generateInitialGraphString(newPoints);
+            setGraphString(initialGraphString);
+
+            // Envoyer la chaîne graphString initiale au serveur
+            const gameId = window.location.pathname.split('/').pop();
+            if (gameId) {
+                fetch(`/api/game/${gameId}/move/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    },
+                    body: JSON.stringify({
+                        type: 'initialize_points',
+                        points: newPoints,
+                        graphString: initialGraphString
+                    })
+                }).catch(error => {
+                    console.error("Error sending initial graph string:", error);
+                });
+            }
         } else if (points.length > 0 && graphString === '') {
-            setGraphString(generateInitialGraphString(points));
+            const initialGraphString = generateInitialGraphString(points);
+            setGraphString(initialGraphString);
+
+            // Envoyer la chaîne graphString au serveur
+            const gameId = window.location.pathname.split('/').pop();
+            if (gameId) {
+                fetch(`/api/game/${gameId}/move/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    },
+                    body: JSON.stringify({
+                        type: 'update_graph_string',
+                        graphString: initialGraphString
+                    })
+                }).catch(error => {
+                    console.error("Error sending initial graph string:", error);
+                });
+            }
         }
-    }, [setPoints, points, graphString]);
+    }, [setPoints, points, graphString, setCurves]);
 
     useEffect(() => {
         if (myTurn !== prevMyTurnRef.current) {
@@ -208,7 +418,8 @@ const OnlineCanvas = ({points, setPoints, curves = [], setCurves, myTurn, onMove
                     // Récupérer la chaîne de caractères actuelle du serveur
                     try {
                         // Récupérer l'état actuel du jeu
-                        const response = await fetch(`/api/game/${window.location.pathname.split('/').pop()}/state/`, {
+                        const gameId = window.location.pathname.split('/').pop();
+                        const response = await fetch(`/api/game/${gameId}/state/`, {
                             headers: {
                                 'Authorization': `Bearer ${localStorage.getItem('token')}`
                             }
@@ -226,6 +437,19 @@ const OnlineCanvas = ({points, setPoints, curves = [], setCurves, myTurn, onMove
                             graphString;
 
                         console.log("Chaîne récupérée du serveur:", currentServerGraphString);
+
+                        // Valider et nettoyer la chaîne du serveur avec tous les points existants
+                        currentServerGraphString = validateGraphString(currentServerGraphString, updatedPoints);
+
+                        // Vérification supplémentaire: s'assurer que tous les points sont inclus
+                        const allPointsIncluded = updatedPoints.every(p => currentServerGraphString.includes(p.label));
+                        if (!allPointsIncluded) {
+                            console.error("La chaîne du serveur ne contient pas tous les points, reconstruction nécessaire");
+
+                            // Reconstruire la chaîne à partir de zéro
+                            currentServerGraphString = generateInitialGraphString(updatedPoints);
+                            console.log("Chaîne reconstruite:", currentServerGraphString);
+                        }
 
                         // Si la chaîne du serveur est vide ou invalide, utiliser notre chaîne locale
                         if (!currentServerGraphString) {
@@ -246,23 +470,40 @@ const OnlineCanvas = ({points, setPoints, curves = [], setCurves, myTurn, onMove
                                     updatedPoints
                                 );
                             }
+
+                            // Validation finale de la chaîne générée
+                            newGraphString = validateGraphString(newGraphString);
+
                             console.log("Nouvelle chaîne générée:", newGraphString);
                             setGraphString(newGraphString);
                         } catch (error) {
                             console.error("Erreur lors de la génération de la chaîne graphString:", error);
                             toast.warning("Avertissement: La détection de fin de partie pourrait ne pas fonctionner correctement.", {autoClose: 1500});
+
+                            // En cas d'erreur, utiliser une chaîne simple mais valide
+                            newGraphString = `${selectedPoint.label}${newPoint.label}${endPointToUse.label}.}${validateGraphString(currentServerGraphString)}`;
                         }
+
+                        // Vérifier si le jeu est terminé
+                        const isGameOver = await checkGameOver(newGraphString);
 
                         setAwaitingPointPlacement(false);
                         setCurrentCurve([]);
                         toast.success("Point placé.", {autoClose: 1500});
+                        const allPointsInFinalString = updatedPoints.every(p => newGraphString.includes(p.label));
+                        if (!allPointsInFinalString) {
+                            console.error("La chaîne finale ne contient pas tous les points, correction avant envoi");
+                            newGraphString = validateGraphString(newGraphString, updatedPoints);
+                            console.log("Chaîne corrigée avant envoi:", newGraphString);
+                        }
 
                         // Envoyer le mouvement avec la nouvelle chaîne
                         onMove({
                             type: 'place_point',
                             point: newPoint,
                             curve: currentCurve,
-                            graphString: newGraphString
+                            graphString: newGraphString,
+                            isGameOver: isGameOver
                         });
 
                     } catch (error) {
@@ -285,10 +526,18 @@ const OnlineCanvas = ({points, setPoints, curves = [], setCurves, myTurn, onMove
                                     updatedPoints
                                 );
                             }
+
+                            // Validation finale de la chaîne générée
+                            newGraphString = validateGraphString(newGraphString);
+
                             setGraphString(newGraphString);
+
                         } catch (genError) {
                             console.error("Erreur lors de la génération de la chaîne graphString:", genError);
                             toast.warning("Avertissement: La détection de fin de partie pourrait ne pas fonctionner correctement.", {autoClose: 1500});
+
+                            // En cas d'erreur grave, générer une chaîne simple
+                            newGraphString = generateInitialGraphString(updatedPoints);
                         }
 
                         setAwaitingPointPlacement(false);
@@ -296,11 +545,13 @@ const OnlineCanvas = ({points, setPoints, curves = [], setCurves, myTurn, onMove
                         toast.success("Point placé.", {autoClose: 1500});
 
                         // Envoyer le mouvement avec la chaîne locale
+                        const isGameOver = await checkGameOver(newGraphString);
                         onMove({
                             type: 'place_point',
                             point: newPoint,
                             curve: currentCurve,
-                            graphString: newGraphString
+                            graphString: newGraphString,
+                            isGameOver: isGameOver
                         });
                     }
                 } else {
@@ -318,7 +569,6 @@ const OnlineCanvas = ({points, setPoints, curves = [], setCurves, myTurn, onMove
             }
         }
     };
-
 
     const handleMouseUp = async (event) => {
         if (!isDrawing) return;
@@ -362,13 +612,12 @@ const OnlineCanvas = ({points, setPoints, curves = [], setCurves, myTurn, onMove
         // Arrondir les coordonnées de tous les points de la courbe
         const adjustedCurve = [...currentCurve, roundCoordinates({x: endPoint.x, y: endPoint.y})];
 
-        console.log("Vérification d'intersection pour la courbe:", adjustedCurve);
         console.log("Nombre de courbes existantes:", curves.length);
 
         // S'assurer que curves est un tableau
         const safeCurves = Array.isArray(curves) ? curves : [];
 
-        // CHANGEMENT CLÉ: Utiliser notre fonction simplifiée de détection d'intersection
+        // Utiliser notre fonction simplifiée de détection d'intersection
         if (basicCurveIntersects(adjustedCurve, safeCurves, points)) {
             console.log("INTERSECTION DÉTECTÉE");
             toast.error("Intersection détectée.", {autoClose: 1500});
@@ -410,7 +659,8 @@ const OnlineCanvas = ({points, setPoints, curves = [], setCurves, myTurn, onMove
             // Récupérer la chaîne de caractères actuelle du serveur
             try {
                 // Récupérer l'état actuel du jeu
-                const response = await fetch(`/api/game/${window.location.pathname.split('/').pop()}/state/`, {
+                const gameId = window.location.pathname.split('/').pop();
+                const response = await fetch(`/api/game/${gameId}/state/`, {
                     headers: {
                         'Authorization': `Bearer ${localStorage.getItem('token')}`
                     }
@@ -427,7 +677,18 @@ const OnlineCanvas = ({points, setPoints, curves = [], setCurves, myTurn, onMove
                     (gameData.state && gameData.state.graphString) ||
                     graphString;
 
-                console.log("Chaîne récupérée du serveur:", currentServerGraphString);
+                // Valider et nettoyer la chaîne du serveur avec tous les points existants
+                currentServerGraphString = validateGraphString(currentServerGraphString, updatedPoints);
+
+                // Vérification supplémentaire: s'assurer que tous les points sont inclus
+                const allPointsIncluded = updatedPoints.every(p => currentServerGraphString.includes(p.label));
+                if (!allPointsIncluded) {
+                    console.error("La chaîne du serveur ne contient pas tous les points, reconstruction nécessaire");
+
+                    // Reconstruire la chaîne à partir de zéro
+                    currentServerGraphString = generateInitialGraphString(updatedPoints);
+                    console.log("Chaîne reconstruite:", currentServerGraphString);
+                }
 
                 // Si la chaîne du serveur est vide ou invalide, utiliser notre chaîne locale
                 if (!currentServerGraphString) {
@@ -446,17 +707,30 @@ const OnlineCanvas = ({points, setPoints, curves = [], setCurves, myTurn, onMove
                         newCurveMap,
                         updatedPoints
                     );
-                    console.log("Nouvelle chaîne générée:", newGraphString);
+
+                    // Validation finale de la chaîne générée
+                    newGraphString = validateGraphString(newGraphString);
+
                     setGraphString(newGraphString);
                 } catch (error) {
                     console.error("Erreur lors de la génération de la chaîne graphString:", error);
                     toast.warning("Avertissement: La détection de fin de partie pourrait ne pas fonctionner correctement.", {autoClose: 1500});
+
+                    // En cas d'erreur, générer une chaîne simple
+                    newGraphString = `${selectedPoint.label}${tempAddedPoint.label}${endPoint.label}.}${validateGraphString(currentServerGraphString)}`;
                 }
 
+                // Formater correctement les points de la courbe avant de les envoyer
+                const formattedCurve = adjustedCurve.map(point => ({
+                    x: point.x,
+                    y: point.y,
+                    label: point.label || undefined
+                }));
                 // Envoyer le mouvement avec la nouvelle chaîne
+                // Pas besoin de vérifier la fin de partie ici, ce sera fait lors du placement du point
                 onMove({
                     type: 'draw_curve',
-                    curve: adjustedCurve,
+                    curve: formattedCurve,
                     startPoint: selectedPoint.label,
                     endPoint: endPoint.label,
                     graphString: newGraphString
@@ -480,10 +754,17 @@ const OnlineCanvas = ({points, setPoints, curves = [], setCurves, myTurn, onMove
                         newCurveMap,
                         updatedPoints
                     );
+
+                    // Validation finale de la chaîne générée
+                    newGraphString = validateGraphString(newGraphString);
+
                     setGraphString(newGraphString);
                 } catch (genError) {
                     console.error("Erreur lors de la génération de la chaîne graphString:", genError);
                     toast.warning("Avertissement: La détection de fin de partie pourrait ne pas fonctionner correctement.", {autoClose: 1500});
+
+                    // En cas d'erreur grave, générer une chaîne simple
+                    newGraphString = generateInitialGraphString(updatedPoints);
                 }
 
                 // Envoyer le mouvement avec la chaîne locale
@@ -500,7 +781,6 @@ const OnlineCanvas = ({points, setPoints, curves = [], setCurves, myTurn, onMove
         setIsDrawing(false);
         setSelectedPoint(null);
     };
-
 
     const resetDrawing = () => {
         setCurrentCurve([]);

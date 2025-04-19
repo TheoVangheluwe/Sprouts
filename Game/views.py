@@ -29,33 +29,40 @@ def home_view(request):
     return ReactAppView(request)
 
 
-def game_view(request):
-    """Vue pour la page de jeu"""
+def menu_view(request):
+    """Vue pour la page du menu"""
     return ReactAppView(request)
+
 
 def pve_view(request):
-    """Vue pour la page de jeu"""
+    """Vue pour la page de jeu pve"""
     return ReactAppView(request)
 
+
 def ai_view(request):
-    """Vue pour la page de jeu"""
+    """Vue pour la page de jeu ai"""
     return ReactAppView(request)
+
 
 def rules_view(request):
     """Vue pour la page des règles"""
     return ReactAppView(request)
 
+
 def legal_view(request):
     """Vue pour la page d'accueil"""
     return ReactAppView(request)
+
 
 def historic_view(request):
     """Vue pour la page d'accueil"""
     return ReactAppView(request)
 
+
 def historic_id_view(request, game_id):
     """Vue pour game recap"""
     return ReactAppView(request)
+
 
 def waiting_room_view(request):
     """Vue pour la salle d'attente"""
@@ -190,21 +197,20 @@ def start_game(request, game_id):
         return JsonResponse({'error': 'Game not found'}, status=404)
 
 
-def is_valid_graph_string(graph_string):
-    """Vérifie si la chaîne graphString est valide pour déterminer la fin de partie"""
+def validate_graph_string(graph_string, points):
     if not graph_string:
-        return False
+        return ''.join([p["label"] + '.' for p in points]) + '}!'
 
-    # Une chaîne valide doit contenir au moins un point (A, B, C, etc.)
-    if not any(c.isalpha() for c in graph_string):
-        return False
+    # Vérifier que la chaîne se termine correctement
+    if not graph_string.endswith('}!'):
+        graph_string = graph_string + '}!' if not graph_string.endswith('!') else graph_string
 
-    # Vérifier s'il y a des motifs suspects comme des points multiples consécutifs
-    if '...' in graph_string:
-        return False
+    # Vérifier que la chaîne commence bien par des caractères valides et non par un séparateur
+    if graph_string.startswith('.}') or graph_string.startswith('}'):
+        prefix = ''.join([p["label"] + '.' for p in points])
+        graph_string = prefix + graph_string
 
-    return True
-
+    return graph_string
 
 @csrf_exempt
 @login_required(login_url='login')
@@ -214,7 +220,14 @@ def make_move(request, game_id):
 
     try:
         game = Game.objects.get(id=game_id)
-        move = json.loads(request.body.decode('utf-8'))
+
+        try:
+            move = json.loads(request.body.decode('utf-8'))
+            print(f"Données reçues: {move}")
+        except json.JSONDecodeError as e:
+            print(f"Erreur de décodage JSON: {e}")
+            print(f"Corps de la requête: {request.body.decode('utf-8')}")
+            return JsonResponse({'error': 'Invalid JSON format'}, status=400)
 
         if not move:
             return JsonResponse({'error': 'Move data is missing'}, status=400)
@@ -230,11 +243,23 @@ def make_move(request, game_id):
             # Initialisation des points avec vérification des préférences
             if len(move["points"]) in game.point_options:
                 game.state["points"] = move["points"]
+
+                # Initialiser graphString pour les points initiaux si elle n'existe pas déjà
+                if "graphString" in move:
+                    game.state["graphString"] = move["graphString"]
             else:
                 return JsonResponse({'error': 'Invalid number of points'}, status=400)
 
         elif move["type"] == "draw_curve":
-            # Gestion des courbes (code existant)
+            # Vérifier que les champs obligatoires sont présents
+            if "startPoint" not in move or "endPoint" not in move or "curve" not in move:
+                missing_fields = []
+                if "startPoint" not in move: missing_fields.append("startPoint")
+                if "endPoint" not in move: missing_fields.append("endPoint")
+                if "curve" not in move: missing_fields.append("curve")
+                return JsonResponse({'error': f'Missing required fields: {", ".join(missing_fields)}'}, status=400)
+
+            # Gestion des courbes
             start_point = next((p for p in game.state["points"] if p["label"] == move["startPoint"]), None)
             end_point = next((p for p in game.state["points"] if p["label"] == move["endPoint"]), None)
 
@@ -289,49 +314,101 @@ def make_move(request, game_id):
                     # Pour des points différents, ajouter 1 connexion
                     point["connections"] += 1
 
+            # Mettre à jour graphString si elle est fournie
             if "graphString" in move:
-                game.state["graphString"] = move["graphString"]
-                print(f"graphString reçue: {move['graphString']}")
-            else:
-                print("Aucune graphString dans le mouvement")
+                # Vérifier si la chaîne est valide (contient tous les points)
+                graph_string = move["graphString"]
 
-                # Ne pas vérifier la fin de partie ici - attendre le placement du point
+                # Valider que tous les points du jeu sont présents dans la chaîne
+                all_points_present = True
+                for point in game.state["points"]:
+                    if point["label"] not in graph_string:
+                        all_points_present = False
+                        break
+
+                # Si des points manquent, reconstruire une chaîne valide
+                if not all_points_present:
+                    print(f"Points manquants dans la chaîne reçue: {move['graphString']}")
+                    # Construire une chaîne simple qui inclut tous les points
+                    points_string = '.'.join([p["label"] for p in game.state["points"]])
+                    graph_string = f"{points_string}.}}!"
+
+                # Stocker la chaîne validée
+                game.state["graphString"] = graph_string
+                print(f"graphString validée et stockée: {graph_string}")
+
+            # Ne pas vérifier la fin de partie ici - attendre le placement du point
             game_over = False
 
-
         elif move["type"] == "place_point":
+            # Vérifier que le champ point est présent
+            if "point" not in move:
+                return JsonResponse({'error': 'Missing required field: point'}, status=400)
 
             # Ajout d'un point
-            game.state["points"].append(move["point"])
-            # Récupérer la chaîne graphString depuis le mouvement si disponible
+            if "point" in move and move["point"]:
+                game.state["points"].append(move["point"])
+            else:
+                return JsonResponse({'error': 'Point data is missing'}, status=400)
 
+            # Récupérer la chaîne graphString depuis le mouvement si disponible
             if "graphString" in move:
                 game.state["graphString"] = move["graphString"]
+                print(f"graphString reçue pour place_point: {move['graphString']}")
+            else:
+                print("Aucune graphString dans le mouvement place_point")
 
-            # Vérifier la validité de la chaîne avant de déterminer si la partie est terminée
+            # Vérifier la fin de partie à partir de la chaîne graphString
             graph_string = game.state.get("graphString", "")
-            print(f"Vérification de fin de partie avec graphString: {graph_string}")
-
-            game_over = is_game_over(graph_string)
-
-
+            if graph_string:
+                try:
+                    game_over = is_game_over(graph_string)
+                    print(f"Vérification de fin de partie avec graphString: {graph_string}")
+                    print(f"Résultat is_game_over: {game_over}")
+                except Exception as e:
+                    print(f"Erreur lors de la vérification de fin de partie: {e}")
+                    game_over = False
+            else:
+                game_over = False
 
             if game_over:
                 print("La partie est terminée!")
-                # Le gagnant est le joueur qui a joué le dernier coup
+                # CORRECTION: Le gagnant est le joueur actuel qui vient de jouer
+                # car c'est l'adversaire qui ne pourra pas jouer au prochain tour
                 winner = request.user.username
                 print(f"Le gagnant est: {winner}")
                 game.status = 'completed'
-                # Assurez-vous de stocker le gagnant dans l'état du jeu
+                # Stocker le gagnant dans l'état du jeu
                 game.state["winner"] = winner
-
             else:
-
                 # Ce n'est qu'après le placement d'un point que le tour change
                 players = list(game.players.all())
                 current_player_index = players.index(game.current_player)
                 next_player_index = (current_player_index + 1) % len(players)
                 game.current_player = players[next_player_index]
+
+        elif move["type"] == "update_graph_string":
+            # Cas spécial pour la mise à jour de la chaîne graphString uniquement
+            if "graphString" in move:
+                game.state["graphString"] = move["graphString"]
+                print(f"graphString mise à jour: {move['graphString']}")
+            else:
+                return JsonResponse({'error': 'graphString is missing'}, status=400)
+
+
+
+
+        elif move["type"] == "update_winner":
+
+            if "winner" in move and move["winner"]:
+                game.state["winner"] = move["winner"]
+                game.status = 'completed'
+                game_over = True
+                winner = move["winner"]
+                print(f"Winner updated to: {move['winner']} through update_winner")
+
+            else:
+                return JsonResponse({'error': 'Winner is missing'}, status=400)
 
 
         else:
@@ -357,6 +434,8 @@ def make_move(request, game_id):
         return JsonResponse({'error': 'Invalid JSON format'}, status=400)
 
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         return JsonResponse({'error': f'An error occurred: {str(e)}'}, status=500)
 
 
@@ -861,7 +940,6 @@ def join_specific_game(request, game_id):
 @csrf_exempt
 @login_required(login_url='login')
 def leave_game(request, game_id):
-    """Quitter un jeu et informer l'autre joueur"""
     if request.method != 'POST':
         return JsonResponse({'error': 'Invalid request method'}, status=405)
 
@@ -884,24 +962,14 @@ def leave_game(request, game_id):
             game.state['abandoned_by'] = request.user.username
             game.state['abandoned_at'] = datetime.now().isoformat()
             game.status = 'abandoned'  # Marquer le jeu comme abandonné
-            game.save()
-
-            # Retirer le joueur du jeu
-            game.players.remove(request.user)
-            game.player_count -= 1
 
             # Retirer le statut "prêt" du joueur
             if str(request.user.id) in game.player_ready:
                 del game.player_ready[str(request.user.id)]
 
-            # Si le jeu est vide, le supprimer
-            if game.player_count <= 0:
-                game.delete()
-                return JsonResponse({'success': True, 'message': 'Game deleted'})
-
             # Si le joueur actuel quitte, passer au joueur suivant
             if game.current_player == request.user:
-                remaining_players = list(game.players.all())
+                remaining_players = list(game.players.exclude(id=request.user.id))
                 if remaining_players:
                     game.current_player = remaining_players[0]
                 else:
@@ -923,7 +991,8 @@ def leave_game(request, game_id):
             return JsonResponse({
                 'success': True,
                 'message': 'Left game successfully',
-                'abandoned': True
+                'abandoned': True,
+                'abandoned_by': request.user.username,
             })
 
     except Game.DoesNotExist:
@@ -999,28 +1068,32 @@ def login_redirect_with_message(request):
     messages.error(request, "Vous devez être connecté pour accéder à cette page.")
     return redirect('login')
 
+
 @login_required
 def get_user_id(request):
     """Obtenir l'id de l'utilisateur connecté"""
     return JsonResponse({
         "id": request.user.id,
     })
-    
+
+
 @login_required
 def get_user_name(request):
     """Obtenir le nom d'utilisateur de l'utilisateur connecté"""
     return JsonResponse({
         "username": request.user.username,
     })
-    
+
+
 @login_required
 def get_user_info(request):
-        """Obtenir le nom d'utilisateur & id de l'utilisateur connecté"""
-        return JsonResponse({
+    """Obtenir le nom d'utilisateur & id de l'utilisateur connecté"""
+    return JsonResponse({
         "id": request.user.id,
         "username": request.user.username,
     })
-    
+
+
 @login_required
 @transaction.atomic
 def get_user_games(request):
@@ -1040,6 +1113,7 @@ def get_user_games(request):
 
     return JsonResponse(data, safe=False)
 
+
 @login_required
 @csrf_exempt
 def check_game_over(request):
@@ -1055,6 +1129,7 @@ def check_game_over(request):
         except json.JSONDecodeError:
             return JsonResponse({'error': 'Invalid JSON'}, status=400)
     return JsonResponse({'error': 'Invalid request method'}, status=405)
+
 
 @login_required
 def game_summary(request, game_id):

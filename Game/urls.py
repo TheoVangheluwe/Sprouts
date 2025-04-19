@@ -10,7 +10,7 @@ urlpatterns = [
 
     # Pages de l'application
     path('home/', views.home_view, name='home'),
-    path('game/', views.game_view, name='game'),  # Cette ligne reste inchangée
+    path('menu/', views.menu_view, name='game'),
     path('pve/', views.pve_view, name='rules'),
     path('ai/', views.ai_view, name='rules'),
     path('rules/', views.rules_view, name='rules'),

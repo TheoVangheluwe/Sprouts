@@ -327,451 +327,612 @@ export const generateInitialGraphString = (points) => {
 
 export const generateGraphString = (startPoint, addedPoint, endPoint, currentGraphString, curveMap, points) => {
 
-  // Vérifier si les points sont isolés dans la chaîne de caractères actuelle
-  const isIsolated = (label, graphString) => {
-    const regex = new RegExp(`(^|[.}])${label}\\.`);
-    return regex.test(graphString);
-  };
+    // Vérifier si les points sont isolés dans la chaîne de caractères actuelle
+    const isIsolated = (label, graphString) => {
+        const regex = new RegExp(`(^|[.}])${label}\\.`);
+        return regex.test(graphString);
+    };
 
-  // Identifier les régions existantes dans la chaîne de caractères
-  const findRegions = (graphString) => {
-    const regionRegex = /(^[^{}]+|[^{}]+)(?=[.}]|$)/g;
-    const regions = [];
-    let match;
-    while ((match = regionRegex.exec(graphString)) !== null) {
-      regions.push(match[0]);
-    }
-    return regions;
-  };
+    // Identifier les régions existantes dans la chaîne de caractères
+    const findRegions = (graphString) => {
+        const regionRegex = /(^[^{}]+|[^{}]+)(?=[.}]|$)/g;
+        const regions = [];
+        let match;
+        while ((match = regionRegex.exec(graphString)) !== null) {
+            regions.push(match[0]);
+        }
+        return regions;
+    };
 
-  // Identifier les frontières existantes dans la chaîne de caractères
-  const findFrontieres = (regions) => {
-    const frontiereRegex = /([^.]+)/g;
-    const frontieresMap = {};
+    // Identifier les frontières existantes dans la chaîne de caractères
+    const findFrontieres = (regions) => {
+        const frontiereRegex = /([^.]+)/g;
+        const frontieresMap = {};
 
-    regions.forEach(region => {
-      const frontieres = [];
-      let match;
-      while ((match = frontiereRegex.exec(region)) !== null) {
-        frontieres.push(match[0]);
-      }
-      frontieresMap[region] = frontieres;
-    });
+        regions.forEach(region => {
+            const frontieres = [];
+            let match;
+            while ((match = frontiereRegex.exec(region)) !== null) {
+                frontieres.push(match[0]);
+            }
+            frontieresMap[region] = frontieres;
+        });
 
-    return frontieresMap;
-  };
+        return frontieresMap;
+    };
 
-  // Vérifier les conditions pour les points
-  const startIsIsolated = isIsolated(startPoint.label, currentGraphString);
-  const endIsIsolated = isIsolated(endPoint.label, currentGraphString);
+    // Vérifier les conditions pour les points
+    const startIsIsolated = isIsolated(startPoint.label, currentGraphString);
+    const endIsIsolated = isIsolated(endPoint.label, currentGraphString);
 
-  // Cas n°1: Les deux points sont différents et isolés
-  if (startIsIsolated && endIsIsolated && (startPoint !== endPoint)) {
+    // Cas n°1: Les deux points sont différents et isolés
+    if (startIsIsolated && endIsIsolated && (startPoint !== endPoint)) {
 
-    console.log("Cas où les deux points sont différents et isolés");
+        console.log("Cas où les deux points sont différents et isolés");
 
-    // Trouver toutes les régions
-    const areas = findRegions(currentGraphString);
+        // Trouver toutes les régions
+        const areas = findRegions(currentGraphString);
 
-    // Trouver la région pertinente
-    const relevantArea = areas.filter(area => area.includes(startPoint.label) && area.includes(endPoint.label));
+        // Trouver la région pertinente
+        const relevantArea = areas.filter(area => area.includes(startPoint.label) && area.includes(endPoint.label));
 
-    // Filtrer les régions non pertinentes
-    const nonRelevantAreas = areas.filter(area => !area.includes(startPoint.label) && !area.includes(endPoint.label));
+        // Filtrer les régions non pertinentes
+        const nonRelevantAreas = areas.filter(area => !area.includes(startPoint.label) && !area.includes(endPoint.label));
 
-    console.log(relevantArea)
-
-    // Trouver toutes les frontières et les extraire en un seul tableau
-    const boundaries = Object.values(findFrontieres(relevantArea)).flat();
-
-    // Trouver toutes les frontières non pertinentes
-    const nonRelevantBoundaries = boundaries.filter(boundary => !boundary.includes(startPoint.label) && !boundary.includes(endPoint.label));
-
-    // Construire la nouvelle région
-    const newBoundarie = `${startPoint.label}${addedPoint.label}${endPoint.label}${addedPoint.label}${nonRelevantBoundaries.length > 0 ? `.${nonRelevantBoundaries.join('.')}` : ''}`;
-
-    // Construire la chaîne de caractères
-    const newGraphString = `${newBoundarie}.}${nonRelevantAreas.join('}')}`;
-
-    return newGraphString;
-  }
-  // Cas n°2: Un point est isolé et l'autre est déjà relié
-  else if (startIsIsolated !== endIsIsolated) {
-
-    console.log("Cas où un point est isolé et l'autre non isolé");
-
-    // Détermine le point isolé et le point commun
-    const isolatedPoint = startIsIsolated ? startPoint : endPoint;
-    const connectedPoint = startIsIsolated ? endPoint : startPoint;
-
-    // Trouver toutes les régions
-    const areas = findRegions(currentGraphString);
-
-    // Trouver la région pertinente
-    const relevantArea = areas.filter(area => area.includes(isolatedPoint.label));
-
-    // Trouver les régions non pertinentes
-    const nonRelevantAreas = areas.filter(area => !area.includes(isolatedPoint.label));
-
-    // Trouver toutes les frontières et les extraire en un seul tableau
-    const boundaries = Object.values(findFrontieres(relevantArea)).flat();
-
-    // Trouver la frontière pertinente
-    const relevantBoundarie = boundaries.find(boundary => boundary.includes(connectedPoint.label))
-
-    // Trouver les frontières non pertinentes
-    const nonRelevantBoundaries = boundaries.filter(boundary => !boundary.includes(connectedPoint.label) && !boundary.includes(isolatedPoint.label));
-
-    // Trouver l'index du point commun dans la frontière pertinente
-    const insertIndex = relevantBoundarie.indexOf(connectedPoint.label);
-
-    // Construire la nouvelle région
-    const newBoundarie = `${relevantBoundarie.slice(0, insertIndex)}${connectedPoint.label}${addedPoint.label}${isolatedPoint.label}${addedPoint.label}${relevantBoundarie.slice(insertIndex)}${nonRelevantBoundaries.length > 0 ? `.${nonRelevantBoundaries.join('.')}` : ''}`;
-
-    // Construire la chaîne de caractères
-    const newGraphString = `${newBoundarie}.}${nonRelevantAreas.join('}')}`;
-
-    return newGraphString;
-  }
-  // Cas n°3: Les deux points sont déjà reliés
-  else if (!startIsIsolated && !endIsIsolated && startPoint !== endPoint) {
-
-    console.log("Cas où les deux points sont différents et non isolés");
-
-    let chosenRegion = [];
-
-    // Créer la nouvelle région
-    let regionString = `${startPoint.label}${addedPoint.label}${endPoint.label}`;
-
-    // Trouver toutes les régions
-    const areas = findRegions(currentGraphString);
-
-    // Trouver la région pertinente
-    const relevantArea = areas.filter(area => area.includes(startPoint.label) && area.includes(endPoint.label));
-
-    console.log(relevantArea)
-
-    // Il y a 2 régions pertinentes 
-    if (relevantArea.length > 1) {
-
-      console.log("Il y a plusieurs régions pertinentes")
-
-      const areAreasIdentical = relevantArea.every(region => region === relevantArea[0]);
-
-      console.log(areAreasIdentical)
-
-      // Les 2 régions pertinentes sont différentes
-      if (!areAreasIdentical) {
-
-        console.log(relevantArea[0])
+        console.log(relevantArea)
 
         // Trouver toutes les frontières et les extraire en un seul tableau
-        const boundariesArea1 = Object.values(findFrontieres(relevantArea.slice(0, 1))).flat();
-
-        // Trouver la frontière pertinente
-        const relevantBoundarieArea1= boundariesArea1.filter(boundary => boundary.includes(startPoint.label) && boundary.includes(endPoint.label));
+        const boundaries = Object.values(findFrontieres(relevantArea)).flat();
 
         // Trouver toutes les frontières non pertinentes
-        const nonRelevantBoundariesArea1 = boundariesArea1.filter(boundary => !boundary.includes(startPoint.label) && !boundary.includes(endPoint.label));
+        const nonRelevantBoundaries = boundaries.filter(boundary => !boundary.includes(startPoint.label) && !boundary.includes(endPoint.label));
+
+        // Construire la nouvelle région
+        const newBoundarie = `${startPoint.label}${addedPoint.label}${endPoint.label}${addedPoint.label}${nonRelevantBoundaries.length > 0 ? `.${nonRelevantBoundaries.join('.')}` : ''}`;
+
+        // Construire la chaîne de caractères
+        const newGraphString = `${newBoundarie}.}${nonRelevantAreas.join('}')}`;
+
+        return newGraphString;
+    }
+    // Cas n°2: Un point est isolé et l'autre est déjà relié
+    else if (startIsIsolated !== endIsIsolated) {
+        console.log("Cas où un point est isolé et l'autre non isolé");
+        try {
+            // Détermine le point isolé et le point commun
+            const isolatedPoint = startIsIsolated ? startPoint : endPoint;
+            const connectedPoint = startIsIsolated ? endPoint : startPoint;
+
+            // Trouver toutes les régions
+            const areas = findRegions(currentGraphString);
+            if (!areas || areas.length === 0) {
+                console.error("Aucune région trouvée dans:", currentGraphString);
+                return currentGraphString;
+            }
+
+            // Trouver la région pertinente pour le point isolé
+            let relevantArea = areas.filter(area => area.includes(isolatedPoint.label));
+            if (!relevantArea || relevantArea.length === 0) {
+                console.error("Aucune région pertinente trouvée pour le point isolé:", isolatedPoint.label);
+                // Solution alternative - utiliser toutes les régions qui contiennent le point connecté
+                relevantArea = areas.filter(area => area.includes(connectedPoint.label));
+                if (!relevantArea || relevantArea.length === 0) {
+                    // Création d'une région simple si rien n'est trouvé
+                    return `${isolatedPoint.label}${addedPoint.label}${connectedPoint.label}.}`;
+                }
+            }
+            // Trouver les régions non pertinentes
+            const nonRelevantAreas = areas.filter(area => !area.includes(isolatedPoint.label));
+
+            // Rechercher toutes les frontières
+            const boundaries = [];
+            try {
+                const frontieresMap = findFrontieres(relevantArea);
+                for (const key in frontieresMap) {
+                    if (Array.isArray(frontieresMap[key])) {
+                        boundaries.push(...frontieresMap[key]);
+                    }
+                }
+            } catch (e) {
+                console.error("Erreur lors de l'extraction des frontières:", e);
+                return `${isolatedPoint.label}${addedPoint.label}${connectedPoint.label}.}${nonRelevantAreas.join('}')}`;
+            }
+
+            // Trouver la frontière pertinente
+            let relevantBoundarie = boundaries.find(boundary => boundary && boundary.includes(connectedPoint.label));
+            if (!relevantBoundarie) {
+                // Si aucune frontière n'est trouvée, vérifier si le point est dans une autre région
+                console.warn(`Recherche étendue pour le point connecté: ${connectedPoint.label}`);
+
+                // Vérifier dans toutes les régions
+                for (const area of areas) {
+                    if (area.includes(connectedPoint.label)) {
+                        const areaFrontieres = findFrontieres([area]);
+                        for (const key in areaFrontieres) {
+                            if (Array.isArray(areaFrontieres[key])) {
+                                const potentialBoundary = areaFrontieres[key].find(b => b && b.includes(connectedPoint.label));
+                                if (potentialBoundary) {
+                                    relevantBoundarie = potentialBoundary;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    if (relevantBoundarie) break;
+                }
+
+                // Si toujours pas trouvé, créer une frontière simple
+                if (!relevantBoundarie) {
+                    console.error(`Impossible de trouver une frontière pour ${connectedPoint.label}, création d'une frontière simple`);
+                    relevantBoundarie = connectedPoint.label;
+                }
+            }
+
+            // Trouver les frontières non pertinentes
+            const nonRelevantBoundaries = boundaries.filter(boundary =>
+                boundary && !boundary.includes(connectedPoint.label) && !boundary.includes(isolatedPoint.label));
+
+            // Trouver l'index du point commun dans la frontière pertinente
+            const insertIndex = relevantBoundarie.indexOf(connectedPoint.label);
+            if (insertIndex === -1) {
+                console.error("Point connecté introuvable dans la frontière pertinente");
+                return `${isolatedPoint.label}${addedPoint.label}${connectedPoint.label}.}${nonRelevantAreas.join('}')}`;
+            }
+            console.log("=== Construction de newBoundarie ===");
+            console.log("relevantBoundarie:", relevantBoundarie);
+            console.log("insertIndex:", insertIndex);
+            console.log("connectedPoint.label:", connectedPoint.label);
+            console.log("addedPoint.label:", addedPoint.label);
+            console.log("isolatedPoint.label:", isolatedPoint.label);
+            console.log("relevantBoundarie.slice(0, insertIndex):", relevantBoundarie.slice(0, insertIndex));
+            console.log("relevantBoundarie.slice(insertIndex + 1):", relevantBoundarie.slice(insertIndex + 1));
+            console.log("nonRelevantBoundaries:", nonRelevantBoundaries);
+            console.log("nonRelevantBoundaries.join('.'):", nonRelevantBoundaries.join('.'));
+            // Construire la nouvelle région
+            const newBoundarie = `${relevantBoundarie.slice(0, insertIndex)}${connectedPoint.label}${addedPoint.label}${isolatedPoint.label}${addedPoint.label}${connectedPoint.label}${relevantBoundarie.slice(insertIndex + 1)}${nonRelevantBoundaries.length > 0 ? `.${nonRelevantBoundaries.join('.')}` : ''}`;
+            // Construire la chaîne de caractères
+            const newGraphString = `${newBoundarie}.}${nonRelevantAreas.join('}')}`;
+
+            return newGraphString;
+        } catch (e) {
+            console.error("Erreur dans le cas du point isolé/non isolé:", e);
+            return `${startPoint.label}${addedPoint.label}${endPoint.label}.}${currentGraphString}`;
+        }
+    }
+    // Cas n°3: Les deux points sont déjà reliés
+    else if (!startIsIsolated && !endIsIsolated && startPoint !== endPoint) {
+        console.log("Cas où les deux points sont différents et non isolés");
+        try {
+            let chosenRegion = [];
+
+            // Créer la nouvelle région
+            let regionString = `${startPoint.label}${addedPoint.label}${endPoint.label}`;
+
+            // Trouver toutes les régions
+            const areas = findRegions(currentGraphString);
+            if (!areas || areas.length === 0) {
+                console.error("Aucune région trouvée dans:", currentGraphString);
+                return currentGraphString;
+            }
+
+            console.log(areas);
+
+            // Trouver la région pertinente
+            const relevantArea = areas.filter(area => area && area.includes(startPoint.label) && area.includes(endPoint.label));
+            console.log("Régions pertinentes:", relevantArea);
+
+            // Si aucune région pertinente n'est trouvée, utiliser une approche alternative
+            if (!relevantArea || relevantArea.length === 0) {
+                console.warn("Aucune région pertinente trouvée, création d'une nouvelle chaîne");
+                // Créer une nouvelle chaîne simple
+                const basicRegions = areas.filter(area => area && area.trim() !== "");
+                return `${startPoint.label}${addedPoint.label}${endPoint.label}.}${basicRegions.join('}')}`;
+            }
+
+            // Il y a 2 régions pertinentes
+            if (relevantArea.length > 1) {
+
+                console.log("Il y a plusieurs régions pertinentes")
+
+                const areAreasIdentical = relevantArea.every(region => region === relevantArea[0]);
+
+                console.log(areAreasIdentical)
+
+                // Les 2 régions pertinentes sont différentes
+                if (!areAreasIdentical) {
+
+                    console.log(relevantArea[0])
+
+                    // Trouver toutes les frontières et les extraire en un seul tableau
+                    const boundariesArea1 = Object.values(findFrontieres(relevantArea.slice(0, 1))).flat();
+                    console.log("Frontières trouvées SPECIAL CAS:", boundariesArea1);
+
+                    // Trouver la frontière pertinente
+                    const relevantBoundarieArea1 = boundariesArea1.filter(boundary => boundary.includes(startPoint.label) && boundary.includes(endPoint.label));
+
+                    // Trouver toutes les frontières non pertinentes
+                    const nonRelevantBoundariesArea1 = boundariesArea1.filter(boundary => !boundary.includes(startPoint.label) && !boundary.includes(endPoint.label));
+
+                    // Trouver toutes les frontières et les extraire en un seul tableau
+                    const boundariesArea2 = Object.values(findFrontieres(relevantArea.slice(1, 2))).flat();
+
+                    // Trouver la frontière pertinente
+                    const relevantBoundarieArea2 = boundariesArea2.filter(boundary => boundary.includes(startPoint.label) && boundary.includes(endPoint.label));
+
+                    // Trouver toutes les frontières non pertinentes
+                    const nonRelevantBoundariesArea2 = boundariesArea2.filter(boundary => !boundary.includes(startPoint.label) && !boundary.includes(endPoint.label));
+
+                    // Vérifier si les frontières pertinentes sont les mêmes
+                    const areBoundariesIdentical = JSON.stringify(relevantBoundarieArea1) === JSON.stringify(relevantBoundarieArea2);
+
+                    // Les frontières sont différentes, utiliser isFrontiereInRegion pour déterminer la région choisie
+                    if (!areBoundariesIdentical) {
+                        if (isFrontiereInRegion(addedPoint.label, relevantBoundarieArea1[0], curveMap, points)) {
+                            chosenRegion.push(relevantArea[0]);
+                            console.log("CAS 1")
+                        } else if (!isFrontiereInRegion(addedPoint.label, relevantBoundarieArea2[0], curveMap, points)) {
+                            areaOfPolygon(addedPoint.label, relevantBoundarieArea1[0], curveMap, points)
+                            const area1 = areaOfPolygon(addedPoint.label, relevantBoundarieArea1[0], curveMap, points);
+                            const area2 = areaOfPolygon(addedPoint.label, relevantBoundarieArea2[0], curveMap, points);
+                            console.log("Area 1:", area1);
+                            console.log("Area 2:", area2);
+                            console.log("Area 1 < Area 2", area1 < area2);
+                            // Si la première région est plus petite, on choisit la première
+                            if (area1 < area2) {
+                                chosenRegion.push(relevantArea[0]);
+                            } else {
+                               chosenRegion.push(relevantArea[1]);
+                            }
+
+                        } else {
+                            console.log("CAS 3")
+                            chosenRegion.push(relevantArea[1]);
+                        }
+                        console.log(chosenRegion)
+                    }
+                    // Les frontières pertinentes sont identiques, utilisons les frontières non pertinentes
+                    else {
+                        let temporaryRegion;
+                        let temporaryRegionIndex;
+
+                        // Si la première région n'a pas de frontière non pertinente, on prends la deuxième
+                        if (nonRelevantBoundariesArea1.length === 0) {
+                            temporaryRegion = nonRelevantBoundariesArea2[0];
+                            temporaryRegionIndex = 1;
+                        }
+                        //Sinon on prends la première
+                        else {
+                            temporaryRegion = nonRelevantBoundariesArea1[0];
+                            temporaryRegionIndex = 0;
+                        }
+
+                        // Vérifier si la première frontière non pertinente est comprise dans la frontière pertinente
+                        const isFirstNonRelevantInRelevant = isFrontiereInRegion(temporaryRegion, relevantBoundarieArea1[0], curveMap, points);
+
+                        // Vérifier si le point ajouté est compris dans la frontière pertinente
+                        const isAddedPointInRelevant = isFrontiereInRegion(addedPoint.label, relevantBoundarieArea1[0], curveMap, points);
+
+                        // Déterminer la région choisie
+                        if (isFirstNonRelevantInRelevant && isAddedPointInRelevant) {
+                            chosenRegion.push(relevantArea[temporaryRegionIndex]);
+                        } else {
+                            chosenRegion.push(relevantArea[1 - temporaryRegionIndex]);
+                        }
+                    }
+                }
+                // Les 2 régions pertinentes sont identiques
+                else {
+                    console.log("Les régions pertinentes sont identiques. On choisit la première arbitrairement.");
+                    chosenRegion.push(relevantArea[0]);
+                }
+
+            }
+            // l y a une seule région pertinente
+            else {
+                chosenRegion = relevantArea;
+            }
+
+
+            // Filtrer les régions non pertinentes
+            const nonRelevantAreas = areas.filter(area => area !== chosenRegion[0]);
+
+            console.log(nonRelevantAreas)
+
+            // Trouver toutes les frontières et les extraire en un seul tableau
+            const boundariesArea = Object.values(findFrontieres(chosenRegion)).flat();
+            console.log("Frontières trouvées:", boundariesArea);
+
+            // Trouver la frontière pertinente
+            const relevantBoundarieArea = boundariesArea.find(boundary => boundary.includes(startPoint.label) && boundary.includes(endPoint.label));
+            console.log("Frontière pertinente trouvée:", relevantBoundarieArea);
+
+            // Trouver les frontières non pertinentes
+            const nonRelevantBoundariesArea = boundariesArea.filter(boundary => !boundary.includes(startPoint.label) && !boundary.includes(endPoint.label));
+            console.log("Frontières non pertinentes trouvées:", nonRelevantBoundariesArea);
+
+            if (!relevantBoundarieArea) {
+
+                // Trouver la frontiere pertinente du startPoint
+                const relevantBoundarieStartPoint = boundariesArea.find(boundary => boundary.includes(startPoint.label));
+                console.log(relevantBoundarieStartPoint);
+
+                // Trouver la frontiere du startPoint
+                const relevantBoundarieEndPoint = boundariesArea.find(boundary => boundary.includes(endPoint.label));
+                console.log(relevantBoundarieEndPoint);
+
+                // Trouver l'index du point commun dans la région existante
+                const insertIndex = relevantBoundarieStartPoint.indexOf(startPoint.label);
+                console.log("Index d'insertion:", insertIndex);
+
+                // Réorganiser relevantFrontiere2 pour commencer par endPoint.label et boucler correctement
+                const endPointIndex = relevantBoundarieEndPoint.indexOf(endPoint.label);
+                const reorganizedFrontiere2 = relevantBoundarieEndPoint.slice(endPointIndex) + relevantBoundarieEndPoint.slice(0, endPointIndex);
+
+                // Construire la nouvelle région
+
+                // Insérer la nouvelle région avant le point commun dans la région existante
+                const newBoundarie = `${relevantBoundarieStartPoint.slice(0, insertIndex) + startPoint.label + addedPoint.label + reorganizedFrontiere2 + endPoint.label + addedPoint.label + relevantBoundarieStartPoint.slice(insertIndex)}.${nonRelevantBoundariesArea.join('.')}}`;
+
+                // Construire la nouvelle chaîne
+                const newGraphString = `${newBoundarie}${nonRelevantAreas.join('}')}`;
+
+                return newGraphString;
+            } else {
+                // Trouver les indices des points de départ et d'arrivée dans la frontière
+                const startPointIndices = [...relevantBoundarieArea.matchAll(new RegExp(`${startPoint.label}`, 'g'))].map(match => match.index);
+                const endPointIndices = [...relevantBoundarieArea.matchAll(new RegExp(`${endPoint.label}`, 'g'))].map(match => match.index);
+
+                const startIndex = startPointIndices[0];
+                const endIndex = endPointIndices[0];
+
+                let departToDepart = '';
+                let departToEnd = '';
+                let endToDepart = '';
+                let endToEnd = '';
+
+                let initialIndex = startIndex <= endIndex ? startIndex : endIndex;
+                let startingIndexRecord = initialIndex;
+                let index = initialIndex;
+
+                while (true) {
+                    let result = '';
+
+                    while (true) {
+                        index = (index + 1) % relevantBoundarieArea.length;
+                        if (relevantBoundarieArea[index] === startPoint.label || relevantBoundarieArea[index] === endPoint.label) {
+                            break;
+                        }
+                        result += relevantBoundarieArea[index];
+                    }
+
+                    if (relevantBoundarieArea[startingIndexRecord] === startPoint.label && relevantBoundarieArea[index] === startPoint.label) {
+                        departToDepart = result;
+                        console.log("Points entre départ et départ:", departToDepart);
+                    } else if (relevantBoundarieArea[startingIndexRecord] === startPoint.label && relevantBoundarieArea[index] === endPoint.label) {
+                        departToEnd = result;
+                        console.log("Points entre départ et arrivée:", departToEnd);
+                    } else if (relevantBoundarieArea[startingIndexRecord] === endPoint.label && relevantBoundarieArea[index] === startPoint.label) {
+                        endToDepart = result;
+                        console.log("Points entre arrivée et départ:", endToDepart);
+                    } else if (relevantBoundarieArea[startingIndexRecord] === endPoint.label && relevantBoundarieArea[index] === endPoint.label) {
+                        endToEnd = result;
+                        console.log("Points entre arrivée et arrivée:", endToEnd);
+                    }
+
+                    startingIndexRecord = index;
+                    if (initialIndex === index) {
+                        break;
+                    }
+                }
+                // Logique pour gérer les points déjà reliés
+                let region1 = '';
+                let region2 = '';
+
+                // Cas n°3.1, 3.2, 3.3, 3.4: départ-arrivé: non vide, arrivé-départ: non vide
+                if (departToEnd !== "" && endToDepart !== '') {
+                    region1 = `${regionString}${endToDepart}`;
+
+                    if (departToDepart !== '' && endToEnd !== '') {
+                        // Cas n°3.1: départ-départ: non vide, arrivé-arrivé: non vide
+                        region2 = `${regionString}${endToEnd}${endPoint.label}${endToDepart}${startPoint.label}${departToDepart}`;
+                    } else if (departToDepart !== '') {
+                        // Cas n°3.2: départ-départ: non vide, arrivé-arrivé: vide
+                        let reversedDepartToEnd = departToEnd.split('').reverse().join('');
+                        region2 = `${regionString}${reversedDepartToEnd}${startPoint.label}${departToDepart}`;
+                        //region2 = `${regionString}${endToDepart}${startPoint.label}${departToDepart}`;
+                    } else if (endToEnd !== '') {
+                        // Cas n°3.3: départ-départ: vide, arrivé-arrivé: non vide
+                        region1 = `${regionString}${departToEnd}`;
+                        region2 = `${regionString}${endToEnd}${endPoint.label}${endToDepart}`;
+                    } else {
+                        // Cas n°3.4: départ-départ: vide, arrivé-arrivé: vide
+                        if (departToEnd === endToDepart.split('').reverse().join('')) {
+                            // Si departToEnd et endToDepart sont identiques mais décalés
+                            region2 = `${regionString}${endToDepart}`;
+                        } else {
+                            regionString = regionString.split('').reverse().join('');
+                            region2 = `${regionString}${departToEnd}`;
+                        }
+
+                    }
+                }
+                // Cas n°3.5, 3.6, 3.7, 3.8: départ-arrivé: vide, arrivé-départ: vide
+                else if (departToEnd === "" && endToDepart === '') {
+                    region1 = `${regionString}`;
+
+                    if (departToDepart !== '' && endToEnd !== '') {
+                        // Cas n°3.5: départ-départ: non vide, arrivé-arrivé: non vide
+                        let reversedDepartToDepart = departToDepart.split('').reverse().join('');
+                        let reversedEndToEnd = endToEnd.split('').reverse().join('');
+                        region2 = `${regionString}${reversedEndToEnd}${endPoint.label}${reversedDepartToDepart}${startPoint.label}`;
+                    } else if (departToDepart !== '') {
+                        // Cas n°3.3: départ-départ: non vide, arrivé-arrivé: vide
+                        let reversedDepartToDepart = departToDepart.split('').reverse().join('');
+                        region2 = `${regionString}${startPoint.label}${reversedDepartToDepart}`;
+                    } else if (endToEnd !== '') {
+                        // Cas n°3.4: départ-départ: vide, arrivé-arrivé: non vide
+                        let reversedEndToEnd = endToEnd.split('').reverse().join('');
+                        region2 = `${regionString}${reversedEndToEnd}${endPoint.label}`;
+                    } else {
+                        console.log("Le cas vide-vide-vide-vide est strictement impossible !");
+                        region2 = `${regionString}`;
+                    }
+                }
+                //Cas n°3.9: départ-arrivé: vide, arrivé-départ: non vide, départ-départ: vide, arrivé-arrivé: vide
+                else if (departToEnd === "" && endToDepart !== '' && departToDepart === '' && endToEnd === '') {
+
+                    //Définition de la 1ère nouvelle région.
+                    region1 = `${regionString}${endToDepart}`;
+                    console.log(region1);
+
+                    //Définition de la 2ème nouvelle région.
+                    region2 = `${regionString}`;
+                    console.log(region2);
+                } else {
+                    console.log("Un cas non prévu est apparu !");
+                }
+
+                nonRelevantBoundariesArea.forEach(frontiere => {
+                    if (isFrontiereInRegion(frontiere, region1, curveMap, points)) {
+                        region1 += `.${frontiere}`;
+                    } else {
+                        region2 += `.${frontiere}`;
+                    }
+                });
+
+                console.log(region1);
+                console.log(region2);
+
+                // Construire la nouvelle chaîne
+                const newGraphString = `${region1}.}${region2}.}${nonRelevantAreas.join('}')}`;
+
+                console.log("Chaîne mise à jour:", newGraphString);
+                return newGraphString;
+            }
+        } catch (e) {
+            console.error("Erreur dans le cas des points non isolés:", e);
+            return currentGraphString;
+        }
+    }
+    // Cas n°4: Le point de départ est le point d'arrivée (boucle)
+    else if (startPoint === endPoint) {
+
+        console.log("Cas où les points de départ et d'arrivé sont les mêmes");
+
+        const regionString = `${startPoint.label}${addedPoint.label}`;
+
+        // Trouver toutes les régions
+        const areas = findRegions(currentGraphString);
+
+        // Trouver la région pertinente
+        const relevantArea = areas.filter(area => area.includes(startPoint.label));
+
+        // Filtrer les régions non pertinentes
+        const nonRelevantAreas = areas.filter(area => !area.includes(startPoint.label));
 
         // Trouver toutes les frontières et les extraire en un seul tableau
-        const boundariesArea2 = Object.values(findFrontieres(relevantArea.slice(1, 2))).flat();
+        const boundaries = Object.values(findFrontieres(relevantArea)).flat();
 
         // Trouver la frontière pertinente
-        const relevantBoundarieArea2= boundariesArea2.filter(boundary => boundary.includes(startPoint.label) && boundary.includes(endPoint.label));
+        const relevantBoundarie = boundaries.filter(boundary => boundary.includes(startPoint.label));
 
         // Trouver toutes les frontières non pertinentes
-        const nonRelevantBoundariesArea2 = boundariesArea2.filter(boundary => !boundary.includes(startPoint.label) && !boundary.includes(endPoint.label));
+        const nonRelevantBoundaries = boundaries.filter(boundary => !boundary.includes(startPoint.label));
 
-        // Vérifier si les frontières pertinentes sont les mêmes
-        const areBoundariesIdentical = JSON.stringify(relevantBoundarieArea1) === JSON.stringify(relevantBoundarieArea2);
+        // Construire la 1ère région
+        let firstArea = `${startPoint.label}${addedPoint.label}`;
 
-        // Les frontières sont différentes, utiliser isFrontiereInRegion pour déterminer la région choisie
-        if(!areBoundariesIdentical){
-          if (isFrontiereInRegion(addedPoint.label, relevantBoundarieArea1[0], curveMap, points)) {
-            chosenRegion.push(relevantArea[0]);
-          } else {
-            chosenRegion.push(relevantArea[1]);
-          }
-          console.log(chosenRegion)
-        }
-        // Les frontières pertinentes sont identiques, utilisons les frontières non pertinentes
-        else{
-          let temporaryRegion;
-          let temporaryRegionIndex;
+        //Construire la 2ème région
+        let secondArea = startIsIsolated ? `${startPoint.label}${addedPoint.label}` : relevantBoundarie.map(frontiere => frontiere.replace(startPoint.label, `${startPoint.label}${addedPoint.label}${startPoint.label}`)).join('.');
 
-          // Si la première région n'a pas de frontière non pertinente, on prends la deuxième
-          if (nonRelevantBoundariesArea1.length === 0) {
-            temporaryRegion = nonRelevantBoundariesArea2[0];
-            temporaryRegionIndex = 1;
-          } 
-          //Sinon on prends la première
-          else {
-            temporaryRegion = nonRelevantBoundariesArea1[0];
-            temporaryRegionIndex = 0;
-          }
+        // Répartir les frontières non pertinentes entre les deux nouvelles régions
+        nonRelevantBoundaries.forEach(boundarie => {
+            if (isFrontiereInRegion(boundarie, regionString, curveMap, points)) {
+                firstArea += `.${boundarie}`;
+            } else {
+                secondArea += `.${boundarie}`;
+            }
+        });
 
-          // Vérifier si la première frontière non pertinente est comprise dans la frontière pertinente
-          const isFirstNonRelevantInRelevant = isFrontiereInRegion(temporaryRegion, relevantBoundarieArea1[0], curveMap, points);
+        // Construire la nouvelle chaîne
+        const newGraphString = `${firstArea}.}${secondArea}.}${nonRelevantAreas.join('}')}`;
 
-          // Vérifier si le point ajouté est compris dans la frontière pertinente
-          const isAddedPointInRelevant = isFrontiereInRegion(addedPoint.label, relevantBoundarieArea1[0], curveMap, points);
-
-          // Déterminer la région choisie
-          if (isFirstNonRelevantInRelevant && isAddedPointInRelevant) {
-            chosenRegion.push(relevantArea[temporaryRegionIndex]);
-          } else {
-            chosenRegion.push(relevantArea[1 - temporaryRegionIndex]);
-          }
-        }
-      }
-      // Les 2 régions pertinentes sont identiques
-      else {
-        console.log("Les régions pertinentes sont identiques. On choisit la première arbitrairement.");
-        chosenRegion.push(relevantArea[0]);
-      }
-      
+        return newGraphString;
     }
-    // l y a une seule région pertinente
-    else{
-      chosenRegion = relevantArea;
-    }
-
-    console.log(areas)
-    console.log(chosenRegion);
-
-    // Filtrer les régions non pertinentes
-    const nonRelevantAreas = areas.filter(area => area !== chosenRegion[0]);
-
-    console.log(nonRelevantAreas)
-
-    // Trouver toutes les frontières et les extraire en un seul tableau
-    const boundariesArea = Object.values(findFrontieres(chosenRegion)).flat();
-
-    // Trouver la frontière pertinente
-    const relevantBoundarieArea= boundariesArea.find(boundary => boundary.includes(startPoint.label) && boundary.includes(endPoint.label));
-
-    // Trouver les frontières non pertinentes
-    const nonRelevantBoundariesArea = boundariesArea.filter(boundary => !boundary.includes(startPoint.label) && !boundary.includes(endPoint.label));
-
-    if (!relevantBoundarieArea) {
-
-      // Trouver la frontiere pertinente du startPoint
-      const relevantBoundarieStartPoint= boundariesArea.find(boundary => boundary.includes(startPoint.label));
-      console.log(relevantBoundarieStartPoint);
-
-      // Trouver la frontiere du startPoint
-      const relevantBoundarieEndPoint= boundariesArea.find(boundary => boundary.includes(endPoint.label));
-      console.log(relevantBoundarieEndPoint);
-
-      // Trouver l'index du point commun dans la région existante
-      const insertIndex = relevantBoundarieStartPoint.indexOf(startPoint.label);
-      console.log("Index d'insertion:", insertIndex);
-
-      // Réorganiser relevantFrontiere2 pour commencer par endPoint.label et boucler correctement
-      const endPointIndex = relevantBoundarieEndPoint.indexOf(endPoint.label);
-      const reorganizedFrontiere2 = relevantBoundarieEndPoint.slice(endPointIndex) + relevantBoundarieEndPoint.slice(0, endPointIndex);
-
-      // Construire la nouvelle région
-
-      // Insérer la nouvelle région avant le point commun dans la région existante
-      const newBoundarie = `${relevantBoundarieStartPoint.slice(0, insertIndex) + startPoint.label + addedPoint.label + reorganizedFrontiere2 + endPoint.label + addedPoint.label + relevantBoundarieStartPoint.slice(insertIndex)}.${nonRelevantBoundariesArea.join('.')}}`;
-
-      // Construire la nouvelle chaîne
-      const newGraphString = `${newBoundarie}${nonRelevantAreas.join('}')}`;
-
-      return newGraphString;
-    }
+    //Cas n°5: Pas prévu
     else {
-      // Trouver les indices des points de départ et d'arrivée dans la frontière
-      const startPointIndices = [...relevantBoundarieArea.matchAll(new RegExp(`${startPoint.label}`, 'g'))].map(match => match.index);
-      const endPointIndices = [...relevantBoundarieArea.matchAll(new RegExp(`${endPoint.label}`, 'g'))].map(match => match.index);
-
-      const startIndex = startPointIndices[0];
-      const endIndex = endPointIndices[0];
-
-      let departToDepart = '';
-      let departToEnd = '';
-      let endToDepart = '';
-      let endToEnd = '';
-
-      let initialIndex = startIndex <= endIndex ? startIndex : endIndex;
-      let startingIndexRecord = initialIndex;
-      let index = initialIndex;
-
-      while (true) {
-        let result = '';
-
-        while (true) {
-          index = (index + 1) % relevantBoundarieArea.length;
-          if (relevantBoundarieArea[index] === startPoint.label || relevantBoundarieArea[index] === endPoint.label) {
-            break;
-          }
-          result += relevantBoundarieArea[index];
-        }
-
-        if (relevantBoundarieArea[startingIndexRecord] === startPoint.label && relevantBoundarieArea[index] === startPoint.label) {
-          departToDepart = result;
-          console.log("Points entre départ et départ:", departToDepart);
-        } 
-        else if (relevantBoundarieArea[startingIndexRecord] === startPoint.label && relevantBoundarieArea[index] === endPoint.label) {
-          departToEnd = result;
-          console.log("Points entre départ et arrivée:", departToEnd);
-        } 
-        else if (relevantBoundarieArea[startingIndexRecord] === endPoint.label && relevantBoundarieArea[index] === startPoint.label) {
-          endToDepart = result;
-          console.log("Points entre arrivée et départ:", endToDepart);
-        } 
-        else if (relevantBoundarieArea[startingIndexRecord] === endPoint.label && relevantBoundarieArea[index] === endPoint.label) {
-          endToEnd = result;
-          console.log("Points entre arrivée et arrivée:", endToEnd);
-        }
-
-        startingIndexRecord = index;
-        if (initialIndex === index) {
-          break;
-        }
-      }
-      // Logique pour gérer les points déjà reliés
-      let region1 = '';
-      let region2 = '';
-
-      // Cas n°3.1, 3.2, 3.3, 3.4: départ-arrivé: non vide, arrivé-départ: non vide
-      if (departToEnd !== "" && endToDepart !== '') {
-        region1 = `${regionString}${endToDepart}`;
-
-        if (departToDepart !== '' && endToEnd !== '') {
-          // Cas n°3.1: départ-départ: non vide, arrivé-arrivé: non vide
-          region2 = `${regionString}${endToEnd}${endPoint.label}${endToDepart}${startPoint.label}${departToDepart}`;
-        } else if (departToDepart !== '') {
-          // Cas n°3.2: départ-départ: non vide, arrivé-arrivé: vide
-          let reversedDepartToEnd = departToEnd.split('').reverse().join('');
-          region2 = `${regionString}${reversedDepartToEnd}${startPoint.label}${departToDepart}`;
-          //region2 = `${regionString}${endToDepart}${startPoint.label}${departToDepart}`;
-        } else if (endToEnd !== '') {
-          // Cas n°3.3: départ-départ: vide, arrivé-arrivé: non vide
-          region1 = `${regionString}${departToEnd}`;
-          region2 = `${regionString}${endToEnd}${endPoint.label}${endToDepart}`;
-        } else {
-          // Cas n°3.4: départ-départ: vide, arrivé-arrivé: vide
-          if (departToEnd === endToDepart.split('').reverse().join('')) {
-            // Si departToEnd et endToDepart sont identiques mais décalés
-            region2 = `${regionString}${endToDepart}`;
-          } else {
-            regionString = regionString.split('').reverse().join('');
-            region2 = `${regionString}${departToEnd}`;
-          }
-
-        }
-      }
-      // Cas n°3.5, 3.6, 3.7, 3.8: départ-arrivé: vide, arrivé-départ: vide
-      else if (departToEnd === "" && endToDepart === '') {
-        region1 = `${regionString}`;
-
-        if (departToDepart !== '' && endToEnd !== '') {
-          // Cas n°3.5: départ-départ: non vide, arrivé-arrivé: non vide
-          let reversedDepartToDepart = departToDepart.split('').reverse().join('');
-          let reversedEndToEnd = endToEnd.split('').reverse().join('');
-          region2 = `${regionString}${reversedEndToEnd}${endPoint.label}${reversedDepartToDepart}${startPoint.label}`;
-        } else if (departToDepart !== '') {
-          // Cas n°3.3: départ-départ: non vide, arrivé-arrivé: vide
-          let reversedDepartToDepart = departToDepart.split('').reverse().join('');
-          region2 = `${regionString}${startPoint.label}${reversedDepartToDepart}`;
-        } else if (endToEnd !== '') {
-          // Cas n°3.4: départ-départ: vide, arrivé-arrivé: non vide
-          let reversedEndToEnd = endToEnd.split('').reverse().join('');
-          region2 = `${regionString}${reversedEndToEnd}${endPoint.label}`;
-        } else {
-          console.log("Le cas vide-vide-vide-vide est strictement impossible !");
-          region2 = `${regionString}`;
-        }
-      }
-      //Cas n°3.9: départ-arrivé: vide, arrivé-départ: non vide, départ-départ: vide, arrivé-arrivé: vide
-      else if (departToEnd === "" && endToDepart !== '' && departToDepart === '' && endToEnd === '') {
-
-        //Définition de la 1ère nouvelle région.
-        region1 = `${regionString}${endToDepart}`;
-        console.log(region1);
-
-        //Définition de la 2ème nouvelle région.
-        region2 = `${regionString}`;
-        console.log(region2);
-      }
-      else {
-        console.log("Un cas non prévu est apparu !");
-      }
-
-      nonRelevantBoundariesArea.forEach(frontiere => {
-        if (isFrontiereInRegion(frontiere, region1, curveMap, points)) {
-          region1 += `.${frontiere}`;
-        } else {
-          region2 += `.${frontiere}`;
-        }
-      });
-
-      console.log(region1);
-      console.log(region2);
-
-      // Construire la nouvelle chaîne
-      const newGraphString = `${region1}.}${region2}.}${nonRelevantAreas.join('}')}`;
-
-      console.log("Chaîne mise à jour:", newGraphString);
-      return newGraphString;
+        console.log("Ce type de cas n'est pas prévu");
     }
-  }
-  // Cas n°4: Le point de départ est le point d'arrivée (boucle)
-  else if (startPoint === endPoint) {
+    return currentGraphString;
+};
 
-    console.log("Cas où les points de départ et d'arrivé sont les mêmes");
+const areaOfPolygon = (frontiere, region, curveMap, points) => {
+    // Vérifier si la frontière est vide
+    if (!frontiere || frontiere.length === 0) {
+        console.log("Frontière vide");
+        return false;
+    }
 
-    const regionString = `${startPoint.label}${addedPoint.label}`;
+    // Obtenir les courbes associées à la région
+    const regionPoints = [];
 
-    // Trouver toutes les régions
-    const areas = findRegions(currentGraphString);
+    // Parcourir chaque point de la région
+    for (let i = 0; i < region.length; i++) {
+        const pointLabel = region[i];
+        const nextPointLabel = region[(i + 1) % region.length]; // Point suivant, avec retour au début
 
-    // Trouver la région pertinente
-    const relevantArea = areas.filter(area => area.includes(startPoint.label));
+        // Trouver le point dans la liste des points
+        const point = points.find(p => p.label === pointLabel);
+        if (!point) {
+            console.log(`Point ${pointLabel} non trouvé`);
+            return false;
+        }
 
-    // Filtrer les régions non pertinentes
-    const nonRelevantAreas = areas.filter(area => !area.includes(startPoint.label));
+        regionPoints.push(point);
 
-    // Trouver toutes les frontières et les extraire en un seul tableau
-    const boundaries = Object.values(findFrontieres(relevantArea)).flat();
+        // Chercher la courbe entre le point actuel et le suivant
+        const curves = curveMap.get(pointLabel) || [];
+        let curveFound = false;
 
-    // Trouver la frontière pertinente
-    const relevantBoundarie = boundaries.filter(boundary => boundary.includes(startPoint.label));
+        for (const curveInfo of curves) {
+            if (curveInfo.role === 'start') {
+                const lastPointLabel = curveInfo.curve[curveInfo.curve.length - 1].label;
+                if (lastPointLabel === nextPointLabel) {
+                    // Ajouter tous les points de la courbe sauf le premier (déjà ajouté)
+                    regionPoints.push(...curveInfo.curve.slice(1));
+                    curveFound = true;
+                    break;
+                }
+            }
+        }
 
-    // Trouver toutes les frontières non pertinentes
-    const nonRelevantBoundaries = boundaries.filter(boundary => !boundary.includes(startPoint.label));
+        if (!curveFound && i < region.length - 1) {
+            console.log(`Pas de courbe trouvée entre ${pointLabel} et ${nextPointLabel}`);
+            // Si aucune courbe n'est trouvée, on peut ajouter une ligne droite
+            // entre les points, mais cela dépend de votre cas d'utilisation
+        }
+    }
 
-    // Construire la 1ère région
-    let firstArea = `${startPoint.label}${addedPoint.label}`;
+    // Vérifier si nous avons suffisamment de points pour former un polygone
+    if (regionPoints.length < 3) {
+        console.log("Pas assez de points pour former un polygone");
+        return false;
+    }
 
-    //Construire la 2ème région
-    let secondArea = startIsIsolated ? `${startPoint.label}${addedPoint.label}` : relevantBoundarie.map(frontiere => frontiere.replace(startPoint.label, `${startPoint.label}${addedPoint.label}${startPoint.label}`)).join('.');
+    // Calculer l'aire en utilisant la formule du déterminant (formule de l'aire de Gauss)
+    let area = 0;
+    const n = regionPoints.length;
 
-    // Répartir les frontières non pertinentes entre les deux nouvelles régions
-    nonRelevantBoundaries.forEach(boundarie => {
-      if (isFrontiereInRegion(boundarie, regionString, curveMap, points)) {
-        firstArea += `.${boundarie}`;
-      } else {
-        secondArea += `.${boundarie}`;
-      }
-    });
+    for (let i = 0; i < n; i++) {
+        const currentPoint = regionPoints[i];
+        const nextPoint = regionPoints[(i + 1) % n];
 
-    // Construire la nouvelle chaîne
-    const newGraphString = `${firstArea}.}${secondArea}.}${nonRelevantAreas.join('}')}`;
+        area += (currentPoint.x * nextPoint.y) - (nextPoint.x * currentPoint.y);
+    }
 
-    return newGraphString;
-  } 
-  //Cas n°5: Pas prévu
-  else {
-    console.log("Ce type de cas n'est pas prévu");
-  }
-  return currentGraphString;
-  };
-
-  
+    // La valeur absolue de area/2 donne l'aire du polygone
+    return Math.abs(area / 2);
+};
 
 const isFrontiereInRegion = (frontiere, region, curveMap, points) => {
 
