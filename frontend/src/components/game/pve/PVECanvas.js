@@ -223,7 +223,7 @@ const PVECanvas = ({ points, setPoints, curves, setCurves, currentPlayer, handle
   return (
     <div
       id="canvas-container"
-      className="relative flex items-center justify-center w-full p-2 rounded-xl border-4 border-yellow-400 shadow-[0_0_25px_#facc15] bg-gray-900"
+      className="relative flex items-center justify-center w-full rounded-xl border-4 border-yellow-400 shadow-[0_0_25px_#facc15] bg-gray-900"
       style={{ height: '500px' }}>
       <canvas
         ref={canvasRef}
@@ -231,7 +231,8 @@ const PVECanvas = ({ points, setPoints, curves, setCurves, currentPlayer, handle
         style={{
           backgroundColor: '#fff',
           border: 'none',
-          //cursor: 'url("/assets/cursor-cross.png") 20 20, crosshair' // 16 16 = point central de l’image
+          margin: 0,
+          padding: 0,
         }}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}

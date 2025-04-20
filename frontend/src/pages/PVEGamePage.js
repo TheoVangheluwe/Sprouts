@@ -147,6 +147,13 @@ const PVEGamePage = () => {
                                     addMove={addMove} // Passer la fonction pour ajouter un coup
                                 />
                             </div>
+                            <div className="w-full h-2 bg-yellow-400 my-4"></div> {/* Séparation */}
+                            <button
+                className="px-6 py-2 bg-gray-600 hover:bg-gray-500 text-white rounded border-2 border-white"
+                onClick={() => window.location.href = '/menu'}
+                >
+                ❌ Quitter
+            </button>
                         </>
                     )}
 
@@ -179,7 +186,6 @@ const PVEGamePage = () => {
                 </div>
                 {phase === 'game' && <MoveHistory moves={moves} />}
             </div>
-
             <ToastContainer
                 position="top-right"
                 autoClose={1500}
