@@ -1,6 +1,8 @@
+// PVEGamePage.js
 import React, { useState, useEffect, useRef } from 'react';
 import PVECanvas from '../components/game/pve/PVECanvas';
-import MoveHistory from '../components/MoveHistory'; // Importer le composant MoveHistory
+import AICanvas from '../components/game/pve/AICanvas'; // Importer le nouveau composant AICanvas
+import MoveHistory from '../components/MoveHistory';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
@@ -11,25 +13,22 @@ const PVEGamePage = () => {
     const [curves, setCurves] = useState([]);
     const [currentPlayer, setCurrentPlayer] = useState(1);
     const [gameOver, setGameOver] = useState(false);
-    const [moves, setMoves] = useState([]); // État pour stocker l'historique des coups
-
-    const [timer1, setTimer1] = useState(600); // 10 minutes en secondes
+    const [moves, setMoves] = useState([]);
+    const [timer1, setTimer1] = useState(600);
     const [timer2, setTimer2] = useState(600);
+    const [gameMode, setGameMode] = useState('pve'); // Ajouter un état pour le mode de jeu
 
     const timerInterval = useRef(null);
 
-    // Formate les secondes en mm:ss
     const formatTime = (seconds) => {
         const m = Math.floor(seconds / 60);
         const s = seconds % 60;
         return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
     };
 
-    // Gestion du timer à chaque changement de joueur
     useEffect(() => {
         if (phase !== 'game' || gameOver) return;
 
-        // Nettoyer le timer existant
         if (timerInterval.current) clearInterval(timerInterval.current);
 
         timerInterval.current = setInterval(() => {
@@ -67,7 +66,7 @@ const PVEGamePage = () => {
         setCurrentPlayer(1);
         setTimer1(600);
         setTimer2(600);
-        setMoves([]); // Réinitialiser l'historique des coups
+        setMoves([]);
     };
 
     const handleGameOver = (isGameOver) => {
@@ -111,6 +110,24 @@ const PVEGamePage = () => {
                                     </button>
                                 ))}
                             </div>
+                            <div className="flex justify-center gap-4 mb-4">
+                                <button
+                                    className={`px-4 py-2 rounded border-2 border-white transition transform hover:scale-105 ${
+                                        gameMode === 'pve' ? 'bg-yellow-400 text-black' : 'bg-gray-700'
+                                    }`}
+                                    onClick={() => setGameMode('pve')}
+                                >
+                                    Joueur vs Joueur
+                                </button>
+                                <button
+                                    className={`px-4 py-2 rounded border-2 border-white transition transform hover:scale-105 ${
+                                        gameMode === 'ai' ? 'bg-yellow-400 text-black' : 'bg-gray-700'
+                                    }`}
+                                    onClick={() => setGameMode('ai')}
+                                >
+                                    Joueur vs IA
+                                </button>
+                            </div>
                             <button
                                 className="px-6 py-3 bg-green-500 hover:bg-green-400 text-black font-bold rounded border-2 border-white shadow-md transition-transform hover:scale-110"
                                 onClick={handleStartGame}
@@ -122,30 +139,44 @@ const PVEGamePage = () => {
 
                     {phase === 'game' && (
                         <>
-                            <h1 className="text-2xl font-bold mb-4 text-yellow-300">🎲 Joueur contre Joueur</h1>
+                            <h1 className="text-2xl font-bold mb-4 text-yellow-300">🎲 {gameMode === 'pve' ? 'Joueur contre Joueur' : 'Joueur contre IA'}</h1>
                             <div className="flex justify-around mb-4 text-xl font-bold">
                                 <div className={`${currentPlayer === 1 ? 'text-green-400' : 'text-white'}`}>
                                     🟢 Joueur 1: {formatTime(timer1)}
                                 </div>
                                 <div className={`${currentPlayer === 2 ? 'text-green-400' : 'text-white'}`}>
-                                    🔴 Joueur 2: {formatTime(timer2)}
+                                    {gameMode === 'pve' ? '🔴 Joueur 2: ' : '🔴 IA: '} {formatTime(timer2)}
                                 </div>
                             </div>
                             <div className="text-xl mb-4 animate-bounce">
                                 🚩 Tour du joueur <span className="text-green-400">{currentPlayer}</span>
                             </div>
                             <div className="flex justify-center items-center w-full" style={{ height: '500px' }}>
-                                <PVECanvas
-                                    points={points}
-                                    setPoints={setPoints}
-                                    curves={curves}
-                                    setCurves={setCurves}
-                                    currentPlayer={currentPlayer}
-                                    handlePlayerChange={handlePlayerChange}
-                                    handleGameOver={handleGameOver}
-                                    initialPointCount={initialPoints}
-                                    addMove={addMove} // Passer la fonction pour ajouter un coup
-                                />
+                                {gameMode === 'pve' ? (
+                                    <PVECanvas
+                                        points={points}
+                                        setPoints={setPoints}
+                                        curves={curves}
+                                        setCurves={setCurves}
+                                        currentPlayer={currentPlayer}
+                                        handlePlayerChange={handlePlayerChange}
+                                        handleGameOver={handleGameOver}
+                                        initialPointCount={initialPoints}
+                                        addMove={addMove}
+                                    />
+                                ) : (
+                                    <AICanvas
+                                        points={points}
+                                        setPoints={setPoints}
+                                        curves={curves}
+                                        setCurves={setCurves}
+                                        currentPlayer={currentPlayer}
+                                        handlePlayerChange={handlePlayerChange}
+                                        handleGameOver={handleGameOver}
+                                        initialPointCount={initialPoints}
+                                        addMove={addMove}
+                                    />
+                                )}
                             </div>
                             <div className="w-full h-2 bg-yellow-400 my-4"></div> {/* Séparation */}
                             <button
