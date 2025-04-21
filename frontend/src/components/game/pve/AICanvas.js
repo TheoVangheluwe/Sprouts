@@ -1,8 +1,10 @@
+// AICanvas.js
 import React, { useEffect, useRef, useState } from 'react';
+import PVECanvas from './PVECanvas';
 import { toast } from 'react-toastify';
 import { drawGame, getMousePos, getNearPoint, canConnect, connectPoints, curveIntersects, curveLength, getNextLabel, getClosestPointOnCurve, isPointTooClose, generateInitialGraphString, generateGraphString, updateCurveMap } from './PVEUtils';
 
-const PVECanvas = ({ points, setPoints, curves, setCurves, currentPlayer, handlePlayerChange, handleGameOver, initialPointCount, addMove }) => {
+const AICanvas = ({ points, setPoints, curves, setCurves, currentPlayer, handlePlayerChange, handleGameOver, initialPointCount, addMove }) => {
   const canvasRef = useRef(null);
   const [selectedPoint, setSelectedPoint] = useState(null);
   const [isDrawing, setIsDrawing] = useState(false);
@@ -17,7 +19,6 @@ const PVECanvas = ({ points, setPoints, curves, setCurves, currentPlayer, handle
       const canvas = canvasRef.current;
       const container = document.getElementById("canvas-container");
       if (canvas && container) {
-        // 🔒 Dimensions fixes en pixels
         canvas.width = container.clientWidth;
         canvas.height = 500;
         drawGame(canvasRef, points, curves, currentCurve);
@@ -31,7 +32,6 @@ const PVECanvas = ({ points, setPoints, curves, setCurves, currentPlayer, handle
 
   useEffect(() => {
     initializePoints(initialPointCount);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -51,7 +51,7 @@ const PVECanvas = ({ points, setPoints, curves, setCurves, currentPlayer, handle
   };
 
   const generateInitialPoints = (canvas, initialPointCount) => {
-    const minDistance = 100; // Distance minimale entre les points
+    const minDistance = 100;
     const width = canvas.width;
     const height = canvas.height;
     const newPoints = [];
@@ -112,17 +112,13 @@ const PVECanvas = ({ points, setPoints, curves, setCurves, currentPlayer, handle
           const test = points;
           test.push(newPoint);
 
-          // Mettre à jour la chaîne de caractères après avoir placé le point
           const updatedGraphString = generateGraphString(selectedPoint, newPoint, endPoint, graphString, curveMap, test);
           setGraphString(updatedGraphString);
-
-          // Ajouter le coup à l'historique
-          //addMove(`${selectedPoint.label} -> ${newPoint.label} : ${closestPoint.label}`);
 
           setAwaitingPointPlacement(false);
           setCurrentCurve([]);
           toast.success("Point placé.", { autoClose: 1500 });
-          handlePlayerChange(); // Changer de joueur après avoir placé le point
+          handlePlayerChange();
         } else {
           toast.error("Le point est trop proche d'un autre.", { autoClose: 1500 });
         }
@@ -140,51 +136,36 @@ const PVECanvas = ({ points, setPoints, curves, setCurves, currentPlayer, handle
   };
 
   const handleMouseUp = (event) => {
-    console.log("handleMouseUp triggered"); // Log de début de la fonction
     if (!isDrawing) return;
     const canvas = canvasRef.current;
-    if (!canvas) {
-      console.error("Canvas not found.");
-      return;
-    }
+    if (!canvas) return;
 
     const pos = getMousePos(canvas, event);
-    console.log("Mouse position on mouseUp: ", pos); // Log des coordonnées du curseur
-
     const end = getNearPoint(Math.round(pos.x), Math.round(pos.y), points);
-    console.log("End point found: ", end); // Log du point trouvé
 
     if (end && selectedPoint && canConnect(selectedPoint, end)) {
-      setEndPoint(end); // Stocker endPoint dans l'état
+      setEndPoint(end);
       const addedPoint = { x: Math.round(pos.x), y: Math.round(pos.y), connections: 0, label: getNextLabel(points) };
       const adjustedCurve = [...currentCurve, addedPoint, end];
-      console.log("Adjusted curve: ", adjustedCurve); // Log de la courbe ajustée
 
       if (curveIntersects(adjustedCurve, curves, points)) {
         toast.error("Intersection détectée.", { autoClose: 1500 });
-        setCurrentCurve([]); // Réinitialiser la courbe
+        setCurrentCurve([]);
       } else if (curveLength(adjustedCurve) < 50) {
         toast.error("Courbe trop courte.", { autoClose: 1500 });
-        setCurrentCurve([]); // Réinitialiser la courbe
+        setCurrentCurve([]);
       } else {
-        console.log("Curve validated, connecting points...");
-
-        // Mettre à jour la curveMap existante
         const updatedCurveMap = updateCurveMap(curveMap, selectedPoint, end, adjustedCurve);
-
         setCurves(prevCurves => [...prevCurves, adjustedCurve]);
         setCurveMap(updatedCurveMap);
 
         connectPoints(selectedPoint, end, adjustedCurve, points, setPoints, setCurves);
 
         if(!awaitingPointPlacement) {
-          // Ajouter le coup à l'historique
           addMove(`${selectedPoint.label} -> ${end.label} : ${addedPoint.label}`);
         }
 
         setAwaitingPointPlacement(true);
-
-        
       }
     } else {
       if (!end) {
@@ -192,7 +173,7 @@ const PVECanvas = ({ points, setPoints, curves, setCurves, currentPlayer, handle
       } else if (!canConnect(selectedPoint, end)) {
         toast.error("Trop de connexions sur le point.", { autoClose: 1500 });
       }
-      setCurrentCurve([]); // Réinitialiser la courbe
+      setCurrentCurve([]);
     }
     setIsDrawing(false);
   };
@@ -211,7 +192,7 @@ const PVECanvas = ({ points, setPoints, curves, setCurves, currentPlayer, handle
       const newCurve = [...prevCurve, { x: Math.round(pos.x), y: Math.round(pos.y) }];
       if (!validateCurve(newCurve)) {
         console.error("Invalid curve detected:", newCurve);
-        return prevCurve; // Retourne la courbe précédente si elle est invalide
+        return prevCurve;
       }
       if (newCurve.length > 1) {
         drawGame(canvasRef, points, curves, newCurve);
@@ -220,26 +201,52 @@ const PVECanvas = ({ points, setPoints, curves, setCurves, currentPlayer, handle
     });
   };
 
+  const handleAIMove = () => {
+    // Logique pour que l'IA joue un coup
+    // Par exemple, sélectionner deux points aléatoires et tracer une courbe entre eux
+    const availablePoints = points.filter(point => point.connections < 3);
+    if (availablePoints.length < 2) return;
+
+    const startPoint = availablePoints[Math.floor(Math.random() * availablePoints.length)];
+    const endPoint = availablePoints[Math.floor(Math.random() * availablePoints.length)];
+
+    if (startPoint && endPoint && canConnect(startPoint, endPoint)) {
+      const addedPoint = { x: (startPoint.x + endPoint.x) / 2, y: (startPoint.y + endPoint.y) / 2, connections: 0, label: getNextLabel(points) };
+      const adjustedCurve = [startPoint, addedPoint, endPoint];
+
+      if (curveIntersects(adjustedCurve, curves, points)) {
+        toast.error("Intersection détectée.", { autoClose: 1500 });
+      } else if (curveLength(adjustedCurve) < 50) {
+        toast.error("Courbe trop courte.", { autoClose: 1500 });
+      } else {
+        const updatedCurveMap = updateCurveMap(curveMap, startPoint, endPoint, adjustedCurve);
+        setCurves(prevCurves => [...prevCurves, adjustedCurve]);
+        setCurveMap(updatedCurveMap);
+
+        connectPoints(startPoint, endPoint, adjustedCurve, points, setPoints, setCurves);
+
+        const updatedGraphString = generateGraphString(startPoint, addedPoint, endPoint, graphString, curveMap, points);
+        setGraphString(updatedGraphString);
+
+        addMove(`${startPoint.label} -> ${endPoint.label} : ${addedPoint.label}`);
+        handlePlayerChange();
+      }
+    }
+  };
+
   return (
-    <div
-      id="canvas-container"
-      className="relative flex items-center justify-center w-full rounded-xl border-4 border-yellow-400 shadow-[0_0_25px_#facc15] bg-gray-900"
-      style={{ height: '500px' }}>
+    <div id="canvas-container" className="relative flex items-center justify-center w-full rounded-xl border-4 border-yellow-400 shadow-[0_0_25px_#facc15] bg-gray-900" style={{ height: '500px' }}>
       <canvas
         ref={canvasRef}
         className="w-full h-full rounded-md shadow-inner"
-        style={{
-          backgroundColor: '#fff',
-          border: 'none',
-          margin: 0,
-          padding: 0,
-        }}
+        style={{ backgroundColor: '#fff', border: 'none', margin: 0, padding: 0 }}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
       />
+      <button onClick={handleAIMove} className="absolute top-4 left-4 px-4 py-2 bg-blue-500 text-white rounded">IA Move</button>
     </div>
   );
 };
 
-export default PVECanvas;
+export default AICanvas;
