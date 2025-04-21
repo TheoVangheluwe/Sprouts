@@ -111,25 +111,11 @@ def react_fallback(request):
 def game_detail_view(request, game_id):
     try:
         game = Game.objects.get(id=game_id)
-        response_data = {
+        return JsonResponse({
             'status': game.status,
             'player_count': game.player_count,
             'players': [{"username": player.username, "id": player.id} for player in game.players.all()]
-        }
-
-        # Ajouter les informations sur le gagnant/perdant si disponibles
-        if game.winner:
-            response_data['winner'] = game.winner.username
-        if game.loser:
-            response_data['loser'] = game.loser.username
-        if game.victory_reason:
-            response_data['victory_reason'] = game.victory_reason
-
-        # Ajouter des informations sur l'abandon si présentes dans l'état
-        if game.state and 'abandoned_by' in game.state:
-            response_data['abandoned_by'] = game.state['abandoned_by']
-
-        return JsonResponse(response_data)
+        })
     except Game.DoesNotExist:
         return JsonResponse({'error': 'Game not found'}, status=404)
 
@@ -192,25 +178,12 @@ def game_status(request, game_id):
 def game_state(request, game_id):
     try:
         game = Game.objects.get(id=game_id)
-
-        # Préparer les données de base
-        response_data = {
+        return JsonResponse({
             'status': game.status,
             'state': game.state,
             'currentPlayer': game.current_player.id if game.current_player else None,
-            'point_options': game.point_options,
-            'players': [{"username": player.username, "id": player.id} for player in game.players.all()]
-        }
-
-        # Ajouter les informations sur le gagnant et le perdant si disponibles
-        if game.winner:
-            response_data['winner'] = game.winner.username
-        if game.loser:
-            response_data['loser'] = game.loser.username
-        if game.victory_reason:
-            response_data['victory_reason'] = game.victory_reason
-
-        return JsonResponse(response_data)
+            'point_options': game.point_options
+        })
     except Game.DoesNotExist:
         return JsonResponse({'error': 'Game not found'}, status=404)
 
@@ -407,21 +380,13 @@ def make_move(request, game_id):
 
             if game_over:
                 print("La partie est terminée!")
-                # Le gagnant est le joueur actuel qui vient de jouer
+                # CORRECTION: Le gagnant est le joueur actuel qui vient de jouer
                 # car c'est l'adversaire qui ne pourra pas jouer au prochain tour
-                winner = request.user
-                loser = next((p for p in game.players.all() if p != request.user), None)
-
-                print(f"Le gagnant est: {winner.username}")
+                winner = request.user.username
+                print(f"Le gagnant est: {winner}")
                 game.status = 'completed'
-
-                # Stocker le gagnant et le perdant dans le modèle de jeu
-                game.winner = winner
-                game.loser = loser
-                game.victory_reason = 'normal'
-
-                # Stocker le gagnant dans l'état du jeu aussi (pour compatibilité)
-                game.state["winner"] = winner.username
+                # Stocker le gagnant dans l'état du jeu
+                game.state["winner"] = winner
             else:
                 # Ce n'est qu'après le placement d'un point que le tour change
                 players = list(game.players.all())
@@ -1005,12 +970,6 @@ def leave_game(request, game_id):
             game.state['abandoned_at'] = datetime.now().isoformat()
             game.status = 'abandoned'  # Marquer le jeu comme abandonné
 
-            # Définir le gagnant et le perdant
-            game.loser = request.user  # La personne qui abandonne est le perdant
-            if other_players:
-                game.winner = other_players[0]  # L'adversaire est le gagnant
-            game.victory_reason = 'abandoned'  # Raison de la victoire: abandon
-
             # Retirer le statut "prêt" du joueur
             if str(request.user.id) in game.player_ready:
                 del game.player_ready[str(request.user.id)]
@@ -1025,14 +984,22 @@ def leave_game(request, game_id):
 
             game.save()
 
+            # Vérifier toutes les parties actives du joueur et les marquer comme abandonnées
+            other_games = Game.objects.filter(
+                players=request.user,
+                status__in=['waiting', 'in_progress', 'started']
+            )
+            for other_game in other_games:
+                if other_game.id != game_id:  # Éviter de traiter deux fois le même jeu
+                    other_game.status = 'abandoned'
+                    other_game.save()
+
             # Retourner les informations sur l'abandon
             return JsonResponse({
                 'success': True,
                 'message': 'Left game successfully',
                 'abandoned': True,
                 'abandoned_by': request.user.username,
-                'winner': game.winner.username if game.winner else None,
-                'loser': game.loser.username if game.loser else None
             })
 
     except Game.DoesNotExist:

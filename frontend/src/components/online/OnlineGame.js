@@ -1,11 +1,11 @@
-import React, {useEffect, useState} from 'react';
-import {useParams, useNavigate, Link} from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import OnlineCanvas from './OnlineCanvas';
-import {ToastContainer, toast} from "react-toastify";
+import { ToastContainer, toast } from "react-toastify";
 import 'react-toastify/dist/ReactToastify.css';
 
 function OnlineGame() {
-    const {gameId} = useParams();
+    const { gameId } = useParams();
     const navigate = useNavigate();
     const [gameState, setGameState] = useState(null);
     const [currentPlayer, setCurrentPlayer] = useState(null);
@@ -20,8 +20,6 @@ function OnlineGame() {
     const [isGameOver, setIsGameOver] = useState(false);
     const [winner, setWinner] = useState(null);
     const [iWon, setIWon] = useState(false);
-    const [hasSelfAbandoned, setHasSelfAbandoned] = useState(false);
-
 
     const [points, setPoints] = useState([]);
     const [curves, setCurves] = useState([]);
@@ -81,16 +79,6 @@ function OnlineGame() {
             return;
         }
 
-        // Vérifier si on a enregistré un abandon précédemment dans localStorage
-        const hasAbandoned = localStorage.getItem(`game_${gameId}_abandoned`) === 'true';
-        if (hasAbandoned) {
-            console.log("Abandon détecté dans localStorage");
-            setHasSelfAbandoned(true);
-            setIsGameOver(true);
-            setGameEnded(true);
-            setIWon(false);
-        }
-
         const fetchPlayerIdAndGameState = async () => {
             try {
                 const playerResponse = await fetch('/api/game/create', {
@@ -136,119 +124,28 @@ function OnlineGame() {
                     setCurrentPlayer(gameData.currentPlayer);
                 }
 
-                // Vérifier si le jeu est abandonné
-                if (gameData.status === 'abandoned') {
-                    console.log("Partie abandonnée détectée au chargement");
-
-                    // Vérifier qui a abandonné
-                    if (gameData.state && gameData.state.abandoned_by) {
-                        const abandonedBy = gameData.state.abandoned_by;
-                        console.log(`Abandon par: ${abandonedBy}, mon username: ${username}`);
-
-                        if (abandonedBy === username) {
-                            // C'est moi qui ai abandonné
-                            console.log("J'ai abandonné, afficher écran de défaite");
-                            localStorage.setItem(`game_${gameId}_abandoned`, 'true');
-                            setHasSelfAbandoned(true);
-                            setIsGameOver(true);
-                            setGameEnded(true);
-                            setIWon(false);
-
-                            // Chercher qui est le gagnant
-                            if (gameData.state.winner) {
-                                setWinner(gameData.state.winner);
-                            } else if (gameData.players) {
-                                const otherPlayer = gameData.players.find(p => p.username !== username);
-                                if (otherPlayer) {
-                                    setWinner(otherPlayer.username);
-                                } else {
-                                    setWinner("Adversaire");
-                                }
-                            }
-                            return;
-                        } else {
-                            // C'est l'adversaire qui a abandonné
-                            console.log("L'adversaire a abandonné, afficher écran de victoire");
-                            setIsGameOver(true);
-                            setGameEnded(true);
-                            setIWon(true);
-                            setWinner(username);
-                            toast.warning(`${abandonedBy} a abandonné la partie !`);
-                            return;
-                        }
-                    }
-
-                    // Si on ne sait pas qui a abandonné, vérifier si on a l'info winner et loser
-                    if (gameData.winner && gameData.loser) {
-                        if (gameData.loser === username) {
-                            console.log("Je suis le perdant (abandon)");
-                            localStorage.setItem(`game_${gameId}_abandoned`, 'true');
-                            setHasSelfAbandoned(true);
-                            setIsGameOver(true);
-                            setGameEnded(true);
-                            setIWon(false);
-                            setWinner(gameData.winner);
-                        } else {
-                            console.log("Je suis le gagnant (adversaire a abandonné)");
-                            setIsGameOver(true);
-                            setGameEnded(true);
-                            setIWon(true);
-                            setWinner(username);
-                        }
-                        return;
-                    }
-
-                    // Si on n'a pas l'info gagnant/perdant, faire une requête supplémentaire
-                    try {
-                        const detailResponse = await fetch(`/api/game/${gameId}/`, {
-                            headers: {
-                                'Authorization': `Bearer ${localStorage.getItem('token')}`
-                            }
-                        });
-
-                        if (detailResponse.ok) {
-                            const detailData = await detailResponse.json();
-                            if (detailData.winner === username) {
-                                setIsGameOver(true);
-                                setGameEnded(true);
-                                setIWon(true);
-                                setWinner(username);
-                            } else if (detailData.loser === username) {
-                                localStorage.setItem(`game_${gameId}_abandoned`, 'true');
-                                setHasSelfAbandoned(true);
-                                setIsGameOver(true);
-                                setGameEnded(true);
-                                setIWon(false);
-                                setWinner(detailData.winner || "Adversaire");
-                            }
-                        }
-                    } catch (error) {
-                        console.error("Erreur lors de la récupération des détails du jeu", error);
-                    }
-
-                    return;
-                }
-
-                // Vérifier si un joueur a abandonné dans l'état du jeu
                 if (gameData.state && gameData.state.abandoned_by) {
-                    // Si le joueur est en train d'abandonner, ignorer cette notification
-                    if (window.userIsLeaving) {
-                        return;
-                    }
-
-                    // Déterminer si c'est le joueur actuel qui a abandonné
-                    if (gameData.state.abandoned_by === username) {
-                        localStorage.setItem(`game_${gameId}_abandoned`, 'true');
-                        setHasSelfAbandoned(true);
-                        setIWon(false);
-                        setWinner(opponents.length > 0 ? opponents[0].username : "Adversaire");
-                    } else {
+                    if (gameData.state.abandoned_by !== username) {
                         setIWon(true);
                         setWinner(username);
-                        toast.warning(`${gameData.state.abandoned_by} a abandonné la partie !`);
+                    } else {
+                        setIWon(false);
+                        if (gameData.players && gameData.players.length > 0) {
+                            const otherPlayer = gameData.players.find(p => p.username !== username);
+                            if (otherPlayer) {
+                                setWinner(otherPlayer.username);
+                            }
+                        }
                     }
                     setIsGameOver(true);
                     setGameEnded(true);
+                    return;
+                }
+
+                if (gameData.status === 'abandoned') {
+                    toast.warning("La partie a été abandonnée !");
+                    setGameEnded(true);
+                    setIsGameOver(true);
                     return;
                 }
 
@@ -330,7 +227,7 @@ function OnlineGame() {
                 setGameInitialized(true);
 
             } catch (error) {
-                console.error("Erreur lors de l'initialisation:", error);
+                // Erreur silencieuse
             }
         };
 
@@ -365,77 +262,7 @@ function OnlineGame() {
 
                 const gameData = await gameResponse.json();
 
-                // Vérifier si la partie est abandonnée
-                if (gameData.status === 'abandoned') {
-                    console.log("Partie abandonnée détectée au chargement");
-
-                    // Vérifier qui a abandonné
-                    if (gameData.state && gameData.state.abandoned_by) {
-                        const abandonedBy = gameData.state.abandoned_by;
-                        console.log(`Abandon par: ${abandonedBy}, mon username: ${username}`);
-
-                        // Le point crucial: comparer directement avec mon nom d'utilisateur
-                        const iSelfAbandoned = abandonedBy === username;
-
-                        if (iSelfAbandoned) {
-                            // Si c'est moi qui ai abandonné, je DOIS voir une défaite
-                            console.log("J'ai abandonné, afficher écran de défaite");
-                            localStorage.setItem(`game_${gameId}_abandoned`, 'true');
-                            setHasSelfAbandoned(true);
-                            setIsGameOver(true);
-                            setGameEnded(true);
-                            setIWon(false); // Je ne peux PAS avoir gagné si j'ai abandonné
-
-                            // Trouver qui est le gagnant (forcément l'adversaire)
-                            if (gameData.players) {
-                                const otherPlayer = gameData.players.find(p => p.username !== username);
-                                if (otherPlayer) {
-                                    setWinner(otherPlayer.username);
-                                } else {
-                                    setWinner("Adversaire");
-                                }
-                            }
-                            return;
-                        } else {
-                            // Si c'est l'adversaire qui a abandonné, je DOIS voir une victoire
-                            console.log("L'adversaire a abandonné, afficher écran de victoire");
-                            setIsGameOver(true);
-                            setGameEnded(true);
-                            setIWon(true); // J'ai forcément gagné si l'adversaire a abandonné
-                            setWinner(username);
-                            toast.warning(`${abandonedBy} a abandonné la partie !`);
-                            return;
-                        }
-                    }
-
-                    // Si on ne peut pas déterminer qui a abandonné avec abandoned_by,
-                    // vérifier explicitement avec winner/loser
-                    if (gameData.winner && gameData.loser) {
-                        // Vérifier si je suis le perdant
-                        const iAmLoser = gameData.loser === username;
-
-                        if (iAmLoser) {
-                            console.log("Je suis le perdant (abandon)");
-                            localStorage.setItem(`game_${gameId}_abandoned`, 'true');
-                            setHasSelfAbandoned(true);
-                            setIsGameOver(true);
-                            setGameEnded(true);
-                            setIWon(false);
-                            setWinner(gameData.winner);
-                        } else {
-                            console.log("Je suis le gagnant (adversaire a abandonné)");
-                            setIsGameOver(true);
-                            setGameEnded(true);
-                            setIWon(true);
-                            setWinner(username);
-                        }
-                        return;
-                    }
-                }
-
                 if (gameData.state && gameData.state.abandoned_by) {
-                    if (window.userIsLeaving) return;
-
                     if (gameData.state.abandoned_by !== username) {
                         toast.warning(`${gameData.state.abandoned_by} a abandonné la partie !`);
                         setIWon(true);
@@ -444,20 +271,22 @@ function OnlineGame() {
                         setGameEnded(true);
                         clearInterval(intervalId); // Stop the interval
                         return;
-                    } else {
-                        localStorage.setItem(`game_${gameId}_abandoned`, 'true');
-                        setHasSelfAbandoned(true);
-                        setIWon(false);
-                        if (opponents.length > 0) {
-                            setWinner(opponents[0].username);
-                        } else {
-                            setWinner("Adversaire");
-                        }
-                        setIsGameOver(true);
-                        setGameEnded(true);
-                        clearInterval(intervalId);
-                        return;
                     }
+                }
+
+                if (gameData.status === 'abandoned') {
+                    toast.warning("La partie a été abandonnée !");
+                    setGameEnded(true);
+                    setIsGameOver(true);
+                    if (gameData.players && gameData.players.length > 0) {
+                        const otherPlayer = gameData.players.find(p => p.username !== username);
+                        if (otherPlayer) {
+                            setWinner(otherPlayer.username);
+                            setIWon(false);
+                        }
+                    }
+                    clearInterval(intervalId); // Stop the interval
+                    return;
                 }
 
                 setGameState(gameData.state);
@@ -510,7 +339,7 @@ function OnlineGame() {
                                     'Content-Type': 'application/json',
                                     'Authorization': `Bearer ${localStorage.getItem('token')}`
                                 },
-                                body: JSON.stringify({curves: curves})
+                                body: JSON.stringify({ curves: curves })
                             });
                         } catch (error) {
                             // Erreur silencieuse
@@ -546,10 +375,7 @@ function OnlineGame() {
             }
         }, 2000);
 
-        return () => {
-            clearInterval(intervalId);
-            window.userIsLeaving = false;
-        };
+        return () => clearInterval(intervalId);
     }, [gameId, selectedPoints, navigate, username, playerId]);
 
     const updateGraphString = (data) => {
@@ -562,7 +388,6 @@ function OnlineGame() {
 
     const handleMove = async (move) => {
         if (gameEnded) return;
-        if (window.userIsLeaving) return;
 
         try {
             if (move.type === 'draw_curve' && (!move.startPoint || !move.endPoint)) {
@@ -675,18 +500,8 @@ function OnlineGame() {
     };
 
     const executeLeaveGame = async () => {
-        window.userIsLeaving = true; // Indicateur global pour éviter les notifications en double
-        setHasSelfAbandoned(true); // Marquer que VOUS avez abandonné
         setIsLeaving(true);
         setGameEnded(true);
-        setIsGameOver(true);
-        setIWon(false);
-
-        if (opponents.length > 0) {
-            setWinner(opponents[0].username);
-        } else {
-            setWinner("Adversaire");
-        }
 
         try {
             const response = await fetch(`/api/game/${gameId}/leave/`, {
@@ -700,23 +515,27 @@ function OnlineGame() {
             const data = await response.json();
 
             if (response.ok) {
-                // Enregistrer l'état d'abandon dans localStorage pour le conserver après rechargement
-                localStorage.setItem(`game_${gameId}_abandoned`, 'true');
-
                 toast.success("Vous avez quitté la partie.");
+                setIWon(false);
+                setIsGameOver(true);
 
-                // S'assurer que l'affichage correspond à ce que le serveur indique
                 if (data.winner) {
                     setWinner(data.winner);
+                } else {
+                    const otherPlayer = opponents.length > 0 ? opponents[0] : null;
+                    setWinner(otherPlayer ? otherPlayer.username : "Adversaire");
                 }
             } else {
-                toast.error("Une erreur est survenue lors de la tentative de quitter la partie.");
+                toast.error(`Erreur: ${data.error || 'Impossible de quitter la partie'}`);
+                setIsLeaving(false);
+                setGameEnded(false);
             }
         } catch (error) {
             toast.error("Une erreur est survenue lors de la tentative de quitter la partie.");
+            setIsLeaving(false);
+            setGameEnded(false);
         }
     };
-
 
     const handleLeaveGame = () => {
         toast((t) => (
@@ -752,52 +571,7 @@ function OnlineGame() {
         });
     };
 
-    if (hasSelfAbandoned) {
-        return (
-            <div
-                className="bg-gradient-to-br from-gray-900 to-black flex flex-col items-center justify-center min-h-screen p-4 font-arcade">
-                <div
-                    className="bg-gray-800 border-4 border-yellow-400 p-4 pt-8 rounded-lg shadow-2xl text-center max-w-md w-full">
-                    <h1 className="text-2xl font-bold mb-6 text-red-500">DÉFAITE</h1>
-                    <div className="bg-red-900 p-6 rounded-lg mb-6">
-                        <p className="text-white text-xl mb-2">Vous avez abandonné la partie</p>
-                    </div>
-                    <Link
-                        to="/menu"
-                        className="bg-blue-600 text-white py-3 px-6 rounded-lg hover:bg-blue-500 transform transition hover:scale-105 shadow-md w-full block"
-                    >
-                        Retour au menu
-                    </Link>
-                </div>
-                <ToastContainer position="top-right" autoClose={3000} hideProgressBar={false}/>
-            </div>
-        );
-    }
     if (isGameOver && iWon) {
-        // Vérification de sécurité pour ne jamais afficher victoire si j'ai abandonné
-        if (localStorage.getItem(`game_${gameId}_abandoned`) === 'true' || hasSelfAbandoned) {
-            return (
-                <div
-                    className="bg-gradient-to-br from-gray-900 to-black flex flex-col items-center justify-center min-h-screen p-4 font-arcade">
-                    <div
-                        className="bg-gray-800 border-4 border-yellow-400 p-4 pt-8 rounded-lg shadow-2xl text-center max-w-md w-full">
-                        <h1 className="text-2xl font-bold mb-6 text-red-500">DÉFAITE</h1>
-                        <div className="bg-red-900 p-6 rounded-lg mb-6">
-                            <p className="text-white text-xl mb-2">Vous avez abandonné la partie</p>
-                        </div>
-                        <Link
-                            to="/menu"
-                            className="bg-blue-600 text-white py-3 px-6 rounded-lg hover:bg-blue-500 transform transition hover:scale-105 shadow-md w-full block"
-                        >
-                            Retour au menu
-                        </Link>
-                    </div>
-                    <ToastContainer position="top-right" autoClose={3000} hideProgressBar={false}/>
-                </div>
-            );
-        }
-
-        // Si je n'ai pas abandonné, alors je peux afficher l'écran de victoire
         return (
             <div
                 className="bg-gradient-to-br from-gray-900 to-black flex flex-col items-center justify-center min-h-screen p-4 font-arcade">
@@ -815,7 +589,7 @@ function OnlineGame() {
                         Retour au menu
                     </Link>
                 </div>
-                <ToastContainer position="top-right" autoClose={3000} hideProgressBar={false}/>
+                <ToastContainer position="top-right" autoClose={3000} hideProgressBar={false} />
             </div>
         );
     }
@@ -838,7 +612,7 @@ function OnlineGame() {
                         Retour au menu
                     </Link>
                 </div>
-                <ToastContainer position="top-right" autoClose={3000} hideProgressBar={false}/>
+                <ToastContainer position="top-right" autoClose={3000} hideProgressBar={false} />
             </div>
         );
     }
@@ -852,7 +626,7 @@ function OnlineGame() {
                     <h2 className="text-2xl font-bold text-yellow-300 mb-4">Initialisation de la partie...</h2>
                     <p className="text-white">Veuillez patienter pendant le chargement du jeu.</p>
                 </div>
-                <ToastContainer position="top-right" autoClose={1500} hideProgressBar={true}/>
+                <ToastContainer position="top-right" autoClose={1500} hideProgressBar={true} />
             </div>
         );
     }
@@ -921,7 +695,7 @@ function OnlineGame() {
             )}
             <ToastContainer position="top-right" autoClose={1500} hideProgressBar={true} newestOnTop={false}
                             closeOnClick={false} rtl={false} pauseOnFocusLoss={false} draggable={false}
-                            pauseOnHover={false}/>
+                            pauseOnHover={false} />
         </div>
     );
 }
