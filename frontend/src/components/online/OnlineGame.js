@@ -1,11 +1,11 @@
-import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import React, {useEffect, useState} from 'react';
+import {useParams, useNavigate, Link} from 'react-router-dom';
 import OnlineCanvas from './OnlineCanvas';
-import { ToastContainer, toast } from "react-toastify";
+import {ToastContainer, toast} from "react-toastify";
 import 'react-toastify/dist/ReactToastify.css';
 
 function OnlineGame() {
-    const { gameId } = useParams();
+    const {gameId} = useParams();
     const navigate = useNavigate();
     const [gameState, setGameState] = useState(null);
     const [currentPlayer, setCurrentPlayer] = useState(null);
@@ -20,6 +20,7 @@ function OnlineGame() {
     const [isGameOver, setIsGameOver] = useState(false);
     const [winner, setWinner] = useState(null);
     const [iWon, setIWon] = useState(false);
+    const [abandon, setAbandon] = useState(false);
 
     const [points, setPoints] = useState([]);
     const [curves, setCurves] = useState([]);
@@ -126,6 +127,10 @@ function OnlineGame() {
 
                 if (gameData.state && gameData.state.abandoned_by) {
                     if (gameData.state.abandoned_by !== username) {
+                        toast.warning(`${gameData.state.abandoned_by} a abandonné la partie !`);
+                    }
+
+                    if (gameData.state.abandoned_by !== username) {
                         setIWon(true);
                         setWinner(username);
                     } else {
@@ -143,7 +148,6 @@ function OnlineGame() {
                 }
 
                 if (gameData.status === 'abandoned') {
-                    toast.warning("La partie a été abandonnée !");
                     setGameEnded(true);
                     setIsGameOver(true);
                     return;
@@ -263,8 +267,8 @@ function OnlineGame() {
                 const gameData = await gameResponse.json();
 
                 if (gameData.state && gameData.state.abandoned_by) {
-                    if (gameData.state.abandoned_by !== username) {
-                        toast.warning(`${gameData.state.abandoned_by} a abandonné la partie !`);
+                    if (gameData.state.abandoned_by.id !== playerId) {
+                        toast.warning(`${gameData.state.abandoned_by.username} a abandonné la partie !`);
                         setIWon(true);
                         setWinner(username);
                         setIsGameOver(true);
@@ -339,7 +343,7 @@ function OnlineGame() {
                                     'Content-Type': 'application/json',
                                     'Authorization': `Bearer ${localStorage.getItem('token')}`
                                 },
-                                body: JSON.stringify({ curves: curves })
+                                body: JSON.stringify({curves: curves})
                             });
                         } catch (error) {
                             // Erreur silencieuse
@@ -436,20 +440,22 @@ function OnlineGame() {
                     let winnerUsername;
 
                     if (data.state && data.state.winner) {
+                        // Utiliser le gagnant défini par le backend s'il existe
                         winnerUsername = data.state.winner;
                         setIWon(winnerUsername === username);
-                    } else if (data.currentPlayer !== undefined && data.currentPlayer !== null) {
+                    } else {
+                        // Sinon, le gagnant est l'adversaire du joueur courant
+                        // Car dans Sprouts, celui qui ne peut plus jouer perd
                         if (data.currentPlayer == playerId) {
-                            winnerUsername = username;
-                            setIWon(true);
-                        } else {
+                            // Si le joueur actuel est celui qui vient de jouer, alors son adversaire gagne
                             const otherPlayer = opponents.length > 0 ? opponents[0] : null;
                             winnerUsername = otherPlayer ? otherPlayer.username : "Adversaire";
                             setIWon(false);
+                        } else {
+                            // Si c'est l'adversaire qui est le joueur actuel, alors le joueur local gagne
+                            winnerUsername = username;
+                            setIWon(true);
                         }
-                    } else {
-                        winnerUsername = data.winner || (data.state && data.state.winner) || null;
-                        setIWon(winnerUsername === username);
                     }
 
                     setWinner(winnerUsername);
@@ -458,6 +464,7 @@ function OnlineGame() {
                     setGameEnded(true);
 
                     try {
+                        // Informer le backend du gagnant
                         const response = await fetch(`/api/game/${gameId}/move/`, {
                             method: 'POST',
                             headers: {
@@ -501,6 +508,7 @@ function OnlineGame() {
 
     const executeLeaveGame = async () => {
         setIsLeaving(true);
+        setAbandon(true);
         setGameEnded(true);
 
         try {
@@ -513,17 +521,18 @@ function OnlineGame() {
             });
 
             const data = await response.json();
+            console.log("Réponse de la tentative de quitter la partie:", data);
 
             if (response.ok) {
-                toast.success("Vous avez quitté la partie.");
+                toast.warn("Vous avez quitté la partie.");
                 setIWon(false);
                 setIsGameOver(true);
 
                 if (data.winner) {
                     setWinner(data.winner);
+                    console.log("Vous avez gagné",data.winner);
                 } else {
-                    const otherPlayer = opponents.length > 0 ? opponents[0] : null;
-                    setWinner(otherPlayer ? otherPlayer.username : "Adversaire");
+
                 }
             } else {
                 toast.error(`Erreur: ${data.error || 'Impossible de quitter la partie'}`);
@@ -571,7 +580,7 @@ function OnlineGame() {
         });
     };
 
-    if (isGameOver && iWon) {
+    if (isGameOver && iWon && !abandon) {
         return (
             <div
                 className="bg-gradient-to-br from-gray-900 to-black flex flex-col items-center justify-center min-h-screen p-4 font-arcade">
@@ -589,12 +598,34 @@ function OnlineGame() {
                         Retour au menu
                     </Link>
                 </div>
-                <ToastContainer position="top-right" autoClose={3000} hideProgressBar={false} />
+                <ToastContainer position="top-right" autoClose={3000} hideProgressBar={false}/>
+            </div>
+        );
+    }
+    if (isGameOver && !iWon && abandon) {
+        return (
+            <div
+                className="bg-gradient-to-br from-gray-900 to-black flex flex-col items-center justify-center min-h-screen p-4 font-arcade">
+                <div
+                    className="bg-gray-800 border-4 border-yellow-400 p-4 pt-8 rounded-lg shadow-2xl text-center max-w-md w-full">
+                    <h1 className="text-2xl font-bold mb-6 text-red-500">DÉFAITE</h1>
+                    <div className="bg-red-900 p-6 rounded-lg mb-6">
+                        <p className="text-white text-xl mb-2">Vous avez abandonné la partie</p>
+                        {winner && <p className="text-white">{winner} a remporté la victoire</p>}
+                    </div>
+                    <Link
+                        to="/menu"
+                        className="bg-blue-600 text-white py-3 px-6 rounded-lg hover:bg-blue-500 transform transition hover:scale-105 shadow-md w-full block"
+                    >
+                        Retour au menu
+                    </Link>
+                </div>
+                <ToastContainer position="top-right" autoClose={3000} hideProgressBar={false}/>
             </div>
         );
     }
 
-    if (isGameOver && !iWon) {
+    else if (isGameOver && !iWon) {
         return (
             <div
                 className="bg-gradient-to-br from-gray-900 to-black flex flex-col items-center justify-center min-h-screen p-4 font-arcade">
@@ -612,7 +643,7 @@ function OnlineGame() {
                         Retour au menu
                     </Link>
                 </div>
-                <ToastContainer position="top-right" autoClose={3000} hideProgressBar={false} />
+                <ToastContainer position="top-right" autoClose={3000} hideProgressBar={false}/>
             </div>
         );
     }
@@ -626,7 +657,7 @@ function OnlineGame() {
                     <h2 className="text-2xl font-bold text-yellow-300 mb-4">Initialisation de la partie...</h2>
                     <p className="text-white">Veuillez patienter pendant le chargement du jeu.</p>
                 </div>
-                <ToastContainer position="top-right" autoClose={1500} hideProgressBar={true} />
+                <ToastContainer position="top-right" autoClose={1500} hideProgressBar={true}/>
             </div>
         );
     }
@@ -695,7 +726,7 @@ function OnlineGame() {
             )}
             <ToastContainer position="top-right" autoClose={1500} hideProgressBar={true} newestOnTop={false}
                             closeOnClick={false} rtl={false} pauseOnFocusLoss={false} draggable={false}
-                            pauseOnHover={false} />
+                            pauseOnHover={false}/>
         </div>
     );
 }

@@ -484,9 +484,6 @@ const OnlineCanvas = ({points, setPoints, curves = [], setCurves, myTurn, onMove
                             newGraphString = `${selectedPoint.label}${newPoint.label}${endPointToUse.label}.}${validateGraphString(currentServerGraphString)}`;
                         }
 
-                        // Vérifier si le jeu est terminé
-                        const isGameOver = await checkGameOver(newGraphString);
-
                         setAwaitingPointPlacement(false);
                         setCurrentCurve([]);
                         toast.success("Point placé.", {autoClose: 1500});
@@ -502,8 +499,7 @@ const OnlineCanvas = ({points, setPoints, curves = [], setCurves, myTurn, onMove
                             type: 'place_point',
                             point: newPoint,
                             curve: currentCurve,
-                            graphString: newGraphString,
-                            isGameOver: isGameOver
+                            graphString: newGraphString
                         });
 
                     } catch (error) {

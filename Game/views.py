@@ -378,21 +378,22 @@ def make_move(request, game_id):
             else:
                 game_over = False
 
+            # D'abord changer le tour
+            players = list(game.players.all())
+            current_player_index = players.index(game.current_player)
+            next_player_index = (current_player_index + 1) % len(players)
+            game.current_player = players[next_player_index]
+
+            # Puis vérifier si le jeu est terminé
             if game_over:
                 print("La partie est terminée!")
-                # CORRECTION: Le gagnant est le joueur actuel qui vient de jouer
-                # car c'est l'adversaire qui ne pourra pas jouer au prochain tour
+                # Le gagnant est le joueur qui vient de jouer
+                # car c'est l'adversaire qui ne pourra pas jouer
                 winner = request.user.username
                 print(f"Le gagnant est: {winner}")
                 game.status = 'completed'
                 # Stocker le gagnant dans l'état du jeu
                 game.state["winner"] = winner
-            else:
-                # Ce n'est qu'après le placement d'un point que le tour change
-                players = list(game.players.all())
-                current_player_index = players.index(game.current_player)
-                next_player_index = (current_player_index + 1) % len(players)
-                game.current_player = players[next_player_index]
 
         elif move["type"] == "update_graph_string":
             # Cas spécial pour la mise à jour de la chaîne graphString uniquement
@@ -966,7 +967,10 @@ def leave_game(request, game_id):
             if not game.state:
                 game.state = {}
 
-            game.state['abandoned_by'] = request.user.username
+            game.state['abandoned_by'] = {
+                'username': request.user.username,
+                'id': request.user.id
+            }
             game.state['abandoned_at'] = datetime.now().isoformat()
             game.status = 'abandoned'  # Marquer le jeu comme abandonné
 
@@ -999,13 +1003,17 @@ def leave_game(request, game_id):
                 'success': True,
                 'message': 'Left game successfully',
                 'abandoned': True,
-                'abandoned_by': request.user.username,
+                'abandoned_by': {
+                    'username': request.user.username,
+                    'id': request.user.id
+                },
             })
 
     except Game.DoesNotExist:
         return JsonResponse({'error': 'Game not found'}, status=404)
     except Exception as e:
         return JsonResponse({'error': f'An error occurred: {str(e)}'}, status=500)
+
 
 
 def register(request):

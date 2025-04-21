@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import logo from '../assets/sprouts.png';
-import toast from 'react-hot-toast';
+
 
 const Header = () => {
   const [user, setUser] = useState(null);
