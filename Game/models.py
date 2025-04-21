@@ -34,6 +34,12 @@ class Game(models.Model):
     from_queue = models.BooleanField(default=False)
     # Points sélectionnés pour cette partie (basés sur les préférences communes)
     selected_points = models.IntegerField(null=True, blank=True)
+    winner = models.ForeignKey(User, related_name='games_won', on_delete=models.SET_NULL, null=True, blank=True)
+    loser = models.ForeignKey(User, related_name='games_lost', on_delete=models.SET_NULL, null=True, blank=True)
+    victory_reason = models.CharField(max_length=20, choices=[
+        ('normal', 'Victoire normale'),
+        ('abandoned', 'Abandon de l\'adversaire')
+    ], null=True, blank=True)
 
     def is_ready(self):
         return all(self.player_ready.values())
