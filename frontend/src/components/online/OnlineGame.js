@@ -200,22 +200,25 @@ function OnlineGame() {
                 } else if (gameData.state && gameData.state.curves) {
                     setCurves(gameData.state.curves);
                 }
-
                 if (gameData.isGameOver ||
                     (gameData.state && gameData.state.winner) ||
                     gameData.status === 'completed') {
+                    console.log("Partie terminée:", gameData);
 
                     const winnerFromData = gameData.winner ||
-                        (gameData.state && gameData.state.winner) ||
+                        (gameData.state && gameData.state.winner ? gameData.state.winner.username : null) ||
                         null;
-
+                    console.log("Gagnant:", winnerFromData);
                     setIsGameOver(true);
                     setWinner(winnerFromData);
-                    setIWon(winnerFromData === username);
 
                     if (winnerFromData) {
+                        // Je suis le gagnant si mon nom d'utilisateur correspond
+                        setIWon(winnerFromData === username);
                         toast.info(`Partie terminée! ${winnerFromData} a gagné!`);
                     } else {
+                        console.log("aya fraté ya un prob")
+                        // Aucun gagnant défini, on considère que l'adversaire a gagné
                         const players = opponents.map(p => p.username).concat([username]);
                         const otherPlayer = players.find(p => p !== username);
 
@@ -225,6 +228,7 @@ function OnlineGame() {
                     }
 
                     setGameEnded(true);
+                    clearInterval(intervalId); // Stop the interval
                     return;
                 }
 
@@ -278,8 +282,15 @@ function OnlineGame() {
                     }
                 }
 
+                if (gameData.status === 'completed') {
+                    setGameEnded(true);
+                    setIsGameOver(true);
+                    setWinner(gameData.state.winner.username);
+                    clearInterval(intervalId); // Stop the interval
+                    return;
+                }
+
                 if (gameData.status === 'abandoned') {
-                    toast.warning("La partie a été abandonnée !");
                     setGameEnded(true);
                     setIsGameOver(true);
                     if (gameData.players && gameData.players.length > 0) {
@@ -436,23 +447,29 @@ function OnlineGame() {
 
                 if (data.isGameOver) {
                     setIsGameOver(true);
-
+                    let winnerId;
                     let winnerUsername;
 
                     if (data.state && data.state.winner) {
                         // Utiliser le gagnant défini par le backend s'il existe
-                        winnerUsername = data.state.winner;
-                        setIWon(winnerUsername === username);
+                        console.log("Le gagnant est:", data.state.winner);
+                        console.log("Le joueur actuel est:", playerId);
+                        winnerId = data.state.winner.id;
+                        winnerUsername = data.state.winner.username;
+                        setIWon(winnerId === playerId);
                     } else {
                         // Sinon, le gagnant est l'adversaire du joueur courant
                         // Car dans Sprouts, celui qui ne peut plus jouer perd
                         if (data.currentPlayer == playerId) {
                             // Si le joueur actuel est celui qui vient de jouer, alors son adversaire gagne
-                            const otherPlayer = opponents.length > 0 ? opponents[0] : null;
-                            winnerUsername = otherPlayer ? otherPlayer.username : "Adversaire";
                             setIWon(false);
+                            // Trouver l'adversaire pour définir comme gagnant
+                            const opponent = opponents.length > 0 ? opponents[0] : null;
+                            winnerId = opponent ? opponent.id : null;
+                            winnerUsername = opponent ? opponent.username : "Adversaire";
                         } else {
                             // Si c'est l'adversaire qui est le joueur actuel, alors le joueur local gagne
+                            winnerId = playerId;
                             winnerUsername = username;
                             setIWon(true);
                         }
@@ -473,7 +490,10 @@ function OnlineGame() {
                             },
                             body: JSON.stringify({
                                 type: 'update_winner',
-                                winner: winnerUsername,
+                                winner: {
+                                    id: winnerId,
+                                    username: winnerUsername
+                                },
                                 isGameOver: true
                             })
                         });
@@ -485,7 +505,6 @@ function OnlineGame() {
                     } catch (error) {
                         console.error("Erreur lors de l'envoi du gagnant:", error);
                     }
-
                     return;
                 }
             } else {
@@ -530,7 +549,7 @@ function OnlineGame() {
 
                 if (data.winner) {
                     setWinner(data.winner);
-                    console.log("Vous avez gagné",data.winner);
+                    console.log("Vous avez gagné", data.winner);
                 } else {
 
                 }
@@ -623,9 +642,7 @@ function OnlineGame() {
                 <ToastContainer position="top-right" autoClose={3000} hideProgressBar={false}/>
             </div>
         );
-    }
-
-    else if (isGameOver && !iWon) {
+    } else if (isGameOver && !iWon) {
         return (
             <div
                 className="bg-gradient-to-br from-gray-900 to-black flex flex-col items-center justify-center min-h-screen p-4 font-arcade">

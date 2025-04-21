@@ -389,7 +389,10 @@ def make_move(request, game_id):
                 print("La partie est terminée!")
                 # Le gagnant est le joueur qui vient de jouer
                 # car c'est l'adversaire qui ne pourra pas jouer
-                winner = request.user.username
+                winner = {
+                    'username': request.user.username,
+                    'id': request.user.id
+                }
                 print(f"Le gagnant est: {winner}")
                 game.status = 'completed'
                 # Stocker le gagnant dans l'état du jeu
