@@ -15,6 +15,7 @@ from django.db.models import Q
 from datetime import datetime, timedelta
 from django.db import transaction
 from .utils.move_over import is_game_over
+from .utils.move_generator import generate_possible_moves 
 
 # Configure the logger
 logger = logging.getLogger(__name__)
@@ -1147,6 +1148,18 @@ def check_game_over(request):
         except json.JSONDecodeError:
             return JsonResponse({'error': 'Invalid JSON'}, status=400)
     return JsonResponse({'error': 'Invalid request method'}, status=405)
+
+@csrf_exempt
+def get_possible_moves(request):
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        graph_string = data.get('graph_string')
+
+        # Appelez votre fonction pour obtenir les coups possibles
+        possible_moves = generate_possible_moves(graph_string)
+
+        return JsonResponse({'possible_moves': possible_moves})
+    return JsonResponse({'error': 'Invalid request method'}, status=400)
 
 
 @login_required
