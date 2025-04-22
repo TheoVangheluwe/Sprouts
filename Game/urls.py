@@ -49,6 +49,8 @@ urlpatterns = [
     # API pour la fin du jeu
     path('api/is_game_over/', views.check_game_over, name='check_game_over'),
 
+    path('api/get_possible_moves/', views.get_possible_moves, name='get_possible_moves'),
+    
     # APIs pour la file d'attente
     path('api/queue/join/', views.join_queue, name='join_queue'),
     path('api/queue/ready/', views.set_ready, name='set_ready'),

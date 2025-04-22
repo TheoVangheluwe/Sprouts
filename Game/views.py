@@ -15,6 +15,7 @@ from django.db.models import Q
 from datetime import datetime, timedelta
 from django.db import transaction
 from .utils.move_over import is_game_over
+from .utils.move_generator import generate_possible_moves 
 
 # Configure the logger
 logger = logging.getLogger(__name__)
@@ -1256,7 +1257,7 @@ def get_user_games(request):
     user = request.user
 
     # Récupère tous les jeux où l'utilisateur est dans la relation ManyToMany
-    games = Game.objects.filter(players=user)
+    games = Game.objects.filter(players=user).order_by('-id') #on va les order by de manière à ce qu'on est les premières d'abbord (id grand)
 
     data = [
         {
@@ -1286,6 +1287,18 @@ def check_game_over(request):
             return JsonResponse({'error': 'Invalid JSON'}, status=400)
     return JsonResponse({'error': 'Invalid request method'}, status=405)
 
+@csrf_exempt
+def get_possible_moves(request):
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        graph_string = data.get('graph_string')
+
+        # Appelez votre fonction pour obtenir les coups possibles
+        possible_moves = generate_possible_moves(graph_string)
+
+        return JsonResponse({'possible_moves': possible_moves})
+    return JsonResponse({'error': 'Invalid request method'}, status=400)
+
 
 @login_required
 def game_summary(request, game_id):
@@ -1296,9 +1309,12 @@ def game_summary(request, game_id):
 
     data = {
         "game_id": game.id,
-        "status": game.status if hasattr(game, 'status') else "inconnu",
-        "created_at": game.created_at.strftime("%Y-%m-%d %H:%M") if hasattr(game, 'created_at') else "inconnu",
-        "players": [player.username for player in game.players.all()]  # relation ManyToMany
+        "status": game.status,
+        "created_at": game.created_at.strftime("%Y-%m-%d %H:%M"),
+        "players": [player.username for player in game.players.all()],
+        "curves": game.state.get("curves", []),
+        "points": game.state.get("points", []),
+        "selected_points": game.selected_points or 3 #backup au cas où pour le "or 3"
     }
 
     return JsonResponse(data)

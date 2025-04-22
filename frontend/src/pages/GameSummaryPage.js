@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
+import ReplayCanvas from '../components/replay/ReplayCanvas';
 
 const GameSummaryPage = () => {
   const { gameId } = useParams();
   const [game, setGame] = useState(null);
+  const [step, setStep] = useState(0);
 
   useEffect(() => {
     fetch(`/api/game/${gameId}/summary/`, {
@@ -11,32 +13,70 @@ const GameSummaryPage = () => {
       credentials: 'include'
     })
       .then(res => res.json())
-      .then(data => setGame(data))
+      .then(data => {
+        setGame(data);
+        setStep(0); // on commence au tour 0
+      })
       .catch(err => console.error('Erreur:', err));
   }, [gameId]);
 
+  const next = () => {
+    if (game && step < game.curves.length) setStep(step + 1);
+  };
+
+  const prev = () => {
+    if (step > 0) setStep(step - 1);
+  };
+
   return (
-    <div className="bg-gradient-to-br from-gray-900 to-black flex flex-col items-center justify-center min-h-screen p-4 font-arcade">
-      <div className="bg-gray-800 border-4 border-yellow-400 p-8 rounded-lg shadow-2xl text-center max-w-2xl w-full">
+    <div className="bg-gradient-to-br from-gray-900 to-black min-h-screen flex flex-col items-center justify-center p-6 font-arcade text-white">
+      <div className="bg-gray-800 border-4 border-yellow-400 p-6 rounded-xl shadow-2xl w-full max-w-3xl text-center">
         <h1 className="text-4xl font-bold mb-6 text-yellow-300 animate-pulse">
           🧾 Résumé de la partie #{gameId}
         </h1>
 
         {game ? (
-          <div className="text-white space-y-4 text-left">
-            <p>
-              <span className="text-yellow-400 font-semibold">📅 Créée le :</span> {game.created_at}
+          <>
+            <div className="bg-white border-4 border-yellow-400 rounded-xl p-4 shadow-xl inline-block">
+              <ReplayCanvas
+                curves={game.curves}
+                points={game.points || []}
+                currentStep={step}
+                initialPointCount={game.selected_points || 3}
+              />
+            </div>
+
+            <div className="mt-6 flex gap-6 justify-center">
+              <button
+                onClick={prev}
+                disabled={step === 0}
+                className={`px-4 py-2 rounded-lg font-bold transition ${
+                  step === 0 ? 'bg-gray-500 cursor-not-allowed' : 'bg-yellow-500 hover:bg-yellow-400 text-black'
+                }`}
+              >
+                ← Reculer
+              </button>
+              <button
+                onClick={next}
+                disabled={step === game.curves.length}
+                className={`px-4 py-2 rounded-lg font-bold transition ${
+                  step === game.curves.length ? 'bg-gray-500 cursor-not-allowed' : 'bg-yellow-500 hover:bg-yellow-400 text-black'
+                }`}
+              >
+                Avancer →
+              </button>
+            </div>
+
+            <p className="mt-3 text-sm text-gray-300">
+              Coup n°{step} / {game.curves.length}
             </p>
-            <p>
-              <span className="text-yellow-400 font-semibold">🎮 Statut :</span> {game.status}
+
+            <p className="text-sm text-gray-400 mt-1">
+              Points de départ : {game.selected_points || 3}
             </p>
-            <p>
-              <span className="text-yellow-400 font-semibold">👤 Joueurs :</span> {game.players?.join(', ')}
-            </p>
-            {/* Tu peux afficher ici le gagnant ou durée si dispo */}
-          </div>
+          </>
         ) : (
-          <p className="text-white">Chargement...</p>
+          <p className="text-gray-400">Chargement des données...</p>
         )}
       </div>
     </div>
@@ -44,3 +84,4 @@ const GameSummaryPage = () => {
 };
 
 export default GameSummaryPage;
+
