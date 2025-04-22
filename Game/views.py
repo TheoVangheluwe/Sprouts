@@ -1158,9 +1158,12 @@ def game_summary(request, game_id):
 
     data = {
         "game_id": game.id,
-        "status": game.status if hasattr(game, 'status') else "inconnu",
-        "created_at": game.created_at.strftime("%Y-%m-%d %H:%M") if hasattr(game, 'created_at') else "inconnu",
-        "players": [player.username for player in game.players.all()]  # relation ManyToMany
+        "status": game.status,
+        "created_at": game.created_at.strftime("%Y-%m-%d %H:%M"),
+        "players": [player.username for player in game.players.all()],
+        "curves": game.state.get("curves", []),
+        "points": game.state.get("points", []),
+        "selected_points": game.selected_points or 3 #backup au cas où pour le "or 3"
     }
 
     return JsonResponse(data)
