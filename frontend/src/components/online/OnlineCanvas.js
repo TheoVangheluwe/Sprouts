@@ -5,8 +5,6 @@ import {
     getMousePos,
     getNearPoint,
     canConnect,
-    connectPoints,
-    curveIntersects,
     curveLength,
     getNextLabel,
     getClosestPointOnCurve,

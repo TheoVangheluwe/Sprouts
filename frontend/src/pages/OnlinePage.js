@@ -1,23 +1,21 @@
-import React, {useEffect, useState, useRef} from 'react';
-import {useParams, useNavigate, Link} from 'react-router-dom';
+import React, { useEffect, useState, useRef } from 'react';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import OnlineCanvas from '../components/online/OnlineCanvas';
-import {ToastContainer, toast} from "react-toastify";
+import { ToastContainer, toast } from "react-toastify";
 import 'react-toastify/dist/ReactToastify.css';
 
 const LoadingScreen = () => {
     return (
-        <div
-            className="bg-gradient-to-br from-gray-900 to-black flex flex-col items-center justify-center min-h-screen p-4 font-arcade">
-            <div
-                className="bg-gray-800 border-4 border-yellow-400 p-8 rounded-lg shadow-2xl text-center max-w-md w-full">
+        <div className="bg-gradient-to-br from-gray-900 to-black flex flex-col items-center justify-center min-h-screen p-4 font-arcade">
+            <div className="bg-gray-800 border-4 border-yellow-400 p-8 rounded-lg shadow-2xl text-center max-w-md w-full">
                 <h2 className="text-2xl font-bold text-yellow-300 mb-4">Initialisation de la partie...</h2>
                 <div className="loading-container my-6">
                     <div className="loading-points">
-                        <div className="point" style={{animationDelay: '0s'}}></div>
-                        <div className="point" style={{animationDelay: '0.3s'}}></div>
-                        <div className="point" style={{animationDelay: '0.6s'}}></div>
-                        <div className="point" style={{animationDelay: '0.9s'}}></div>
-                        <div className="point" style={{animationDelay: '1.2s'}}></div>
+                        <div className="point" style={{ animationDelay: '0s' }}></div>
+                        <div className="point" style={{ animationDelay: '0.3s' }}></div>
+                        <div className="point" style={{ animationDelay: '0.6s' }}></div>
+                        <div className="point" style={{ animationDelay: '0.9s' }}></div>
+                        <div className="point" style={{ animationDelay: '1.2s' }}></div>
                         <div className="curve"></div>
                     </div>
                 </div>
@@ -93,7 +91,7 @@ const LoadingScreen = () => {
 };
 
 function OnlinePage() {
-    const {gameId} = useParams();
+    const { gameId } = useParams();
     const navigate = useNavigate();
     const [gameState, setGameState] = useState(null);
     const [currentPlayer, setCurrentPlayer] = useState(null);
@@ -183,10 +181,9 @@ function OnlinePage() {
         // Mettre en place un intervalle pour la synchronisation et le décompte
         timerInterval.current = setInterval(() => {
             // Synchroniser avec le serveur toutes les 5 secondes (5000ms)
-            if (timerCounter.current % 2 === 0) {
+            if (timerCounter.current % 5 === 0) {
                 syncTimers();
             }
-
 
             // Décompte local entre les synchronisations
             if (isMyTurn) {
@@ -345,7 +342,6 @@ function OnlinePage() {
 
                 if (gameData.state && gameData.state.abandoned_by) {
 
-
                     if (gameData.state.abandoned_by !== username) {
                         setIWon(true);
                         setWinner(username);
@@ -416,8 +412,6 @@ function OnlinePage() {
                     setAllPlayersReady(true);
                     setPointsLoaded(true);
                 }
-                setAllPlayersReady(true);
-                setPointsLoaded(true);
 
                 if (gameData.points && gameData.points.length > 0) {
                     setPoints(gameData.points);
@@ -612,7 +606,7 @@ function OnlinePage() {
                                     'Content-Type': 'application/json',
                                     'Authorization': `Bearer ${localStorage.getItem('token')}`
                                 },
-                                body: JSON.stringify({curves: curves})
+                                body: JSON.stringify({ curves: curves })
                             });
                         } catch (error) {
                             // Erreur silencieuse
@@ -684,7 +678,6 @@ function OnlinePage() {
             }
 
             move.timer = myTimer;
-
 
             const response = await fetch(`/api/game/${gameId}/move/`, {
                 method: 'POST',
@@ -891,7 +884,7 @@ function OnlinePage() {
 
     // Condition modifiée pour l'écran de chargement
     if (!gameInitialized || !pointsLoaded) {
-        return <LoadingScreen/>;
+        return <LoadingScreen />;
     }
 
     if (isGameOver && iWon && !abandon) {
@@ -912,7 +905,7 @@ function OnlinePage() {
                         Retour au menu
                     </Link>
                 </div>
-                <ToastContainer position="top-right" autoClose={3000} hideProgressBar={false}/>
+                <ToastContainer position="top-right" autoClose={3000} hideProgressBar={false} />
             </div>
         );
     }
@@ -934,7 +927,7 @@ function OnlinePage() {
                         Retour au menu
                     </Link>
                 </div>
-                <ToastContainer position="top-right" autoClose={3000} hideProgressBar={false}/>
+                <ToastContainer position="top-right" autoClose={3000} hideProgressBar={false} />
             </div>
         );
     } else if (isGameOver && !iWon) {
@@ -955,11 +948,10 @@ function OnlinePage() {
                         Retour au menu
                     </Link>
                 </div>
-                <ToastContainer position="top-right" autoClose={3000} hideProgressBar={false}/>
+                <ToastContainer position="top-right" autoClose={3000} hideProgressBar={false} />
             </div>
         );
     }
-
 
     return (
         <div
@@ -1049,7 +1041,7 @@ function OnlinePage() {
                 )}
                 <ToastContainer position="top-right" autoClose={1500} hideProgressBar={true} newestOnTop={false}
                                 closeOnClick={false} rtl={false} pauseOnFocusLoss={false} draggable={false}
-                                pauseOnHover={false}/>
+                                pauseOnHover={false} />
             </div>
         </div>
     );
