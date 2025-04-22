@@ -1118,7 +1118,7 @@ def get_user_games(request):
     user = request.user
 
     # Récupère tous les jeux où l'utilisateur est dans la relation ManyToMany
-    games = Game.objects.filter(players=user)
+    games = Game.objects.filter(players=user).order_by('-id') #on va les order by de manière à ce qu'on est les premières d'abbord (id grand)
 
     data = [
         {
