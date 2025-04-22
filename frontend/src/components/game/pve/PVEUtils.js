@@ -440,83 +440,85 @@ export const generateGraphString = (startPoint, addedPoint, endPoint, currentGra
 
     let chosenRegion = [];
 
+    let areAreasIdentical=false;
+    
     // Créer la nouvelle région
     let regionString = `${startPoint.label}${addedPoint.label}${endPoint.label}`;
-
+    
     // Trouver toutes les régions
     const areas = findRegions(currentGraphString);
-
+    
     // Trouver la région pertinente
     const relevantArea = areas.filter(area => area.includes(startPoint.label) && area.includes(endPoint.label));
-
-    console.log(relevantArea)
-
-    // Il y a 2 régions pertinentes 
+    
+    console.log(relevantArea);
+    
+    // Il y a 2 régions pertinentes
     if (relevantArea.length > 1) {
-
-      console.log("Il y a plusieurs régions pertinentes")
-
-      const areAreasIdentical = relevantArea.every(region => region === relevantArea[0]);
-
-      console.log(areAreasIdentical)
-
+    
+      console.log("Il y a plusieurs régions pertinentes");
+    
+      areAreasIdentical = relevantArea.every(region => region === relevantArea[0]);
+    
+      console.log(areAreasIdentical);
+    
       // Les 2 régions pertinentes sont différentes
       if (!areAreasIdentical) {
-
-        console.log(relevantArea[0])
-
+    
+        console.log(relevantArea[0]);
+    
         // Trouver toutes les frontières et les extraire en un seul tableau
         const boundariesArea1 = Object.values(findFrontieres(relevantArea.slice(0, 1))).flat();
-
+    
         // Trouver la frontière pertinente
-        const relevantBoundarieArea1= boundariesArea1.filter(boundary => boundary.includes(startPoint.label) && boundary.includes(endPoint.label));
-
+        const relevantBoundarieArea1 = boundariesArea1.filter(boundary => boundary.includes(startPoint.label) && boundary.includes(endPoint.label));
+    
         // Trouver toutes les frontières non pertinentes
         const nonRelevantBoundariesArea1 = boundariesArea1.filter(boundary => !boundary.includes(startPoint.label) && !boundary.includes(endPoint.label));
-
+    
         // Trouver toutes les frontières et les extraire en un seul tableau
         const boundariesArea2 = Object.values(findFrontieres(relevantArea.slice(1, 2))).flat();
-
+    
         // Trouver la frontière pertinente
-        const relevantBoundarieArea2= boundariesArea2.filter(boundary => boundary.includes(startPoint.label) && boundary.includes(endPoint.label));
-
+        const relevantBoundarieArea2 = boundariesArea2.filter(boundary => boundary.includes(startPoint.label) && boundary.includes(endPoint.label));
+    
         // Trouver toutes les frontières non pertinentes
         const nonRelevantBoundariesArea2 = boundariesArea2.filter(boundary => !boundary.includes(startPoint.label) && !boundary.includes(endPoint.label));
-
+    
         // Vérifier si les frontières pertinentes sont les mêmes
         const areBoundariesIdentical = JSON.stringify(relevantBoundarieArea1) === JSON.stringify(relevantBoundarieArea2);
-
+    
         // Les frontières sont différentes, utiliser isFrontiereInRegion pour déterminer la région choisie
-        if(!areBoundariesIdentical){
+        if (!areBoundariesIdentical) {
           if (isFrontiereInRegion(addedPoint.label, relevantBoundarieArea1[0], curveMap, points)) {
             chosenRegion.push(relevantArea[0]);
           } else {
             chosenRegion.push(relevantArea[1]);
           }
-          console.log(chosenRegion)
+          console.log(chosenRegion);
         }
         // Les frontières pertinentes sont identiques, utilisons les frontières non pertinentes
-        else{
+        else {
           let temporaryRegion;
           let temporaryRegionIndex;
-
+    
           // Si la première région n'a pas de frontière non pertinente, on prends la deuxième
           if (nonRelevantBoundariesArea1.length === 0) {
             temporaryRegion = nonRelevantBoundariesArea2[0];
             temporaryRegionIndex = 1;
-          } 
-          //Sinon on prends la première
+          }
+          // Sinon on prends la première
           else {
             temporaryRegion = nonRelevantBoundariesArea1[0];
             temporaryRegionIndex = 0;
           }
-
+    
           // Vérifier si la première frontière non pertinente est comprise dans la frontière pertinente
           const isFirstNonRelevantInRelevant = isFrontiereInRegion(temporaryRegion, relevantBoundarieArea1[0], curveMap, points);
-
+    
           // Vérifier si le point ajouté est compris dans la frontière pertinente
           const isAddedPointInRelevant = isFrontiereInRegion(addedPoint.label, relevantBoundarieArea1[0], curveMap, points);
-
+    
           // Déterminer la région choisie
           if (isFirstNonRelevantInRelevant && isAddedPointInRelevant) {
             chosenRegion.push(relevantArea[temporaryRegionIndex]);
@@ -530,20 +532,27 @@ export const generateGraphString = (startPoint, addedPoint, endPoint, currentGra
         console.log("Les régions pertinentes sont identiques. On choisit la première arbitrairement.");
         chosenRegion.push(relevantArea[0]);
       }
-      
+    
     }
-    // l y a une seule région pertinente
-    else{
+    // Il y a une seule région pertinente
+    else {
       chosenRegion = relevantArea;
     }
-
-    console.log(areas)
+    
+    console.log(areas);
     console.log(chosenRegion);
-
+    
     // Filtrer les régions non pertinentes
-    const nonRelevantAreas = areas.filter(area => area !== chosenRegion[0]);
+    let nonRelevantAreas = areas.filter(area => !chosenRegion.includes(area));
 
-    console.log(nonRelevantAreas)
+    console.log(areAreasIdentical)
+    
+    // Ajouter la région choisie en première position si elle n'est pas déjà présente
+    if (areAreasIdentical===true){
+      nonRelevantAreas.unshift(chosenRegion[0]);
+    }
+    
+    console.log(nonRelevantAreas);    
 
     // Trouver toutes les frontières et les extraire en un seul tableau
     const boundariesArea = Object.values(findFrontieres(chosenRegion)).flat();
