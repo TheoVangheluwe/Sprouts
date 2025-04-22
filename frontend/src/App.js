@@ -12,7 +12,7 @@ import PVEGamePage from './pages/PVEGamePage';
 import AIGamePage from './pages/AIGamePage';
 import MultiplayerGamePage from './pages/MultiplayerGamePage';
 import WaitingRoom from './components/game/WaitingRoom';
-import OnlineGame from './components/online/OnlineGame';
+import OnlinePage from './pages/OnlinePage';
 import LegalPage from './pages/LegalPage';
 import HistoricPage from './pages/HistoricPage';
 import GameSummaryPage from './pages/GameSummaryPage';
@@ -32,7 +32,7 @@ const App = () => {
             <Route path="/multiplayer" element={<MultiplayerGamePage />} />
             <Route path="/rules" element={<RulesPage />} />
             <Route path="/waiting-room" element={<WaitingRoom />} />
-            <Route path="/online-game/:gameId" element={<OnlineGame />} />
+            <Route path="/online-game/:gameId" element={<OnlinePage />} />
             <Route path="/legal" element={<LegalPage />} />
             <Route path="/historic" element={<HistoricPage />} />
             <Route path="/historic/:gameId" element={<GameSummaryPage />} />

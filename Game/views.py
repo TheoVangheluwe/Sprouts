@@ -70,13 +70,16 @@ def waiting_room_view(request):
         return redirect('login_redirect')
     return ReactAppView(request)
 
+
 def menu_view(request):
     """Vue pour game recap"""
     return ReactAppView(request)
 
+
 def profil_view(request):
     """Vue pour game recap"""
     return ReactAppView(request)
+
 
 def online_game_view(request, game_id):
     """Vue pour un jeu en ligne spécifique"""
@@ -178,11 +181,22 @@ def game_status(request, game_id):
 def game_state(request, game_id):
     try:
         game = Game.objects.get(id=game_id)
+
+        # Vérifier si tous les joueurs ont chargé leurs points
+        all_players_ready = True
+        for player in game.players.all():
+            if str(player.id) not in game.state.get('players_points_loaded', {}) or not \
+                    game.state['players_points_loaded'][str(player.id)]:
+                all_players_ready = False
+                break
+
         return JsonResponse({
             'status': game.status,
             'state': game.state,
             'currentPlayer': game.current_player.id if game.current_player else None,
-            'point_options': game.point_options
+            'point_options': game.point_options,
+            'all_players_ready': all_players_ready,
+            'players_ready': game.state.get('players_points_loaded', {})
         })
     except Game.DoesNotExist:
         return JsonResponse({'error': 'Game not found'}, status=404)
@@ -194,7 +208,7 @@ def start_game(request, game_id):
     try:
         game = Game.objects.get(id=game_id)
 
-        if game.player_count >= 2 and game.status == "waiting" and all(game.player_ready.values()):
+        if game.player_count >= 2 and game.status == "waiting" and all(game.player_dy.values()):
             game.status = "started"
             game.save()
             return JsonResponse({'success': True, 'message': 'Game started'})
@@ -218,6 +232,7 @@ def validate_graph_string(graph_string, points):
         graph_string = prefix + graph_string
 
     return graph_string
+
 
 @csrf_exempt
 @login_required(login_url='login')
@@ -378,6 +393,35 @@ def make_move(request, game_id):
             else:
                 game_over = False
 
+                # Gestion du timer
+                if "timer" in move:
+                    # Initialiser le dictionnaire des timers s'il n'existe pas
+                    if "timers" not in game.state:
+                        game.state["timers"] = {}
+
+                    # Enregistrer le temps restant
+                    game.state["timers"][str(request.user.id)] = move["timer"]
+
+                    # Enregistrer également un timestamp pour le dernier mouvement
+                    if "last_move_time" not in game.state:
+                        game.state["last_move_time"] = {}
+
+                    game.state["last_move_time"][str(request.user.id)] = datetime.now().timestamp()
+
+                    # Vérifier si le timer est à 0
+                    if move["timer"] <= 0:
+                        # Le joueur a perdu par timeout
+                        game_over = True
+                        # Le gagnant est l'adversaire
+                        winner = next((p for p in game.players.all() if p.id != request.user.id), None)
+                        if winner:
+                            winner = {
+                                'username': winner.username,
+                                'id': winner.id
+                            }
+                            game.state["winner"] = winner
+                            game.status = 'completed'
+
             # D'abord changer le tour
             players = list(game.players.all())
             current_player_index = players.index(game.current_player)
@@ -450,6 +494,97 @@ def make_move(request, game_id):
         return JsonResponse({'error': f'An error occurred: {str(e)}'}, status=500)
 
 
+@login_required(login_url='login')
+def get_game_timers(request, game_id):
+    try:
+        game = Game.objects.get(id=game_id)
+
+        # Vérifier si le joueur fait partie de la partie
+        if request.user not in game.players.all():
+            return JsonResponse({'error': 'Vous n\'êtes pas autorisé à accéder à cette partie.'}, status=403)
+
+        if "timers" not in game.state:
+            game.state["timers"] = {}
+            for player in game.players.all():
+                game.state["timers"][str(player.id)] = 600  # 10 minutes par défaut
+
+        if "last_move_time" not in game.state:
+            game.state["last_move_time"] = {}
+
+        current_player_id = str(game.current_player.id) if game.current_player else None
+        requester_id = str(request.user.id)
+
+        # 🛑 Ne décompte le timer que si c'est le joueur actuel qui fait la requête
+        if current_player_id == requester_id and current_player_id in game.state["timers"]:
+            if current_player_id in game.state["last_move_time"]:
+                last_move_time = game.state["last_move_time"][current_player_id]
+                current_time = datetime.now().timestamp()
+
+                elapsed_seconds = int(current_time - last_move_time)
+
+                if elapsed_seconds > 0:
+                    previous_timer = game.state["timers"][current_player_id]
+                    game.state["timers"][current_player_id] = max(0, previous_timer - elapsed_seconds)
+
+                game.state["last_move_time"][current_player_id] = current_time
+                game.save()
+            else:
+                game.state["last_move_time"][current_player_id] = datetime.now().timestamp()
+                game.save()
+
+        return JsonResponse({
+            'timers': game.state["timers"],
+            'current_player': current_player_id
+        })
+
+    except Game.DoesNotExist:
+        return JsonResponse({'error': 'Partie non trouvée'}, status=404)
+
+
+
+@csrf_exempt
+@login_required(login_url='login')
+def player_ready_to_play(request, game_id):
+    """Signaler qu'un joueur a chargé ses points et est prêt à jouer"""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Invalid request method'}, status=405)
+
+    try:
+        with transaction.atomic():
+            game = Game.objects.select_for_update().get(id=game_id)
+
+            # Vérifier si le joueur est dans cette partie
+            if request.user not in game.players.all():
+                return JsonResponse({'error': 'Vous n\'êtes pas autorisé à accéder à cette partie.'}, status=403)
+
+            # Initialiser le dictionnaire players_points_loaded s'il n'existe pas
+            if 'players_points_loaded' not in game.state:
+                game.state['players_points_loaded'] = {}
+
+            # Marquer ce joueur comme prêt
+            game.state['players_points_loaded'][str(request.user.id)] = True
+            game.save()
+
+            # Vérifier si tous les joueurs ont chargé leurs points
+            all_players_ready = True
+            for player in game.players.all():
+                if str(player.id) not in game.state.get('players_points_loaded', {}) or not \
+                        game.state['players_points_loaded'][str(player.id)]:
+                    all_players_ready = False
+                    break
+
+            return JsonResponse({
+                'success': True,
+                'all_players_ready': all_players_ready,
+                'players_ready': game.state.get('players_points_loaded', {})
+            })
+
+    except Game.DoesNotExist:
+        return JsonResponse({'error': 'Partie non trouvée'}, status=404)
+    except Exception as e:
+        return JsonResponse({'error': f'Une erreur est survenue: {str(e)}'}, status=500)
+
+
 @csrf_exempt
 @login_required(login_url='login')
 def create_game(request):
@@ -494,7 +629,10 @@ def create_game(request):
                     player_count=1,
                     current_player=request.user,
                     point_options=point_options,
-                    state={"curves": [], "points": []},
+                    state={"curves": [], "points": [], "timers": {
+                        str(request.user.id): 600,
+                        str(matched_entry.user.id): 600
+                    }},
                     from_queue=True  # Marquer explicitement comme venant de la file d'attente
                 )
                 waiting_room.players.add(request.user)
@@ -1018,7 +1156,6 @@ def leave_game(request, game_id):
         return JsonResponse({'error': f'An error occurred: {str(e)}'}, status=500)
 
 
-
 def register(request):
     if request.method == 'POST':
         form = UserCreationForm(request.POST)
@@ -1044,6 +1181,7 @@ def login_view(request):
         if 'next' in request.GET:
             messages.error(request, "Vous devez être connecté pour accéder à cette page.")
     return render(request, 'login.html')
+
 
 @csrf_exempt
 def logout_view(request):

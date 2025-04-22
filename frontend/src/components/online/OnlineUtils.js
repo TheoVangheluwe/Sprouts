@@ -629,6 +629,8 @@ export const generateGraphString = (startPoint, addedPoint, endPoint, currentGra
     // Cas n°3: Les deux points sont déjà reliés
     else if (!startIsIsolated && !endIsIsolated && startPoint !== endPoint) {
         console.log("Cas où les deux points sont différents et non isolés");
+        let areAreasIdentical;
+        let nonRelevantAreas;
         try {
             let chosenRegion = [];
 
@@ -661,7 +663,7 @@ export const generateGraphString = (startPoint, addedPoint, endPoint, currentGra
 
                 console.log("Il y a plusieurs régions pertinentes")
 
-                const areAreasIdentical = relevantArea.every(region => region === relevantArea[0]);
+                areAreasIdentical = relevantArea.every(region => region === relevantArea[0]);
 
                 console.log(areAreasIdentical)
 
@@ -697,6 +699,19 @@ export const generateGraphString = (startPoint, addedPoint, endPoint, currentGra
                         if (isFrontiereInRegion(addedPoint.label, relevantBoundarieArea1[0], curveMap, points)) {
                             chosenRegion.push(relevantArea[0]);
                             console.log("CAS 1")
+                        } else if ((!isFrontiereInRegion(addedPoint.label, relevantBoundarieArea2[0], curveMap, points)) && (!pointIsInRegion(addedPoint.label, relevantBoundarieArea2[0], curveMap, points, addedPoint))) {
+                            areaOfPolygon(addedPoint.label, relevantBoundarieArea1[0], curveMap, points)
+                            const area1 = areaOfPolygon(addedPoint.label, relevantBoundarieArea1[0], curveMap, points);
+                            const area2 = areaOfPolygon(addedPoint.label, relevantBoundarieArea2[0], curveMap, points);
+                            console.log("Area 1:", area1);
+                            console.log("Area 2:", area2);
+                            console.log("Area 1 > Area 2", area1 > area2);
+                            // Si la première région est plus grande, on choisit la première
+                            if (area1 > area2) {
+                                chosenRegion.push(relevantArea[0]);
+                            } else {
+                                chosenRegion.push(relevantArea[1]);
+                            }
                         } else if (!isFrontiereInRegion(addedPoint.label, relevantBoundarieArea2[0], curveMap, points)) {
                             areaOfPolygon(addedPoint.label, relevantBoundarieArea1[0], curveMap, points)
                             const area1 = areaOfPolygon(addedPoint.label, relevantBoundarieArea1[0], curveMap, points);
@@ -708,7 +723,7 @@ export const generateGraphString = (startPoint, addedPoint, endPoint, currentGra
                             if (area1 < area2) {
                                 chosenRegion.push(relevantArea[0]);
                             } else {
-                               chosenRegion.push(relevantArea[1]);
+                                chosenRegion.push(relevantArea[1]);
                             }
 
                         } else {
@@ -751,6 +766,8 @@ export const generateGraphString = (startPoint, addedPoint, endPoint, currentGra
                 else {
                     console.log("Les régions pertinentes sont identiques. On choisit la première arbitrairement.");
                     chosenRegion.push(relevantArea[0]);
+                    nonRelevantAreas.push(chosenRegion[0]);
+
                 }
 
             }
@@ -759,9 +776,18 @@ export const generateGraphString = (startPoint, addedPoint, endPoint, currentGra
                 chosenRegion = relevantArea;
             }
 
+            if (areAreasIdentical) {
+                let tmp = areas.filter(area => area !== chosenRegion[0]);
+                for (let i = 0; i < tmp.length; i++) {
+                    nonRelevantAreas.push(tmp[i]);
+                }
 
-            // Filtrer les régions non pertinentes
-            const nonRelevantAreas = areas.filter(area => area !== chosenRegion[0]);
+                console.log("Régions non pertinentes:", nonRelevantAreas);
+
+            } else {
+                nonRelevantAreas = areas.filter(area => area !== chosenRegion[0]);
+            }
+
 
             console.log(nonRelevantAreas)
 
@@ -915,6 +941,14 @@ export const generateGraphString = (startPoint, addedPoint, endPoint, currentGra
                     //Définition de la 2ème nouvelle région.
                     region2 = `${regionString}`;
                     console.log(region2);
+                } else if (departToEnd !== "" && endToDepart === '' && departToDepart === '' && endToEnd === '') {
+                    //Définition de la 1ère nouvelle région.
+                    region1 = `${departToEnd}${regionString}`;
+                    console.log(region1);
+
+                    //Définition de la 2ème nouvelle région.
+                    region2 = `${regionString}`;
+                    console.log(region2);
                 } else {
                     console.log("Un cas non prévu est apparu !");
                 }
@@ -927,8 +961,8 @@ export const generateGraphString = (startPoint, addedPoint, endPoint, currentGra
                     }
                 });
 
-                console.log(region1);
-                console.log(region2);
+                console.log("région 1",region1);
+                console.log("région 2",region2);
 
                 // Construire la nouvelle chaîne
                 const newGraphString = `${region1}.}${region2}.}${nonRelevantAreas.join('}')}`;
@@ -972,6 +1006,7 @@ export const generateGraphString = (startPoint, addedPoint, endPoint, currentGra
         //Construire la 2ème région
         let secondArea = startIsIsolated ? `${startPoint.label}${addedPoint.label}` : relevantBoundarie.map(frontiere => frontiere.replace(startPoint.label, `${startPoint.label}${addedPoint.label}${startPoint.label}`)).join('.');
 
+
         // Répartir les frontières non pertinentes entre les deux nouvelles régions
         nonRelevantBoundaries.forEach(boundarie => {
             if (isFrontiereInRegion(boundarie, regionString, curveMap, points)) {
@@ -991,6 +1026,62 @@ export const generateGraphString = (startPoint, addedPoint, endPoint, currentGra
         console.log("Ce type de cas n'est pas prévu");
     }
     return currentGraphString;
+};
+
+const pointIsInRegion = (frontiere, region, curveMap, points, addedPoint) => {
+    // Vérifier si la frontière est vide
+    if (!frontiere || frontiere.length === 0) {
+        console.log("Frontière vide");
+        return false;
+    }
+
+    // Obtenir les courbes associées à la région
+    const regionPoints = [];
+
+    // Parcourir chaque point de la région
+    for (let i = 0; i < region.length; i++) {
+        const pointLabel = region[i];
+        const nextPointLabel = region[(i + 1) % region.length]; // Point suivant, avec retour au début
+
+        // Trouver le point dans la liste des points
+        const point = points.find(p => p.label === pointLabel);
+        if (!point) {
+            console.log(`Point ${pointLabel} non trouvé`);
+            return false;
+        }
+
+        regionPoints.push(point);
+
+        // Chercher la courbe entre le point actuel et le suivant
+        const curves = curveMap.get(pointLabel) || [];
+        let curveFound = false;
+
+        for (const curveInfo of curves) {
+            if (curveInfo.role === 'start') {
+                const lastPointLabel = curveInfo.curve[curveInfo.curve.length - 1].label;
+                if (lastPointLabel === nextPointLabel) {
+                    // Ajouter tous les points de la courbe sauf le premier (déjà ajouté)
+                    regionPoints.push(...curveInfo.curve.slice(1));
+                    curveFound = true;
+                    break;
+                }
+            }
+        }
+
+        if (!curveFound && i < region.length - 1) {
+
+        }
+    }
+
+    // Vérifier si nous avons suffisamment de points pour former un polygone
+    if (regionPoints.length < 3) {
+        console.log("Pas assez de points pour former un polygone");
+        return false;
+    }
+    // Calculer si le point est dans le polygone
+    const isInRegion = isPointInPolygon([addedPoint.x, addedPoint.y], regionPoints.map(point => [point.x, point.y]));
+    return isInRegion;
+
 };
 
 const areaOfPolygon = (frontiere, region, curveMap, points) => {
@@ -1034,9 +1125,7 @@ const areaOfPolygon = (frontiere, region, curveMap, points) => {
         }
 
         if (!curveFound && i < region.length - 1) {
-            console.log(`Pas de courbe trouvée entre ${pointLabel} et ${nextPointLabel}`);
-            // Si aucune courbe n'est trouvée, on peut ajouter une ligne droite
-            // entre les points, mais cela dépend de votre cas d'utilisation
+
         }
     }
 
@@ -1060,7 +1149,6 @@ const areaOfPolygon = (frontiere, region, curveMap, points) => {
     // La valeur absolue de area/2 donne l'aire du polygone
     return Math.abs(area / 2);
 };
-
 
 
 const isFrontiereInRegion = (frontiere, region, curveMap, points) => {
