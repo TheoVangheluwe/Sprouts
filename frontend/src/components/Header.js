@@ -14,7 +14,7 @@ const Header = () => {
         return res.json();
       })
       .then((data) => {
-        setUser(data.username + " #" +data.id); // t’as raison, on vire l’ID
+        setUser(data.username + " #" + data.id);
       })
       .catch(() => setUser(null));
   }, []);
@@ -25,29 +25,23 @@ const Header = () => {
         {/* Logo et Titre */}
         <div className="flex items-center space-x-3">
           <img src={logo} alt="Logo" className="h-10 w-auto drop-shadow-md" />
-          <a href="/home" className="text-lg hover:text-white transition">
+          <a
+            href="/home"
+            className="text-sm text-yellow-300 hover:text-white transition tracking-tight"
+          >
             Sprouts Game
           </a>
         </div>
 
-        {/* Utilisateur connecté ou lien de login */}
+        {/* Utilisateur ou Connexion */}
         <div>
-          {user ? (
-            <a
-              href="/profil"
-              className="bg-green-500 text-white py-1 px-3 rounded hover:bg-green-400 transition text-xs shadow-md"
-              title="Profil"
-            >
-              {user}
-            </a>
-          ) : (
-            <a
-              href="/login/"
-              className="bg-blue-500 text-white py-1 px-3 rounded hover:bg-blue-400 transition text-xs shadow-md"
-            >
-              Connexion
-            </a>
-          )}
+          <a
+            href={user ? '/profil' : '/login/'}
+            className="text-sm text-yellow-300 hover:text-white transition tracking-tight"
+            title={user ? 'Profil' : 'Connexion'}
+          >
+            {user || 'Connexion'}
+          </a>
         </div>
       </nav>
     </header>
