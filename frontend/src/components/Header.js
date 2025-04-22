@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import logo from '../assets/sprouts.png';
 
-
 const Header = () => {
   const [user, setUser] = useState(null);
 
@@ -15,34 +14,37 @@ const Header = () => {
         return res.json();
       })
       .then((data) => {
-        setUser(data.username + ` (#${data.id})`); //potentiellement enlever l'ID (je l'ai ajouté pour le debug mais jsp si c joli)
+        setUser(data.username + " #" +data.id); // t’as raison, on vire l’ID
       })
       .catch(() => setUser(null));
-  }, []);  
+  }, []);
 
   return (
-    <header className="bg-darkBlue text-white p-4">
-      <nav className="container mx-auto flex items-center">
-        <div className="flex items-center space-x-4 w-1/3 justify-start">
-          <img src={logo} alt="Logo" style={{ height: '3.5rem' }} className="w-auto" />
-          <a href="/home"><div className="text-xl font-bold text-lightGreen">Sprouts Game</div></a>
-        </div>
-
-
-        <div className="flex w-1/3 justify-center">
-        </div>
-
-        <div className="w-1/3 flex justify-end">
-        {user ? (
-          <a
-            href="/profil"
-            className="text-lightGreen hover:text-softBlue transition-colors duration-300"
-            title="Profil"
-          >
-            {user}
+    <header className="bg-gray-900 border-b-4 border-yellow-400 text-yellow-300 font-['Press_Start_2P'] shadow-md z-50">
+      <nav className="max-w-screen-xl mx-auto flex items-center justify-between px-4 py-3">
+        {/* Logo et Titre */}
+        <div className="flex items-center space-x-3">
+          <img src={logo} alt="Logo" className="h-10 w-auto drop-shadow-md" />
+          <a href="/home" className="text-lg hover:text-white transition">
+            Sprouts Game
           </a>
+        </div>
+
+        {/* Utilisateur connecté ou lien de login */}
+        <div>
+          {user ? (
+            <a
+              href="/profil"
+              className="bg-green-500 text-white py-1 px-3 rounded hover:bg-green-400 transition text-xs shadow-md"
+              title="Profil"
+            >
+              {user}
+            </a>
           ) : (
-            <a href="/login/" className="text-lightGreen hover:text-softBlue transition-colors duration-300">
+            <a
+              href="/login/"
+              className="bg-blue-500 text-white py-1 px-3 rounded hover:bg-blue-400 transition text-xs shadow-md"
+            >
               Connexion
             </a>
           )}
