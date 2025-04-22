@@ -129,6 +129,39 @@ export const getNearPoint = (x, y, points, threshold = 15) => {
     return points.find(point => Math.hypot(point.x - x, point.y - y) <= threshold) || null;
 };
 
+export const segmentsIntersect = (A, B, C, D) => {
+    // Fonction pour l'orientation de trois points
+    const orientation = (p, q, r) => {
+        const val = (q.y - p.y) * (r.x - q.x) - (q.x - p.x) * (r.y - q.y);
+        return val === 0 ? 0 : (val > 0 ? 1 : -1);
+    };
+
+    // Pour vérifier si q est sur le segment pr
+    const onSegment = (p, q, r) => {
+        return q.x <= Math.max(p.x, r.x) && q.x >= Math.min(p.x, r.x) &&
+            q.y <= Math.max(p.y, r.y) && q.y >= Math.min(p.y, r.y);
+    };
+
+    // Les quatre orientations nécessaires
+    const o1 = orientation(A, B, C);
+    const o2 = orientation(A, B, D);
+    const o3 = orientation(C, D, A);
+    const o4 = orientation(C, D, B);
+
+    // Cas général d'intersection
+    if (o1 !== o2 && o3 !== o4) {
+        return true;
+    }
+
+    // Cas spéciaux de colinéarité
+    if (o1 === 0 && onSegment(A, C, B)) return true;
+    if (o2 === 0 && onSegment(A, D, B)) return true;
+    if (o3 === 0 && onSegment(C, A, D)) return true;
+    if (o4 === 0 && onSegment(C, B, D)) return true;
+
+    return false;
+};
+
 // Fonction corrigée pour gérer correctement la limite de connexions
 export const canConnect = (p1, p2) => {
     // Vérifier si c'est une boucle (même point)
