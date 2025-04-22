@@ -629,7 +629,7 @@ export const generateGraphString = (startPoint, addedPoint, endPoint, currentGra
     // Cas n°3: Les deux points sont déjà reliés
     else if (!startIsIsolated && !endIsIsolated && startPoint !== endPoint) {
         console.log("Cas où les deux points sont différents et non isolés");
-        let areAreasIdentical;
+        let areAreasIdentical = false;
         let nonRelevantAreas;
         try {
             let chosenRegion = [];
@@ -766,7 +766,7 @@ export const generateGraphString = (startPoint, addedPoint, endPoint, currentGra
                 else {
                     console.log("Les régions pertinentes sont identiques. On choisit la première arbitrairement.");
                     chosenRegion.push(relevantArea[0]);
-                    nonRelevantAreas.push(chosenRegion[0]);
+
 
                 }
 
@@ -775,19 +775,13 @@ export const generateGraphString = (startPoint, addedPoint, endPoint, currentGra
             else {
                 chosenRegion = relevantArea;
             }
+            //Filtrer les régions non pertinentes
+            let nonRelevantAreas = areas.filter(area => area !== chosenRegion[0]);
 
             if (areAreasIdentical) {
-                let tmp = areas.filter(area => area !== chosenRegion[0]);
-                for (let i = 0; i < tmp.length; i++) {
-                    nonRelevantAreas.push(tmp[i]);
-                }
-
-                console.log("Régions non pertinentes:", nonRelevantAreas);
-
-            } else {
-                nonRelevantAreas = areas.filter(area => area !== chosenRegion[0]);
+                nonRelevantAreas.unshift(chosenRegion[0]);
             }
-
+            console.log("Régions non pertinentes:", nonRelevantAreas);
 
             console.log(nonRelevantAreas)
 
@@ -961,8 +955,8 @@ export const generateGraphString = (startPoint, addedPoint, endPoint, currentGra
                     }
                 });
 
-                console.log("région 1",region1);
-                console.log("région 2",region2);
+                console.log("région 1", region1);
+                console.log("région 2", region2);
 
                 // Construire la nouvelle chaîne
                 const newGraphString = `${region1}.}${region2}.}${nonRelevantAreas.join('}')}`;

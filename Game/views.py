@@ -515,7 +515,7 @@ def get_game_timers(request, game_id):
         current_player_id = str(game.current_player.id) if game.current_player else None
         requester_id = str(request.user.id)
 
-        # 🛑 Ne décompte le timer que si c'est le joueur actuel qui fait la requête
+        # Ne décompte le timer que si c'est le joueur actuel qui fait la requête
         if current_player_id == requester_id and current_player_id in game.state["timers"]:
             if current_player_id in game.state["last_move_time"]:
                 last_move_time = game.state["last_move_time"][current_player_id]
@@ -631,8 +631,7 @@ def create_game(request):
                     current_player=request.user,
                     point_options=point_options,
                     state={"curves": [], "points": [], "timers": {
-                        str(request.user.id): 600,
-                        str(matched_entry.user.id): 600
+                        str(request.user.id): 600  # Initialiser le timer à 10 minutes
                     }},
                     from_queue=True  # Marquer explicitement comme venant de la file d'attente
                 )
