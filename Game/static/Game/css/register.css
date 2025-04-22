@@ -1,74 +1,137 @@
-/* Style pour le corps de la page */
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
 body {
-    font-family: Arial, sans-serif;
-    background-color: #121113; /* Couleur de fond de la page */
     margin: 0;
     padding: 0;
+    background: linear-gradient(to bottom right, #111827, #000000);
+    font-family: 'Press Start 2P', cursive;
+    color: #facc15;
     display: flex;
     justify-content: center;
     align-items: center;
-    height: 100vh; /* Hauteur de la fenêtre pour centrer verticalement */
+    min-height: 100vh;
 }
 
-/* Cadre central */
 .login-container {
-    background-color: #899878; /* Couleur de fond du cadre */
+    background-color: #1f2937;
+    border: 4px solid #facc15;
     padding: 2rem;
-    border-radius: 15px; /* Coins arrondis */
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Ombre douce */
+    border-radius: 1rem;
+    box-shadow: 0 0 25px #facc15;
+    text-align: center;
+    max-width: 500px;
     width: 100%;
-    max-width: 400px; /* Largeur maximale */
-    text-align: center; /* Centrer le contenu */
-    color: #ffffff; /* Texte blanc */
 }
 
-/* Titre */
-h1 {
-    font-size: 1.8rem;
-    color: #ffffff; /* Texte blanc */
-    margin-bottom: 1.5rem;
+.login-container h1 {
+    font-size: 1.5rem;
+    margin-bottom: 2rem;
+    color: #facc15;
+    animation: pulse 2s infinite;
 }
 
-/* Champs de formulaire */
-input[type="text"],
-input[type="password"] {
-    width: 100%;
-    padding: 0.75rem;
-    margin-bottom: 1rem;
-    border: 1px solid #ccc;
-    border-radius: 10px; /* Coins arrondis */
+.login-container form p {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 0.8rem;
+    color: #9ca3af; /* gris plus doux */
+    font-size: 0.8rem;
+}
+
+.login-container label {
+    display: block;
+    font-size: 1.1rem;
+    font-weight: bold;
+    color: #facc15;
+    margin-top: 10px;
+    margin-bottom: 5px;
+    text-shadow: 0 0 5px #facc15;
+}
+
+.login-container input {
+    width: 90%;
+    max-width: 300px;
+    padding: 1rem;
+    border: none;
+    border-radius: 0.5rem;
+    background-color: #e5e7eb;
     font-size: 1rem;
-    box-sizing: border-box; /* Inclure le padding dans la largeur */
+    color: #111827;
+    text-align: center;
+    margin-bottom: 0.8rem;
 }
 
-/* Bouton de connexion */
-button {
-    font: inherit;
-    background-color: #222725; /* Couleur bleue */
-    color: #fff;
+/* Liste d’aide au mot de passe */
+.login-container ul {
+    font-size: 0.8rem;
+    padding-left: 1rem;
+    text-align: left;
+    margin: 0.3rem auto 0 auto;
+    display: block;
+    width: fit-content;
+    color: #9ca3af; /* gris plus doux */
+}
+
+/* Bouton d’inscription style arcade */
+.login-container button {
+    background-color: #10b981;
+    color: white;
+    font-size: 0.9rem;
+    font-family: 'ArcadeClassic', sans-serif;
+    padding: 0.75rem 1.5rem;
     border: none;
     border-radius: 10px;
-    font-size: 1rem;
-    padding: 0.75rem;
     cursor: pointer;
-    width: 100%;
-    transition: background-color 0.3s ease;
+    box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);
+    transition: all 0.2s ease-in-out;
+    width: 90%;
+    max-width: 300px;
+    margin-top: 1rem;
 }
 
-button:hover {
-    background-color: #222725; 
+.login-container button:hover {
+    background-color: #34d399;
+    transform: scale(1.05);
+    box-shadow: 0 6px 20px rgba(16, 185, 129, 0.6);
 }
 
-/* Lien "Register" */
+/* Lien vers login : blanc + hover jaune */
 .register-link {
     display: block;
-    margin-top: 1rem;
-    font-size: 0.9rem;
-    color: #ffffff; /* Texte blanc */
-    text-decoration: underline;
-    cursor: pointer;
+    margin-top: 1.5rem;
+    color: #ffffff;
+    font-size: 1rem;
+    text-align: center;
+    font-family: 'ArcadeClassic', sans-serif;
+    font-weight: bold;
+    text-decoration: none;
+    transition: color 0.3s ease;
+    text-shadow: 0 0 3px #ffffff;
 }
 
 .register-link:hover {
-    color: #cccccc; /* Couleur grise au survol */
+    color: #facc15;
+    text-shadow: 0 0 5px #facc15;
+}
+
+/* Animation arcade du titre */
+@keyframes pulse {
+    0%, 100% {
+        text-shadow: 0 0 5px #facc15, 0 0 10px #facc15;
+    }
+    50% {
+        text-shadow: 0 0 10px #facc15, 0 0 20px #facc15;
+    }
+}
+
+.errorlist {
+    font-size: 0.75rem;
+    margin: 0.5rem 0;
+    text-align: center;
+    padding: 0.5rem;
+    border-radius: 0.5rem;
+    background-color: #ef4444;
+    color: white;
+    text-shadow: 0 0 3px #f87171;
 }

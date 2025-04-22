@@ -16,6 +16,7 @@ from datetime import datetime, timedelta
 from django.db import transaction
 from .utils.move_over import is_game_over
 from .utils.move_generator import generate_possible_moves 
+from .forms import CustomUserCreationForm
 
 # Configure the logger
 logger = logging.getLogger(__name__)
@@ -1158,14 +1159,13 @@ def leave_game(request, game_id):
 
 def register(request):
     if request.method == 'POST':
-        form = UserCreationForm(request.POST)
+        form = CustomUserCreationForm(request.POST)  # 👈 utilise ton Custom form
         if form.is_valid():
             form.save()
-            return redirect('login')
+            return redirect('login')  # 👈 redirige vers la page de login après inscription
     else:
-        form = UserCreationForm()
+        form = CustomUserCreationForm()
     return render(request, 'register.html', {'form': form})
-
 
 def login_view(request):
     if request.method == 'POST':
