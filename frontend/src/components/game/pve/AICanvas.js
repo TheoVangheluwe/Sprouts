@@ -201,36 +201,80 @@ const AICanvas = ({ points, setPoints, curves, setCurves, currentPlayer, handleP
     });
   };
 
-  const handleAIMove = () => {
-    // Logique pour que l'IA joue un coup
-    // Par exemple, sélectionner deux points aléatoires et tracer une courbe entre eux
-    const availablePoints = points.filter(point => point.connections < 3);
-    if (availablePoints.length < 2) return;
+  const generateCurvePoints = (startPoint, endPoint, numPoints = 5) => {
+    const curvePoints = [];
+    const dx = endPoint.x - startPoint.x;
+    const dy = endPoint.y - startPoint.y;
+    const distance = Math.hypot(dx, dy);
+    const step = distance / (numPoints + 1);
 
-    const startPoint = availablePoints[Math.floor(Math.random() * availablePoints.length)];
-    const endPoint = availablePoints[Math.floor(Math.random() * availablePoints.length)];
+    for (let i = 1; i <= numPoints; i++) {
+      const t = i / (numPoints + 1);
+      const x = startPoint.x + t * dx + Math.sin(t * Math.PI) * step;
+      const y = startPoint.y + t * dy + Math.cos(t * Math.PI) * step;
+      curvePoints.push({ x: Math.round(x), y: Math.round(y) });
+    }
 
-    if (startPoint && endPoint && canConnect(startPoint, endPoint)) {
-      const addedPoint = { x: (startPoint.x + endPoint.x) / 2, y: (startPoint.y + endPoint.y) / 2, connections: 0, label: getNextLabel(points) };
-      const adjustedCurve = [startPoint, addedPoint, endPoint];
+    return curvePoints;
+  };
 
-      if (curveIntersects(adjustedCurve, curves, points)) {
-        toast.error("Intersection détectée.", { autoClose: 1500 });
-      } else if (curveLength(adjustedCurve) < 50) {
-        toast.error("Courbe trop courte.", { autoClose: 1500 });
-      } else {
-        const updatedCurveMap = updateCurveMap(curveMap, startPoint, endPoint, adjustedCurve);
-        setCurves(prevCurves => [...prevCurves, adjustedCurve]);
-        setCurveMap(updatedCurveMap);
+  const handleAIMove = async () => {
+    try {
+      const response = await fetch('http://127.0.0.1:8000/api/get_possible_moves/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ graph_string: graphString }),
+      });
 
-        connectPoints(startPoint, endPoint, adjustedCurve, points, setPoints, setCurves);
-
-        const updatedGraphString = generateGraphString(startPoint, addedPoint, endPoint, graphString, curveMap, points);
-        setGraphString(updatedGraphString);
-
-        addMove(`${startPoint.label} -> ${endPoint.label} : ${addedPoint.label}`);
-        handlePlayerChange();
+      if (!response.ok) {
+        throw new Error('Network response was not ok');
       }
+
+      const data = await response.json();
+      const possibleMoves = data.possible_moves;
+
+      if (possibleMoves.length > 0) {
+        const move = possibleMoves[Math.floor(Math.random() * possibleMoves.length)];
+        const startPoint = points.find(point => point.label === move[0]);
+        const endPoint = points.find(point => point.label === move[1]);
+
+        if (startPoint && endPoint && canConnect(startPoint, endPoint)) {
+          const curvePoints = generateCurvePoints(startPoint, endPoint);
+          const adjustedCurve = [startPoint, ...curvePoints, endPoint];
+
+          if (curveIntersects(adjustedCurve, curves, points)) {
+            toast.error("Intersection détectée.", { autoClose: 1500 });
+          } else if (curveLength(adjustedCurve) < 50) {
+            toast.error("Courbe trop courte.", { autoClose: 1500 });
+          } else {
+            const updatedCurveMap = updateCurveMap(curveMap, startPoint, endPoint, adjustedCurve);
+            setCurves(prevCurves => [...prevCurves, adjustedCurve]);
+            setCurveMap(updatedCurveMap);
+
+            connectPoints(startPoint, endPoint, adjustedCurve, points, setPoints, setCurves);
+
+            // Ajouter le point intermédiaire sur la courbe
+            const closestPoint = getClosestPointOnCurve(endPoint.x, endPoint.y, adjustedCurve);
+            if (closestPoint && !isPointTooClose(closestPoint.x, closestPoint.y, points)) {
+              const newPoint = { x: closestPoint.x, y: closestPoint.y, connections: 2, label: getNextLabel(points) };
+              const updatedPoints = [...points, newPoint];
+              setPoints(updatedPoints);
+
+              // Mettre à jour la chaîne de caractères après avoir ajouté le point intermédiaire
+              const updatedGraphString = generateGraphString(startPoint, newPoint, endPoint, graphString, curveMap, updatedPoints);
+              setGraphString(updatedGraphString);
+
+              addMove(`${startPoint.label} -> ${endPoint.label} : ${newPoint.label}`);
+            }
+
+            handlePlayerChange();
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching possible moves:', error);
     }
   };
 
