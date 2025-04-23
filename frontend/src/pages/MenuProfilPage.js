@@ -52,10 +52,16 @@ const MenuProfilPage = () => {
             Historique de Jeu
           </Link>
           <Link
-            to="/"
+            to="/legal"
             className="bg-gray-600 text-white py-3 px-6 rounded-lg hover:bg-gray-500 transform transition hover:scale-105 shadow-md w-full block"
           >
-            Paramètres
+            Mentions Légales
+          </Link>
+          <Link
+            to="/technic"
+            className="bg-gray-600 text-white py-3 px-6 rounded-lg hover:bg-gray-500 transform transition hover:scale-105 shadow-md w-full block"
+          >
+            Documentation Technique
           </Link>
           <button
             onClick={handleLogout}

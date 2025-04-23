@@ -9,20 +9,21 @@ urlpatterns = [
     path('logout/', views.logout_view, name='logout'),
 
     # Pages de l'application
-    path('home/', views.home_view, name='home'),
-    path('menu/', views.menu_view, name='game'),
-    path('pve/', views.pve_view, name='rules'),
-    path('ai/', views.ai_view, name='rules'),
-    path('rules/', views.rules_view, name='rules'),
+    path('home/', views.common_react_view, name='home'),
+    path('menu/', views.common_react_view, name='game'),
+    path('pve/', views.common_react_view, name='rules'),
+    path('ai/', views.common_react_view, name='rules'),
+    path('rules/', views.common_react_view, name='rules'),
     path('waiting-room/', views.waiting_room_view, name='waiting_room'),
     path('online-game/<int:game_id>/', views.online_game_view, name='online_game'),
-    path('legal/', views.legal_view, name='legal'),
-    path('menu/', views.menu_view, name='menu'),
-    path('profil/', views.profil_view, name='profil'),
+    path('legal/', views.common_react_view, name='legal'),
+    path('menu/', views.common_react_view, name='menu'),
+    path('profil/', views.common_react_view, name='profil'),
+    path('technic/', views.common_react_view, name='technic'),
 
     # Historique player / game indiv
-    path('historic/', views.historic_view, name='historic'),
-    path('historic/<int:game_id>/', views.historic_id_view, name='historic_id'),
+    path('historic/', views.common_react_view, name='historic'),
+    path('historic/<int:game_id>/', views.common_react_view, name='historic_id'),
 
     # APIs pour avoir infos sur le joueur connecté
     path('api/player/id/', views.get_user_id, name='player_id'),  # revois id

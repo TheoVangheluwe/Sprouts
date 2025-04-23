@@ -17,6 +17,7 @@ import LegalPage from './pages/LegalPage';
 import HistoricPage from './pages/HistoricPage';
 import GameSummaryPage from './pages/GameSummaryPage';
 import MenuProfilPage from './pages/MenuProfilPage';
+import TechnicPDF_Page from './pages/TechnicPage';
 
 const App = () => {
   return (
@@ -37,6 +38,7 @@ const App = () => {
             <Route path="/historic" element={<HistoricPage />} />
             <Route path="/historic/:gameId" element={<GameSummaryPage />} />
             <Route path="/profil" element={<MenuProfilPage />} />
+            <Route path="/technic" element={<TechnicPDF_Page />} />
           </Routes>
         </main>
         <Footer />
