@@ -15,6 +15,7 @@ from datetime import datetime, timedelta
 from django.db import transaction
 from .utils.move_over import is_game_over
 from .utils.move_generator import generate_possible_moves 
+from .forms import CustomUserCreationForm
 
 # Configure the logger
 logger = logging.getLogger(__name__)
@@ -23,61 +24,14 @@ logger = logging.getLogger(__name__)
 def index(request):
     return render(request, 'index.html')
 
-
-def home_view(request):
-    """Vue pour la page d'accueil"""
+def common_react_view(request):
+    """Vue sans args ou logique particulière (ancienne méthode créais bcp de views)"""
     return ReactAppView(request)
-
-
-def menu_view(request):
-    """Vue pour la page du menu"""
-    return ReactAppView(request)
-
-
-def pve_view(request):
-    """Vue pour la page de jeu pve"""
-    return ReactAppView(request)
-
-
-def ai_view(request):
-    """Vue pour la page de jeu ai"""
-    return ReactAppView(request)
-
-
-def rules_view(request):
-    """Vue pour la page des règles"""
-    return ReactAppView(request)
-
-
-def legal_view(request):
-    """Vue pour la page d'accueil"""
-    return ReactAppView(request)
-
-
-def historic_view(request):
-    """Vue pour la page d'accueil"""
-    return ReactAppView(request)
-
-
-def historic_id_view(request, game_id):
-    """Vue pour game recap"""
-    return ReactAppView(request)
-
 
 def waiting_room_view(request):
     """Vue pour la salle d'attente"""
     if not request.user.is_authenticated:
         return redirect('login_redirect')
-    return ReactAppView(request)
-
-
-def menu_view(request):
-    """Vue pour game recap"""
-    return ReactAppView(request)
-
-
-def profil_view(request):
-    """Vue pour game recap"""
     return ReactAppView(request)
 
 
@@ -1078,14 +1032,13 @@ def leave_game(request, game_id):
 
 def register(request):
     if request.method == 'POST':
-        form = UserCreationForm(request.POST)
+        form = CustomUserCreationForm(request.POST)  # 👈 utilise ton Custom form
         if form.is_valid():
             form.save()
-            return redirect('login')
+            return redirect('login')  # 👈 redirige vers la page de login après inscription
     else:
-        form = UserCreationForm()
+        form = CustomUserCreationForm()
     return render(request, 'register.html', {'form': form})
-
 
 def login_view(request):
     if request.method == 'POST':

@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import logo from '../assets/sprouts.png';
 
-
 const Header = () => {
   const [user, setUser] = useState(null);
 
@@ -15,37 +14,34 @@ const Header = () => {
         return res.json();
       })
       .then((data) => {
-        setUser(data.username + ` (#${data.id})`); //potentiellement enlever l'ID (je l'ai ajouté pour le debug mais jsp si c joli)
+        setUser(data.username + " #" + data.id);
       })
       .catch(() => setUser(null));
-  }, []);  
+  }, []);
 
   return (
-    <header className="bg-darkBlue text-white p-4">
-      <nav className="container mx-auto flex items-center">
-        <div className="flex items-center space-x-4 w-1/3 justify-start">
-          <img src={logo} alt="Logo" style={{ height: '3.5rem' }} className="w-auto" />
-          <a href="/home"><div className="text-xl font-bold text-lightGreen">Sprouts Game</div></a>
-        </div>
-
-
-        <div className="flex w-1/3 justify-center">
-        </div>
-
-        <div className="w-1/3 flex justify-end">
-        {user ? (
+    <header className="bg-gray-900 border-b-4 border-yellow-400 text-yellow-300 font-['Press_Start_2P'] shadow-md z-50">
+      <nav className="max-w-screen-xl mx-auto flex items-center justify-between px-4 py-3">
+        {/* Logo et Titre */}
+        <div className="flex items-center space-x-3">
+          <img src={logo} alt="Logo" className="h-10 w-auto drop-shadow-md" />
           <a
-            href="/profil"
-            className="text-lightGreen hover:text-softBlue transition-colors duration-300"
-            title="Profil"
+            href="/home"
+            className="text-sm text-yellow-300 hover:text-white transition tracking-tight"
           >
-            {user}
+            Sprouts Game
           </a>
-          ) : (
-            <a href="/login/" className="text-lightGreen hover:text-softBlue transition-colors duration-300">
-              Connexion
-            </a>
-          )}
+        </div>
+
+        {/* Utilisateur ou Connexion */}
+        <div>
+          <a
+            href={user ? '/profil' : '/login/'}
+            className="text-sm text-yellow-300 hover:text-white transition tracking-tight"
+            title={user ? 'Profil' : 'Connexion'}
+          >
+            {user || 'Connexion'}
+          </a>
         </div>
       </nav>
     </header>
