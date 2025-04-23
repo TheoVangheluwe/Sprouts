@@ -11,7 +11,6 @@ from django.contrib import messages
 import os
 import logging
 import json
-from django.db.models import Q
 from datetime import datetime, timedelta
 from django.db import transaction
 from .utils.move_over import is_game_over
@@ -394,35 +393,6 @@ def make_move(request, game_id):
             else:
                 game_over = False
 
-                # Gestion du timer
-                if "timer" in move:
-                    # Initialiser le dictionnaire des timers s'il n'existe pas
-                    if "timers" not in game.state:
-                        game.state["timers"] = {}
-
-                    # Enregistrer le temps restant
-                    game.state["timers"][str(request.user.id)] = move["timer"]
-
-                    # Enregistrer également un timestamp pour le dernier mouvement
-                    if "last_move_time" not in game.state:
-                        game.state["last_move_time"] = {}
-
-                    game.state["last_move_time"][str(request.user.id)] = datetime.now().timestamp()
-
-                    # Vérifier si le timer est à 0
-                    if move["timer"] <= 0:
-                        # Le joueur a perdu par timeout
-                        game_over = True
-                        # Le gagnant est l'adversaire
-                        winner = next((p for p in game.players.all() if p.id != request.user.id), None)
-                        if winner:
-                            winner = {
-                                'username': winner.username,
-                                'id': winner.id
-                            }
-                            game.state["winner"] = winner
-                            game.status = 'completed'
-
             # D'abord changer le tour
             players = list(game.players.all())
             current_player_index = players.index(game.current_player)
@@ -493,54 +463,6 @@ def make_move(request, game_id):
         import traceback
         traceback.print_exc()
         return JsonResponse({'error': f'An error occurred: {str(e)}'}, status=500)
-
-
-@login_required(login_url='login')
-def get_game_timers(request, game_id):
-    try:
-        game = Game.objects.get(id=game_id)
-
-        # Vérifier si le joueur fait partie de la partie
-        if request.user not in game.players.all():
-            return JsonResponse({'error': 'Vous n\'êtes pas autorisé à accéder à cette partie.'}, status=403)
-
-        if "timers" not in game.state:
-            game.state["timers"] = {}
-            for player in game.players.all():
-                game.state["timers"][str(player.id)] = 600  # 10 minutes par défaut
-
-        if "last_move_time" not in game.state:
-            game.state["last_move_time"] = {}
-
-        current_player_id = str(game.current_player.id) if game.current_player else None
-        requester_id = str(request.user.id)
-
-        # Ne décompte le timer que si c'est le joueur actuel qui fait la requête
-        if current_player_id == requester_id and current_player_id in game.state["timers"]:
-            if current_player_id in game.state["last_move_time"]:
-                last_move_time = game.state["last_move_time"][current_player_id]
-                current_time = datetime.now().timestamp()
-
-                elapsed_seconds = int(current_time - last_move_time)
-
-                if elapsed_seconds > 0:
-                    previous_timer = game.state["timers"][current_player_id]
-                    game.state["timers"][current_player_id] = max(0, previous_timer - elapsed_seconds)
-
-                game.state["last_move_time"][current_player_id] = current_time
-                game.save()
-            else:
-                game.state["last_move_time"][current_player_id] = datetime.now().timestamp()
-                game.save()
-
-        return JsonResponse({
-            'timers': game.state["timers"],
-            'current_player': current_player_id
-        })
-
-    except Game.DoesNotExist:
-        return JsonResponse({'error': 'Partie non trouvée'}, status=404)
-
 
 
 @csrf_exempt
@@ -630,9 +552,7 @@ def create_game(request):
                     player_count=1,
                     current_player=request.user,
                     point_options=point_options,
-                    state={"curves": [], "points": [], "timers": {
-                        str(request.user.id): 600  # Initialiser le timer à 10 minutes
-                    }},
+                    state={"curves": [], "points": []},
                     from_queue=True  # Marquer explicitement comme venant de la file d'attente
                 )
                 waiting_room.players.add(request.user)

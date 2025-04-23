@@ -37,7 +37,6 @@ urlpatterns = [
     path('api/game/<int:game_id>/ready_to_play/', views.player_ready_to_play, name='player_ready_to_play'),
     path('api/game/<int:game_id>/state/', views.game_state, name='game_state'),
     path('api/game/<int:game_id>/move/', views.make_move, name='make_move'),
-    path('api/game/<int:game_id>/timers/', views.get_game_timers, name='get_game_timers'),
 
     path('api/game/', views.list_games, name='list_games'),
     path('api/game/create/', views.create_game, name='create_game'),

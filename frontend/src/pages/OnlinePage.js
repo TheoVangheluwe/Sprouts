@@ -1,21 +1,23 @@
-import React, { useEffect, useState, useRef } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import React, {useEffect, useState, useRef} from 'react';
+import {useParams, useNavigate, Link} from 'react-router-dom';
 import OnlineCanvas from '../components/online/OnlineCanvas';
-import { ToastContainer, toast } from "react-toastify";
+import {ToastContainer, toast} from "react-toastify";
 import 'react-toastify/dist/ReactToastify.css';
 
 const LoadingScreen = () => {
     return (
-        <div className="bg-gradient-to-br from-gray-900 to-black flex flex-col items-center justify-center min-h-screen p-4 font-arcade">
-            <div className="bg-gray-800 border-4 border-yellow-400 p-8 rounded-lg shadow-2xl text-center max-w-md w-full">
+        <div
+            className="bg-gradient-to-br from-gray-900 to-black flex flex-col items-center justify-center min-h-screen p-4 font-arcade">
+            <div
+                className="bg-gray-800 border-4 border-yellow-400 p-8 rounded-lg shadow-2xl text-center max-w-md w-full">
                 <h2 className="text-2xl font-bold text-yellow-300 mb-4">Initialisation de la partie...</h2>
                 <div className="loading-container my-6">
                     <div className="loading-points">
-                        <div className="point" style={{ animationDelay: '0s' }}></div>
-                        <div className="point" style={{ animationDelay: '0.3s' }}></div>
-                        <div className="point" style={{ animationDelay: '0.6s' }}></div>
-                        <div className="point" style={{ animationDelay: '0.9s' }}></div>
-                        <div className="point" style={{ animationDelay: '1.2s' }}></div>
+                        <div className="point" style={{animationDelay: '0s'}}></div>
+                        <div className="point" style={{animationDelay: '0.3s'}}></div>
+                        <div className="point" style={{animationDelay: '0.6s'}}></div>
+                        <div className="point" style={{animationDelay: '0.9s'}}></div>
+                        <div className="point" style={{animationDelay: '1.2s'}}></div>
                         <div className="curve"></div>
                     </div>
                 </div>
@@ -91,7 +93,7 @@ const LoadingScreen = () => {
 };
 
 function OnlinePage() {
-    const { gameId } = useParams();
+    const {gameId} = useParams();
     const navigate = useNavigate();
     const [gameState, setGameState] = useState(null);
     const [currentPlayer, setCurrentPlayer] = useState(null);
@@ -116,93 +118,9 @@ function OnlinePage() {
     const [points, setPoints] = useState([]);
     const [curves, setCurves] = useState([]);
 
-    // Ajout des timers pour les joueurs
-    const [myTimer, setMyTimer] = useState(600); // 10 minutes par défaut
-    const [opponentTimer, setOpponentTimer] = useState(600);
-    const timerInterval = useRef(null);
-    const timerCounter = useRef(0);
-
-    const formatTime = (seconds) => {
-        const m = Math.floor(seconds / 60);
-        const s = seconds % 60;
-        return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-    };
-
     const isMyTurn = currentPlayer !== null &&
         currentPlayer !== undefined &&
         currentPlayer == playerId;
-
-    // Effet pour gérer le timer
-    useEffect(() => {
-        if (!gameInitialized || gameEnded) {
-            // Ne pas démarrer le timer
-            if (timerInterval.current) {
-                clearInterval(timerInterval.current);
-            }
-            return;
-        }
-
-        // Fonction pour synchroniser les timers avec le serveur
-        const syncTimers = async () => {
-            try {
-                const response = await fetch(`/api/game/${gameId}/timers/`, {
-                    headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('token')}`
-                    }
-                });
-
-                if (response.ok) {
-                    const data = await response.json();
-
-                    // Mettre à jour les timers locaux avec les données du serveur
-                    if (data.timers) {
-                        // Mettre à jour notre timer
-                        if (playerId && data.timers[playerId] !== undefined) {
-                            setMyTimer(data.timers[playerId]);
-                        }
-
-                        // Mettre à jour le timer de l'adversaire
-                        if (opponents.length > 0 && opponents[0].id) {
-                            const opponentId = opponents[0].id;
-                            if (data.timers[opponentId] !== undefined) {
-                                setOpponentTimer(data.timers[opponentId]);
-                            }
-                        }
-                    }
-                }
-            } catch (error) {
-                console.error("Erreur lors de la synchronisation des timers:", error);
-            }
-        };
-
-        // Synchroniser au démarrage
-        syncTimers();
-
-        // Mettre en place un intervalle pour la synchronisation et le décompte
-        timerInterval.current = setInterval(() => {
-            // Synchroniser avec le serveur toutes les 5 secondes (5000ms)
-            if (timerCounter.current % 5 === 0) {
-                syncTimers();
-            }
-
-            // Décompte local entre les synchronisations
-            if (isMyTurn) {
-                setMyTimer(prev => Math.max(0, prev - 1));
-            } else {
-                // Si c'est le tour de l'adversaire, décrémenter son timer
-                setOpponentTimer(prev => Math.max(0, prev - 1));
-            }
-
-            // Incrémenter le compteur d'intervalles
-            timerCounter.current = (timerCounter.current + 1) % 10;
-        }, 1000);
-
-        return () => {
-            if (timerInterval.current) {
-                clearInterval(timerInterval.current);
-            }
-        };
-    }, [gameId, playerId, isMyTurn, gameInitialized, gameEnded, opponents]);
 
     // Fonction pour signaler que ce joueur a chargé ses points
     const signalPointsLoaded = async () => {
@@ -319,17 +237,6 @@ function OnlinePage() {
 
                 setGameState(gameData.state);
 
-                if (gameData.state && gameData.state.timers) {
-                    if (gameData.state.timers[playerId]) {
-                        setMyTimer(gameData.state.timers[playerId]);
-                    }
-
-                    // Trouver l'ID de l'adversaire
-                    if (opponents.length > 0 && gameData.state.timers[opponents[0].id]) {
-                        setOpponentTimer(gameData.state.timers[opponents[0].id]);
-                    }
-                }
-
                 if (gameData.graphString) {
                     setGraphString(gameData.graphString);
                 } else if (gameData.state && gameData.state.graphString) {
@@ -363,35 +270,6 @@ function OnlinePage() {
                     setGameEnded(true);
                     setIsGameOver(true);
                     return;
-                }
-
-                try {
-                    const timerResponse = await fetch(`/api/game/${gameId}/timers/`, {
-                        headers: {
-                            'Authorization': `Bearer ${localStorage.getItem('token')}`
-                        }
-                    });
-
-                    if (timerResponse.ok) {
-                        const timerData = await timerResponse.json();
-
-                        if (timerData.timers) {
-                            // Mettre à jour le timer du joueur local
-                            if (playerId && timerData.timers[playerId] !== undefined) {
-                                setMyTimer(timerData.timers[playerId]);
-                            }
-
-                            // Charger le timer de l'adversaire une fois que les opponents sont définis
-                            if (gameData.players) {
-                                const otherPlayers = gameData.players.filter(player => String(player.id) !== String(playerId));
-                                if (otherPlayers.length > 0 && timerData.timers[otherPlayers[0].id] !== undefined) {
-                                    setOpponentTimer(timerData.timers[otherPlayers[0].id]);
-                                }
-                            }
-                        }
-                    }
-                } catch (error) {
-                    console.error("Erreur lors de la récupération des timers:", error);
                 }
 
                 if (gameData.players) {
@@ -606,7 +484,7 @@ function OnlinePage() {
                                     'Content-Type': 'application/json',
                                     'Authorization': `Bearer ${localStorage.getItem('token')}`
                                 },
-                                body: JSON.stringify({ curves: curves })
+                                body: JSON.stringify({curves: curves})
                             });
                         } catch (error) {
                             // Erreur silencieuse
@@ -677,8 +555,6 @@ function OnlinePage() {
                 move.graphString += '}!';
             }
 
-            move.timer = myTimer;
-
             const response = await fetch(`/api/game/${gameId}/move/`, {
                 method: 'POST',
                 headers: {
@@ -704,29 +580,6 @@ function OnlinePage() {
 
                 updateCurves(data);
                 updateGraphString(data);
-                try {
-                    const timerResponse = await fetch(`/api/game/${gameId}/timers/`, {
-                        headers: {
-                            'Authorization': `Bearer ${localStorage.getItem('token')}`
-                        }
-                    });
-
-                    if (timerResponse.ok) {
-                        const timerData = await timerResponse.json();
-
-                        if (timerData.timers) {
-                            if (playerId && timerData.timers[playerId] !== undefined) {
-                                setMyTimer(timerData.timers[playerId]);
-                            }
-
-                            if (opponents.length > 0 && timerData.timers[opponents[0].id] !== undefined) {
-                                setOpponentTimer(timerData.timers[opponents[0].id]);
-                            }
-                        }
-                    }
-                } catch (error) {
-                    console.error("Erreur lors de la synchronisation des timers après mouvement:", error);
-                }
 
                 if (data.isGameOver) {
                     setIsGameOver(true);
@@ -884,7 +737,7 @@ function OnlinePage() {
 
     // Condition modifiée pour l'écran de chargement
     if (!gameInitialized || !pointsLoaded) {
-        return <LoadingScreen />;
+        return <LoadingScreen/>;
     }
 
     if (isGameOver && iWon && !abandon) {
@@ -905,7 +758,7 @@ function OnlinePage() {
                         Retour au menu
                     </Link>
                 </div>
-                <ToastContainer position="top-right" autoClose={3000} hideProgressBar={false} />
+                <ToastContainer position="top-right" autoClose={3000} hideProgressBar={false}/>
             </div>
         );
     }
@@ -927,7 +780,7 @@ function OnlinePage() {
                         Retour au menu
                     </Link>
                 </div>
-                <ToastContainer position="top-right" autoClose={3000} hideProgressBar={false} />
+                <ToastContainer position="top-right" autoClose={3000} hideProgressBar={false}/>
             </div>
         );
     } else if (isGameOver && !iWon) {
@@ -948,7 +801,7 @@ function OnlinePage() {
                         Retour au menu
                     </Link>
                 </div>
-                <ToastContainer position="top-right" autoClose={3000} hideProgressBar={false} />
+                <ToastContainer position="top-right" autoClose={3000} hideProgressBar={false}/>
             </div>
         );
     }
@@ -970,9 +823,6 @@ function OnlinePage() {
                                 isMyTurn ? "bg-green-600" : "bg-gray-700"
                             }`}>
                                 <span className="text-white font-bold">Vous</span>
-                                <span className={`text-2xl font-mono ${myTimer < 60 ? "text-red-400" : "text-white"}`}>
-                                {formatTime(myTimer)}
-                            </span>
                             </div>
 
                             <div className="text-white text-xl px-4">
@@ -984,10 +834,6 @@ function OnlinePage() {
                             }`}>
                             <span className="text-white font-bold">
                                 {opponents.length > 0 ? opponents[0].username : "Adversaire"}
-                            </span>
-                                <span
-                                    className={`text-2xl font-mono ${opponentTimer < 60 ? "text-red-400" : "text-white"}`}>
-                                {formatTime(opponentTimer)}
                             </span>
                             </div>
                         </div>
@@ -1041,7 +887,7 @@ function OnlinePage() {
                 )}
                 <ToastContainer position="top-right" autoClose={1500} hideProgressBar={true} newestOnTop={false}
                                 closeOnClick={false} rtl={false} pauseOnFocusLoss={false} draggable={false}
-                                pauseOnHover={false} />
+                                pauseOnHover={false}/>
             </div>
         </div>
     );
