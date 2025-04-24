@@ -23,7 +23,7 @@ const App = () => {
     <Router>
       <div className="bg-gradient-to-br from-gray-900 to-black h-screen flex flex-col">
         <Header />
-        <main className="flex-1">
+        <main className="bg-gradient-to-br from-gray-900 to-black flex-1">
           <Routes>
             <Route path="/home" element={<HomePage />} />
             <Route path="/menu" element={<MenuPage />} />
