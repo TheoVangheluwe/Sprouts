@@ -7,7 +7,8 @@ import {
   updateCurveMap
 } from './PVEUtils';
 
-const AICanvas = ({ points, setPoints, curves, setCurves, currentPlayer, handlePlayerChange, handleGameOver, initialPointCount, addMove }) => {
+const AICanvas = ({ points, setPoints, curves, setCurves, currentPlayer, handlePlayerChange, handleGameOver, initialPointCount, addMove, difficulty }) => {
+
   const canvasRef = useRef(null);
   const [selectedPoint, setSelectedPoint] = useState(null);
   const [isDrawing, setIsDrawing] = useState(false);
@@ -41,6 +42,14 @@ const AICanvas = ({ points, setPoints, curves, setCurves, currentPlayer, handleP
     console.log("Chaîne mise à jour: ", graphString);
     checkGameOver();
   }, [graphString]);
+
+  useEffect(() => {
+    // L'IA ne joue que si c'est à elle et qu'on a déjà un graphe
+    if (currentPlayer === 2 && graphString !== '') {
+      handleAIMove();
+    }
+  }, [currentPlayer, graphString]);
+  
 
   const initializePoints = (initialPointCount) => {
     const canvas = canvasRef.current;
@@ -256,32 +265,34 @@ const AICanvas = ({ points, setPoints, curves, setCurves, currentPlayer, handleP
         },
         body: JSON.stringify({ graph_string: graphString }),
       });
-
+  
       if (!response.ok) throw new Error('Erreur réseau');
-
+  
       const data = await response.json();
       const possibleMoves = data.possible_moves;
-
+  
       if (!possibleMoves || possibleMoves.length === 0) {
-        toast.info("Aucun mouvement possible pour l'IA.", { autoClose: 1500 });
+        console.log("Aucun mouvement possible pour l'IA.");
         return;
       }
 
-      let moveAttempts = 0;
-      const maxAttempts = 10;
-      const canvas = canvasRef.current;
-      const move = possibleMoves[Math.floor(Math.random() * possibleMoves.length)];
-      console.log(move);
-
-      while (moveAttempts < maxAttempts) {
+      if (difficulty === 'easy') {
+        const randomMove = possibleMoves[Math.floor(Math.random() * possibleMoves.length)];
+        console.log("IA (facile) a choisi :", randomMove);
+        // Tu peux ici directement exécuter le coup avec randomMove[0] et randomMove[1]
+        return;
+      }
+  
+      const pairMoves = [];
+      const impairMoves = [];
+  
+      for (const move of possibleMoves) {
         const start = points.find(p => p.label === move[0]);
         const end = points.find(p => p.label === move[1]);
-
-        if (!start || !end) {
-          moveAttempts++;
-          continue;
-        }
-
+  
+        if (!start || !end) continue;
+  
+        let adjustedCurve;
         if (start.label === end.label) {
           // Générer des demi-cercles et des quarts de cercle dans différentes directions
           const radius = 50; // Vous pouvez ajuster cette valeur selon vos besoins
@@ -295,83 +306,74 @@ const AICanvas = ({ points, setPoints, curves, setCurves, currentPlayer, handleP
             { startAngle: Math.PI, endAngle: 3 * Math.PI / 2 }, // Quart de cercle inférieur gauche
             { startAngle: 3 * Math.PI / 2, endAngle: 2 * Math.PI } // Quart de cercle inférieur droit
           ];
-
-          let validCurveFound = false;
+  
           for (const direction of directions) {
             const curvePoints = generateCirclePoints(start, radius, 40, direction.startAngle, direction.endAngle);
-            const adjustedCurve = [start, ...curvePoints, start];
-
-            if (adjustedCurve.every(point => isPointWithinCanvas(point, canvas)) && !curveIntersects(adjustedCurve, curves, points)) {
-              // Ajouter la courbe
-              setCurves(prev => [...prev, adjustedCurve]);
-              const updatedMap = updateCurveMap(curveMap, start, start, adjustedCurve);
-              setCurveMap(updatedMap);
-
-              // Connecter les points
-              connectPoints(start, start, adjustedCurve, points, setPoints, setCurves);
-
-              // Ajouter le point intermédiaire
-              const mid = curvePoints[Math.floor(curvePoints.length / 2)];
-              const newPoint = { x: mid.x, y: mid.y, connections: 2, label: getNextLabel(points) };
-              const updatedPoints = [...points, newPoint];
-              setPoints(updatedPoints);
-
-              // Mise à jour du graphe
-              const newGraphString = generateGraphString(start, newPoint, start, graphString, updatedMap, updatedPoints);
-              setGraphString(newGraphString);
-
-              // Mouvements et changement de joueur
-              addMove(`${start.label} -> ${start.label} (demi-cercle)`);
-              handlePlayerChange();
-              validCurveFound = true;
+            adjustedCurve = [start, ...curvePoints, start];
+  
+            if (adjustedCurve.every(point => isPointWithinCanvas(point, canvasRef.current)) && !curveIntersects(adjustedCurve, curves, points)) {
               break;
             }
           }
-
-          if (validCurveFound) {
-            return;
-          } else {
-            moveAttempts++;
-          }
+        } else {
+          adjustedCurve = findValidCurve(start, end, canvasRef.current, curves, points);
         }
-
-        if (canConnect(start, end)) {
-          const adjustedCurve = findValidCurve(start, end, canvas, curves, points);
-          if (adjustedCurve && curveLength(adjustedCurve) >= 50) {
-            // Ajouter la courbe
-            setCurves(prev => [...prev, adjustedCurve]);
-            const updatedMap = updateCurveMap(curveMap, start, end, adjustedCurve);
-            setCurveMap(updatedMap);
-
-            // Connecter les points
-            connectPoints(start, end, adjustedCurve, points, setPoints, setCurves);
-
-            // Ajouter le point intermédiaire
-            const mid = adjustedCurve[Math.floor(adjustedCurve.length / 2)];
-            const newPoint = { x: mid.x, y: mid.y, connections: 2, label: getNextLabel(points) };
-            const updatedPoints = [...points, newPoint];
-            setPoints(updatedPoints);
-
-            // Mise à jour du graphe
-            const newGraphString = generateGraphString(start, newPoint, end, graphString, updatedMap, updatedPoints);
-            setGraphString(newGraphString);
-
-            // Mouvements et changement de joueur
-            addMove(`${start.label} -> ${end.label} : ${newPoint.label}`);
-            handlePlayerChange();
-            return;
-          }
+  
+        if (!adjustedCurve || (adjustedCurve && curveLength(adjustedCurve) < 50)) continue;
+  
+        // Simuler le coup
+        const simulatedPoints = [...points];
+        const simulatedCurves = [...curves, adjustedCurve];
+        const simulatedCurveMap = updateCurveMap(curveMap, start, end, adjustedCurve);
+  
+        const mid = adjustedCurve[Math.floor(adjustedCurve.length / 2)];
+        const newPoint = { x: mid.x, y: mid.y, connections: 2, label: getNextLabel(simulatedPoints) };
+        simulatedPoints.push(newPoint);
+  
+        const simulatedGraphString = generateGraphString(start, newPoint, end, graphString, simulatedCurveMap, simulatedPoints);
+  
+        // Récupérer les coups restants après ce coup
+        const response2 = await fetch('http://127.0.0.1:8000/api/get_possible_moves/', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ graph_string: simulatedGraphString }),
+        });
+  
+        if (!response2.ok) throw new Error('Erreur réseau');
+  
+        const data2 = await response2.json();
+        const remainingMoves = data2.possible_moves.length;
+  
+        // Classer les coups en pair et impair
+        if (remainingMoves % 2 === 0) {
+          pairMoves.push(move);
+        } else {
+          impairMoves.push(move);
         }
-
-        moveAttempts++;
       }
+  
+      // Afficher les coups pairs et impairs
+      console.log("Coups pairs:", pairMoves);
+      console.log("Coups impairs:", impairMoves);
 
-      console.warn("IA : Aucun chemin valide après", maxAttempts, "tentatives");
-      toast.warn("IA ne trouve aucun coup valide.", { autoClose: 1500 });
+      // Choisir un coup parmi les coups pairs si possible, sinon parmi les coups impairs
+      let chosenMove = null;
+
+      if (pairMoves.length > 0) {
+        chosenMove = pairMoves[Math.floor(Math.random() * pairMoves.length)];
+        console.log("IA a choisi un coup pair :", chosenMove);
+      } else if (impairMoves.length > 0) {
+        chosenMove = impairMoves[Math.floor(Math.random() * impairMoves.length)];
+        console.log("IA a choisi un coup impair :", chosenMove);
+      } else {
+        console.log("Aucun coup disponible pour l'IA.");
+        return;
+      }
 
     } catch (error) {
       console.error('Erreur IA:', error);
-      toast.error("Erreur lors du calcul du coup IA.", { autoClose: 1500 });
     }
   };
 
@@ -385,7 +387,6 @@ const AICanvas = ({ points, setPoints, curves, setCurves, currentPlayer, handleP
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
       />
-      <button onClick={handleAIMove} className="absolute top-4 left-4 px-4 py-2 bg-blue-500 text-white rounded">IA Move</button>
     </div>
   );
 };
