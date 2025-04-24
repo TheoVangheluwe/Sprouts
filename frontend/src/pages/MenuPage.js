@@ -27,7 +27,7 @@ const MenuPage = () => {
           </Link>
           <Link
             to="/rules"
-            className="bg-yellow-600 text-white py-3 px-6 rounded-lg hover:bg-gray-500 transform transition hover:scale-105 shadow-md w-full block"
+            className="bg-yellow-600 text-white py-3 px-6 rounded-lg hover:bg-yellow-500 transform transition hover:scale-105 shadow-md w-full block"
           >
             Règles du jeu
           </Link>
