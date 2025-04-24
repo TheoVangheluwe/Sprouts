@@ -1,7 +1,6 @@
-// PVEGamePage.js
+// PVEGamePage.js (devient PVP uniquement)
 import React, { useState, useEffect, useRef } from 'react';
 import PVECanvas from '../components/game/pve/PVECanvas';
-import AICanvas from '../components/game/pve/AICanvas'; // Importer le nouveau composant AICanvas
 import MoveHistory from '../components/MoveHistory';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -16,7 +15,6 @@ const PVEGamePage = () => {
     const [moves, setMoves] = useState([]);
     const [timer1, setTimer1] = useState(600);
     const [timer2, setTimer2] = useState(600);
-    const [gameMode, setGameMode] = useState('pve'); // Ajouter un état pour le mode de jeu
 
     const timerInterval = useRef(null);
 
@@ -97,8 +95,8 @@ const PVEGamePage = () => {
                         <>
                             <h1 className="text-3xl mb-4 animate-pulse text-yellow-300">🎮 Nombre de points initiaux 🎮</h1>
                             <p className="mb-2">Choisissez le nombre de points initiaux :</p>
-                            <div className="flex justify-center gap-4 mb-4">
-                                {[3, 4, 5, 6].map(n => (
+                            <div className="flex justify-center gap-4 mb-6">
+                                {[3, 4, 5, 6, 7].map(n => (
                                     <button
                                         key={n}
                                         className={`px-4 py-2 rounded border-2 border-white transition transform hover:scale-105 ${
@@ -110,81 +108,57 @@ const PVEGamePage = () => {
                                     </button>
                                 ))}
                             </div>
-                            <div className="flex justify-center gap-4 mb-4">
+                            <div className="flex gap-4 justify-center mt-6">
                                 <button
-                                    className={`px-4 py-2 rounded border-2 border-white transition transform hover:scale-105 ${
-                                        gameMode === 'pve' ? 'bg-yellow-400 text-black' : 'bg-gray-700'
-                                    }`}
-                                    onClick={() => setGameMode('pve')}
+                                    className="px-6 py-3 bg-green-500 hover:bg-green-400 text-black font-bold rounded border-2 border-white shadow-md transition-transform hover:scale-110"
+                                    onClick={handleStartGame}
                                 >
-                                    Joueur vs Joueur
+                                    ▶️ Commencer
                                 </button>
                                 <button
-                                    className={`px-4 py-2 rounded border-2 border-white transition transform hover:scale-105 ${
-                                        gameMode === 'ai' ? 'bg-yellow-400 text-black' : 'bg-gray-700'
-                                    }`}
-                                    onClick={() => setGameMode('ai')}
+                                    className="px-6 py-2 bg-gray-600 hover:bg-gray-500 text-white rounded border-2 border-white"
+                                    onClick={() => window.location.href = '/menu'}
                                 >
-                                    Joueur vs IA
+                                    ❌ Retour
                                 </button>
                             </div>
-                            <button
-                                className="px-6 py-3 bg-green-500 hover:bg-green-400 text-black font-bold rounded border-2 border-white shadow-md transition-transform hover:scale-110"
-                                onClick={handleStartGame}
-                            >
-                                ▶️ Commencer
-                            </button>
                         </>
                     )}
 
                     {phase === 'game' && (
                         <>
-                            <h1 className="text-2xl font-bold mb-4 text-yellow-300">🎲 {gameMode === 'pve' ? 'Joueur contre Joueur' : 'Joueur contre IA'}</h1>
+                            <h1 className="text-2xl font-bold mb-4 text-yellow-300">🎲 Joueur contre Joueur</h1>
                             <div className="flex justify-around mb-4 text-xl font-bold">
                                 <div className={`${currentPlayer === 1 ? 'text-green-400' : 'text-white'}`}>
                                     🟢 Joueur 1: {formatTime(timer1)}
                                 </div>
                                 <div className={`${currentPlayer === 2 ? 'text-green-400' : 'text-white'}`}>
-                                    {gameMode === 'pve' ? '🔴 Joueur 2: ' : '🔴 IA: '} {formatTime(timer2)}
+                                    🔴 Joueur 2: {formatTime(timer2)}
                                 </div>
                             </div>
                             <div className="text-xl mb-4 animate-bounce">
                                 🚩 Tour du joueur <span className="text-green-400">{currentPlayer}</span>
                             </div>
                             <div className="flex justify-center items-center w-full" style={{ height: '500px' }}>
-                                {gameMode === 'pve' ? (
-                                    <PVECanvas
-                                        points={points}
-                                        setPoints={setPoints}
-                                        curves={curves}
-                                        setCurves={setCurves}
-                                        currentPlayer={currentPlayer}
-                                        handlePlayerChange={handlePlayerChange}
-                                        handleGameOver={handleGameOver}
-                                        initialPointCount={initialPoints}
-                                        addMove={addMove}
-                                    />
-                                ) : (
-                                    <AICanvas
-                                        points={points}
-                                        setPoints={setPoints}
-                                        curves={curves}
-                                        setCurves={setCurves}
-                                        currentPlayer={currentPlayer}
-                                        handlePlayerChange={handlePlayerChange}
-                                        handleGameOver={handleGameOver}
-                                        initialPointCount={initialPoints}
-                                        addMove={addMove}
-                                    />
-                                )}
+                                <PVECanvas
+                                    points={points}
+                                    setPoints={setPoints}
+                                    curves={curves}
+                                    setCurves={setCurves}
+                                    currentPlayer={currentPlayer}
+                                    handlePlayerChange={handlePlayerChange}
+                                    handleGameOver={handleGameOver}
+                                    initialPointCount={initialPoints}
+                                    addMove={addMove}
+                                />
                             </div>
-                            <div className="w-full h-2 bg-yellow-400 my-4"></div> {/* Séparation */}
+                            <div className="w-full h-2 bg-yellow-400 my-4"></div>
                             <button
-                className="px-6 py-2 bg-gray-600 hover:bg-gray-500 text-white rounded border-2 border-white"
-                onClick={() => window.location.href = '/menu'}
-                >
-                ❌ Quitter
-            </button>
+                                className="px-6 py-2 bg-gray-600 hover:bg-gray-500 text-white rounded border-2 border-white"
+                                onClick={() => window.location.href = '/menu'}
+                            >
+                                ❌ Quitter
+                            </button>
                         </>
                     )}
 
