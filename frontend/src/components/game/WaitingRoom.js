@@ -12,14 +12,8 @@ function WaitingRoom({ setInWaitingRoom }) {
     const navigate = useNavigate();
 
     const navigateTo = (path) => {
-        if (path.includes("undefined")) {
-            return;
-        }
-
-        if (navigate) {
+        if (!path.includes("undefined")) {
             navigate(path);
-        } else {
-            window.location.href = path;
         }
     };
 
@@ -33,26 +27,21 @@ function WaitingRoom({ setInWaitingRoom }) {
                         'Authorization': `Bearer ${localStorage.getItem('token')}`
                     }
                 });
-
                 const data = await response.json();
-
                 if (data.active_game && data.game_id) {
                     navigateTo(`/online-game/${data.game_id}`);
-                    return;
+                } else {
+                    setCheckingActiveGame(false);
                 }
-
-                setCheckingActiveGame(false);
-            } catch (error) {
+            } catch {
                 setCheckingActiveGame(false);
             }
         };
-
         checkActiveGame();
     }, [navigate]);
 
     useEffect(() => {
         if (!hasJoinedQueue || checkingActiveGame) return;
-
         const interval = setInterval(async () => {
             try {
                 const response = await fetch(`/api/queue/status/`, {
@@ -60,36 +49,23 @@ function WaitingRoom({ setInWaitingRoom }) {
                         'Authorization': `Bearer ${localStorage.getItem('token')}`
                     }
                 });
-
                 const data = await response.json();
-
                 if (data.active_game && data.game_id) {
                     navigateTo(`/online-game/${data.game_id}`);
-                    return;
+                } else {
+                    setQueueInfo(data);
+                    if (data.game_created && data.game_id) {
+                        setGameId(data.game_id);
+                        navigateTo(`/online-game/${data.game_id}`);
+                    }
                 }
-
-                setQueueInfo(data);
-
-                if (data.game_created && data.game_id) {
-                    setGameId(data.game_id);
-                    navigateTo(`/online-game/${data.game_id}`);
-                }
-            } catch (error) {
-                // Erreur silencieuse
-            }
+            } catch {}
         }, 2000);
-
         return () => clearInterval(interval);
     }, [hasJoinedQueue, navigate, ready, checkingActiveGame]);
 
     const togglePointSelection = (points) => {
-        setSelectedPoints(prev => {
-            if (prev.includes(points)) {
-                return prev.filter(p => p !== points);
-            } else {
-                return [...prev, points];
-            }
-        });
+        setSelectedPoints(prev => prev.includes(points) ? prev.filter(p => p !== points) : [...prev, points]);
     };
 
     const joinQueue = async () => {
@@ -97,9 +73,7 @@ function WaitingRoom({ setInWaitingRoom }) {
             alert("Veuillez sélectionner au moins une option de points.");
             return;
         }
-
         setIsLoading(true);
-
         try {
             const response = await fetch(`/api/queue/join/`, {
                 method: "POST",
@@ -107,25 +81,20 @@ function WaitingRoom({ setInWaitingRoom }) {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${localStorage.getItem('token')}`
                 },
-                body: JSON.stringify({
-                    pointPreferences: selectedPoints
-                })
+                body: JSON.stringify({ pointPreferences: selectedPoints })
             });
-
             const data = await response.json();
-
             if (response.ok) {
                 if (data.active_game && data.game_id) {
                     navigateTo(`/online-game/${data.game_id}`);
-                    return;
+                } else {
+                    setHasJoinedQueue(true);
+                    setQueueInfo(data);
                 }
-
-                setHasJoinedQueue(true);
-                setQueueInfo(data);
             } else {
                 throw new Error(data.error || "Impossible de rejoindre la file d'attente");
             }
-        } catch (error) {
+        } catch {
             alert("Une erreur est survenue. Veuillez réessayer.");
         } finally {
             setIsLoading(false);
@@ -141,12 +110,9 @@ function WaitingRoom({ setInWaitingRoom }) {
                     'Authorization': `Bearer ${localStorage.getItem('token')}`
                 }
             });
-
             const data = await response.json();
-
             if (response.ok) {
                 setReady(true);
-
                 if (data.game_id) {
                     setGameId(data.game_id);
                     navigateTo(`/online-game/${data.game_id}`);
@@ -154,7 +120,7 @@ function WaitingRoom({ setInWaitingRoom }) {
             } else {
                 throw new Error(data.error || "Erreur lors de la déclaration de l'état de préparation");
             }
-        } catch (error) {
+        } catch {
             alert("Une erreur est survenue. Veuillez réessayer.");
         }
     };
@@ -168,13 +134,12 @@ function WaitingRoom({ setInWaitingRoom }) {
                     'Authorization': `Bearer ${localStorage.getItem('token')}`
                 }
             });
-
             if (response.ok) {
                 resetState();
             } else {
                 throw new Error("Erreur lors de la sortie de la file d'attente");
             }
-        } catch (error) {
+        } catch {
             alert("Une erreur est survenue. Veuillez réessayer.");
         }
     };
@@ -189,10 +154,10 @@ function WaitingRoom({ setInWaitingRoom }) {
 
     if (checkingActiveGame) {
         return (
-            <div className="to-black flex flex-col items-center justify-center h-full p-4 font-arcade">
-                <div className="bg-gray-800 border-4 border-yellow-400 p-8 rounded-lg shadow-2xl text-center max-w-md w-full">
+            <div className="to-black flex flex-col items-center justify-center h-full p-4 font-arcade text-white">
+                <div className="bg-gray-800 border-4 border-yellow-400 p-6 rounded-lg shadow-xl text-center w-full max-w-md">
                     <h2 className="text-2xl font-bold text-yellow-300 mb-4">Vérification de partie en cours...</h2>
-                    <p className="text-white">Veuillez patienter pendant que nous vérifions si vous avez une partie active.</p>
+                    <p>Veuillez patienter pendant que nous vérifions votre statut.</p>
                 </div>
             </div>
         );
@@ -200,92 +165,90 @@ function WaitingRoom({ setInWaitingRoom }) {
 
     if (!hasJoinedQueue) {
         return (
-            <div className="to-black flex flex-col items-center justify-center h-full p-4 font-arcade">
-                <div className="bg-gray-800 border-4 border-yellow-400 p-8 rounded-lg shadow-2xl text-center max-w-md w-full">
-                    <h2 className="text-2xl font-bold text-yellow-300 mb-4">Sélectionner le nombre de points</h2>
-                    <p className="text-white mb-6">Choisissez une ou plusieurs options pour être mis en correspondance avec d'autres joueurs:</p>
-
-                    <div className="flex justify-center flex-wrap gap-2 mb-6">
+            <div className="to-black flex flex-col items-center justify-center h-full p-4 font-arcade text-white">
+                <div className="bg-gray-800 border-4 border-yellow-400 p-6 rounded-lg shadow-xl text-center w-full max-w-md">
+                    <h1 className="text-3xl mb-4 animate-pulse text-yellow-300">🎮 Choix du nombre de points 🎮</h1>
+                    <p className="mb-6">Sélectionnez les configurations de points que vous acceptez :</p>
+                    <div className="flex flex-wrap justify-center gap-3 mb-6">
                         {pointOptions.map(option => (
                             <button
                                 key={option}
                                 onClick={() => togglePointSelection(option)}
-                                className={`py-2 px-4 rounded-lg transform transition hover:scale-105 ${
-                                    selectedPoints.includes(option) 
-                                        ? "bg-green-600 text-white font-bold" 
-                                        : "bg-gray-600 text-white"
+                                className={`px-4 py-2 rounded-lg border-2 border-white transition transform hover:scale-105 ${
+                                    selectedPoints.includes(option)
+                                        ? "bg-green-600 text-white"
+                                        : "bg-gray-700 text-white"
                                 }`}
                             >
                                 {option} points
                             </button>
                         ))}
                     </div>
-
-                    <button
-                        onClick={joinQueue}
-                        disabled={isLoading || selectedPoints.length === 0}
-                        className={`py-3 px-6 rounded-lg transform transition w-full ${
-                            selectedPoints.length > 0 
-                                ? "bg-blue-600 text-white hover:bg-blue-500 hover:scale-105" 
-                                : "bg-gray-500 text-gray-300 cursor-not-allowed"
-                        }`}
-                    >
-                        {isLoading ? "Recherche en cours..." : "Rejoindre la file d'attente"}
-                    </button>
+                    <div className="flex gap-4 justify-center">
+                        <button
+                            onClick={joinQueue}
+                            disabled={isLoading || selectedPoints.length === 0}
+                            className={`px-6 py-3 rounded border-2 border-white transition transform ${
+                                selectedPoints.length > 0
+                                    ? "bg-blue-600 hover:bg-blue-500"
+                                    : "bg-gray-500 text-gray-300 cursor-not-allowed"
+                            }`}
+                        >
+                            {isLoading ? "Recherche en cours..." : "Rejoindre"}
+                        </button>
+                        <button
+                            className="px-6 py-3 bg-gray-600 hover:bg-gray-500 text-white rounded border-2 border-white"
+                            onClick={() => window.location.href = '/menu'}
+                        >
+                            ❌ Retour
+                        </button>
+                    </div>
                 </div>
             </div>
         );
     }
 
     return (
-        <div className="to-black flex flex-col items-center justify-center p-4 h-full font-arcade">
-            <div className="bg-gray-800 border-4 border-yellow-400 p-8 rounded-lg shadow-2xl text-center max-w-md w-full">
-                <h2 className="text-3xl font-bold text-yellow-300 mb-6">Salle d'Attente</h2>
+        <div className="to-black flex flex-col items-center justify-center h-full p-4 font-arcade text-white">
+            <div className="bg-gray-800 border-4 border-yellow-400 p-6 rounded-lg shadow-2xl text-center max-w-md w-full">
+                <h2 className="text-3xl font-bold text-yellow-300 mb-4">Salle d’attente</h2>
+                {queueInfo && <p className="mb-4">Joueurs en attente : {queueInfo.queue_count || 0}</p>}
 
-                {queueInfo && (
-                    <p className="text-white mb-4">Joueurs en file d'attente: {queueInfo.queue_count || 0}</p>
-                )}
-
-                <div className="bg-gray-700 p-4 rounded-lg mb-4">
+                <div className="bg-gray-700 p-4 rounded mb-4">
                     <h3 className="text-xl text-yellow-300 mb-2">Préférences de points</h3>
-                    <p className="text-white">{selectedPoints.join(", ")} points</p>
+                    <p>{selectedPoints.join(", ")} points</p>
                 </div>
 
-                <div className="bg-gray-700 p-4 rounded-lg mb-6">
+                <div className="bg-gray-700 p-4 rounded mb-4">
                     <h3 className="text-xl text-yellow-300 mb-2">Statut</h3>
-                    {queueInfo && queueInfo.matched ? (
-                        <div className="text-white">
-                            <p>Adversaire trouvé: <strong>{queueInfo.matched_with.username}</strong></p>
-                            <p>Statut: {queueInfo.matched_with.ready ? 'Prêt ✅' : 'En attente'}</p>
-                            {ready && <p>Vous êtes: <strong>Prêt ✅</strong></p>}
+                    {queueInfo?.matched ? (
+                        <div>
+                            <p>Adversaire : <strong>{queueInfo.matched_with.username}</strong></p>
+                            <p>Statut : {queueInfo.matched_with.ready ? 'Prêt ✅' : 'En attente'}</p>
+                            {ready && <p>Vous êtes : <strong>Prêt ✅</strong></p>}
                         </div>
-                    ) : (
-                        <p className="text-white">En attente d'un adversaire...</p>
-                    )}
+                    ) : <p>En attente d'un adversaire...</p>}
                 </div>
 
-                <div className="flex justify-center gap-3">
-                    {queueInfo && queueInfo.matched && !ready && (
+                <div className="flex justify-center gap-4">
+                    {queueInfo?.matched && !ready && (
                         <button
                             onClick={setPlayerReady}
-                            className="bg-green-600 text-white py-3 px-6 rounded-lg hover:bg-green-500 transform transition hover:scale-105 shadow-md"
+                            className="bg-green-600 text-white py-2 px-4 rounded hover:bg-green-500"
                         >
-                            Prêt
+                            ✅ Prêt
                         </button>
                     )}
-
                     <button
                         onClick={leaveQueue}
-                        className="bg-red-600 text-white py-3 px-6 rounded-lg hover:bg-red-500 transform transition hover:scale-105 shadow-md"
+                        className="bg-red-600 text-white py-2 px-4 rounded hover:bg-red-500"
                     >
-                        Quitter la file
+                        ❌ Quitter
                     </button>
                 </div>
 
                 {ready && (
-                    <p className="text-white mt-4 animate-pulse">
-                        En attente que votre adversaire soit prêt...
-                    </p>
+                    <p className="mt-4 animate-pulse">En attente que l'adversaire se prépare...</p>
                 )}
             </div>
         </div>
