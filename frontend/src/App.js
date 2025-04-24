@@ -10,7 +10,6 @@ import RulesPage from './pages/RulesPage';
 import MenuPage from './pages/MenuPage';
 import PVEGamePage from './pages/PVEGamePage';
 import AIGamePage from './pages/AIGamePage';
-import MultiplayerGamePage from './pages/MultiplayerGamePage';
 import WaitingRoom from './components/game/WaitingRoom';
 import OnlinePage from './pages/OnlinePage';
 import LegalPage from './pages/LegalPage';
@@ -22,7 +21,7 @@ import TechnicPDF_Page from './pages/TechnicPage';
 const App = () => {
   return (
     <Router>
-      <div className="h-screen flex flex-col">
+      <div className="bg-gradient-to-br from-gray-900 to-black h-screen flex flex-col">
         <Header />
         <main className="flex-1">
           <Routes>
@@ -30,7 +29,6 @@ const App = () => {
             <Route path="/menu" element={<MenuPage />} />
             <Route path="/pve" element={<PVEGamePage />} />
             <Route path="/ai" element={<AIGamePage />} />
-            <Route path="/multiplayer" element={<MultiplayerGamePage />} />
             <Route path="/rules" element={<RulesPage />} />
             <Route path="/waiting-room" element={<WaitingRoom />} />
             <Route path="/online-game/:gameId" element={<OnlinePage />} />

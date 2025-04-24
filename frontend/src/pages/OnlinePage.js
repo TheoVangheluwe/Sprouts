@@ -643,6 +643,7 @@ function OnlinePage() {
                     }
                     return;
                 }
+                 return response;
             } else {
                 toast.error(`Erreur: ${data.error || 'Impossible de jouer ce coup'}`);
             }
@@ -743,7 +744,7 @@ function OnlinePage() {
     if (isGameOver && iWon && !abandon) {
         return (
             <div
-                className="bg-gradient-to-br from-gray-900 to-black flex flex-col items-center justify-center min-h-screen p-4 font-arcade">
+                className=" flex flex-col items-center justify-center h-full p-4 font-arcade">
                 <div
                     className="bg-gray-800 border-4 border-yellow-400 p-4 pt-8 rounded-lg shadow-2xl text-center max-w-md w-full">
                     <h1 className="text-2xl font-bold mb-6 text-yellow-300 animate-pulse">🏆 VICTOIRE 🏆</h1>
@@ -765,7 +766,7 @@ function OnlinePage() {
     if (isGameOver && !iWon && abandon) {
         return (
             <div
-                className="bg-gradient-to-br from-gray-900 to-black flex flex-col items-center justify-center min-h-screen p-4 font-arcade">
+                className="flex flex-col items-center justify-center h-full p-4 font-arcade">
                 <div
                     className="bg-gray-800 border-4 border-yellow-400 p-4 pt-8 rounded-lg shadow-2xl text-center max-w-md w-full">
                     <h1 className="text-2xl font-bold mb-6 text-red-500">DÉFAITE</h1>
@@ -786,7 +787,7 @@ function OnlinePage() {
     } else if (isGameOver && !iWon) {
         return (
             <div
-                className="bg-gradient-to-br from-gray-900 to-black flex flex-col items-center justify-center min-h-screen p-4 font-arcade">
+                className="flex flex-col items-center justify-center h-full p-4 font-arcade">
                 <div
                     className="bg-gray-800 border-4 border-yellow-400 p-4 pt-8  rounded-lg shadow-2xl text-center max-w-md w-full">
                     <h1 className="text-2xl font-bold mb-6 text-red-500">DÉFAITE</h1>
@@ -808,7 +809,7 @@ function OnlinePage() {
 
     return (
         <div
-            className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-gray-900 to-black font-arcade text-white p-4">
+            className="flex flex-col items-center justify-center h-full font-arcade text-white p-4">
             <div
                 className="bg-gray-800 border-4 border-yellow-400 p-6 rounded-lg shadow-2xl w-full max-w-screen-lg text-center flex flex-row items-center justify-center space-x-4">
                 {gameState && (
@@ -818,25 +819,6 @@ function OnlinePage() {
                         flexDirection: 'column',
                         alignItems: 'center'
                     }}>
-                        <div className="flex justify-between items-center mb-4 w-full max-w-lg">
-                            <div className={`flex flex-col items-center p-2 rounded-lg ${
-                                isMyTurn ? "bg-green-600" : "bg-gray-700"
-                            }`}>
-                                <span className="text-white font-bold">Vous</span>
-                            </div>
-
-                            <div className="text-white text-xl px-4">
-                                VS
-                            </div>
-
-                            <div className={`flex flex-col items-center p-2 rounded-lg ${
-                                !isMyTurn ? "bg-green-600" : "bg-gray-700"
-                            }`}>
-                            <span className="text-white font-bold">
-                                {opponents.length > 0 ? opponents[0].username : "Adversaire"}
-                            </span>
-                            </div>
-                        </div>
                         <div style={{
                             backgroundColor: 'white',
                             width: '100%',

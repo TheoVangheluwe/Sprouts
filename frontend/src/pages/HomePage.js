@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 
 const HomePage = () => {
   return (
-    <div className="bg-gradient-to-br from-gray-900 to-black flex flex-col items-center justify-center min-h-screen p-4 font-arcade">
+    <div className="flex flex-col items-center justify-center h-full p-4 font-arcade">
       <div className="bg-gray-800 border-4 border-yellow-400 p-8 rounded-lg shadow-2xl text-center w-full max-w-3xl">
         <h1 className="text-5xl font-bold mb-6 text-yellow-300 animate-pulse">Sprouts Game</h1>
         <p className="text-gray-300 mb-8">Bienvenue dans le monde captivant du jeu de Sprouts ! Jouez en ligne avec vos amis ou défiez l'IA.</p>

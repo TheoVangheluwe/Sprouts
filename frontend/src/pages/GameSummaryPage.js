@@ -29,7 +29,7 @@ const GameSummaryPage = () => {
   };
 
   return (
-    <div className="bg-gradient-to-br from-gray-900 to-black min-h-screen flex flex-col items-center justify-center p-6 font-arcade text-white">
+    <div className="flex flex-col items-center justify-center p-6 font-arcade h-full text-white">
       <div className="bg-gray-800 border-4 border-yellow-400 p-6 rounded-xl shadow-2xl w-full max-w-3xl text-center">
         <h1 className="text-4xl font-bold mb-6 text-yellow-300 animate-pulse">
           🧾 Résumé de la partie #{gameId}

@@ -90,7 +90,7 @@ const PVEGamePage = () => {
     };
 
     return (
-        <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-gray-900 to-black font-arcade text-white p-4">
+        <div className="flex flex-col items-center justify-center h-full font-arcade text-white p-4">
             <div className="bg-gray-800 border-4 border-yellow-400 p-6 rounded-lg shadow-2xl w-full max-w-screen-lg text-center flex flex-row space-x-4">
                 <div className="flex-1">
                     {phase === 'menu' && (

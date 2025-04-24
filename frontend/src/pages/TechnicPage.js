@@ -2,7 +2,7 @@ import React from 'react';
 
 const TechnicPDF = () => {
   return (
-    <div className="bg-gradient-to-br from-gray-900 to-black flex items-center justify-center min-h-screen p-6 font-arcade">
+    <div className=" flex items-center justify-center h-full p-6 font-arcade">
         <div className="bg-gray-800 border-4 border-yellow-400 p-6 rounded-lg shadow-2xl w-full max-w-4xl text-center flex flex-col" style={{ height: '90vh' }}>
           <h1 className="text-3xl text-yellow-300 font-bold mb-4">
             Documentation du Projet

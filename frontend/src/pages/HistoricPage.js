@@ -42,7 +42,7 @@ const HistoricPage = () => {
   }, [userId]);
 
   return (
-    <div className="bg-gradient-to-br from-gray-900 to-black flex flex-col items-center justify-center min-h-screen p-4 font-arcade">
+    <div className="flex flex-col items-center justify-center h-full p-4 font-arcade">
       <div className="bg-gray-800 border-4 border-yellow-400 p-8 rounded-lg shadow-2xl text-center w-full max-w-md">
         <h1 className="text-3xl font-bold mb-6 text-yellow-300 animate-pulse">
           🕹️ Historique de : {username}

@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 
 const MenuPage = () => {
   return (
-    <div className="bg-gradient-to-br from-gray-900 to-black flex flex-col items-center justify-center min-h-screen p-4 font-arcade">
+    <div className="flex flex-col  items-center justify-center p-4 h-full font-arcade">
       <div className="bg-gray-800 border-4 border-yellow-400 p-8 rounded-lg shadow-2xl text-center max-w-md w-full">
         <h1 className="text-4xl font-bold mb-8 text-yellow-300 animate-pulse">🎮 Menu 🎮</h1>
         <div className="space-y-6">

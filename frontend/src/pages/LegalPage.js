@@ -2,7 +2,7 @@ import React from 'react';
 
 const LegalPage = () => {
   return (
-    <div className="bg-gradient-to-br from-gray-900 to-black min-h-screen flex items-center justify-center p-6 font-['Press_Start_2P'] text-sm text-yellow-300">
+    <div className="flex items-center justify-center p-6 font-['Press_Start_2P'] text-sm text-yellow-300 h-full">
       <div className="bg-gray-800 border-4 border-yellow-400 p-6 sm:p-10 rounded-lg shadow-2xl max-w-4xl w-full overflow-auto">
         <h1 className="text-2xl sm:text-3xl font-bold mb-6 text-yellow-300 text-center animate-pulse">
           Mentions Légales
