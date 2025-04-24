@@ -189,7 +189,7 @@ function WaitingRoom({ setInWaitingRoom }) {
 
     if (checkingActiveGame) {
         return (
-            <div className="to-black flex flex-col items-center justify-center p-4 font-arcade">
+            <div className="to-black flex flex-col items-center justify-center h-full p-4 font-arcade">
                 <div className="bg-gray-800 border-4 border-yellow-400 p-8 rounded-lg shadow-2xl text-center max-w-md w-full">
                     <h2 className="text-2xl font-bold text-yellow-300 mb-4">Vérification de partie en cours...</h2>
                     <p className="text-white">Veuillez patienter pendant que nous vérifions si vous avez une partie active.</p>
@@ -200,7 +200,7 @@ function WaitingRoom({ setInWaitingRoom }) {
 
     if (!hasJoinedQueue) {
         return (
-            <div className="to-black flex flex-col items-center justify-center p-4 font-arcade">
+            <div className="to-black flex flex-col items-center justify-center h-full p-4 font-arcade">
                 <div className="bg-gray-800 border-4 border-yellow-400 p-8 rounded-lg shadow-2xl text-center max-w-md w-full">
                     <h2 className="text-2xl font-bold text-yellow-300 mb-4">Sélectionner le nombre de points</h2>
                     <p className="text-white mb-6">Choisissez une ou plusieurs options pour être mis en correspondance avec d'autres joueurs:</p>
@@ -238,7 +238,7 @@ function WaitingRoom({ setInWaitingRoom }) {
     }
 
     return (
-        <div className="to-black flex flex-col items-center justify-center p-4 font-arcade">
+        <div className="to-black flex flex-col items-center justify-center p-4 h-full font-arcade">
             <div className="bg-gray-800 border-4 border-yellow-400 p-8 rounded-lg shadow-2xl text-center max-w-md w-full">
                 <h2 className="text-3xl font-bold text-yellow-300 mb-6">Salle d'Attente</h2>
 

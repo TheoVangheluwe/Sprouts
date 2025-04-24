@@ -5,7 +5,7 @@ const HomePage = () => {
   return (
     <div className="flex flex-col items-center justify-center h-full p-4 font-arcade">
       <div className="bg-gray-800 border-4 border-yellow-400 p-8 rounded-lg shadow-2xl text-center w-full max-w-3xl">
-        <h1 className="text-5xl font-bold mb-6 text-yellow-300 animate-pulse">Sprouts Game</h1>
+        <h1 className="text-4xl font-bold mb-6 text-yellow-300 animate-pulse">Sprouts Game</h1>
         <p className="text-gray-300 mb-8">Bienvenue dans le monde captivant du jeu de Sprouts ! Jouez en ligne avec vos amis ou défiez l'IA.</p>
         <div className="space-y-4 mb-8">
           <Link
@@ -16,7 +16,7 @@ const HomePage = () => {
           </Link>
         </div>
         <div className="mt-6">
-          <h2 className="text-3xl font-semibold mb-4 text-yellow-300">Pourquoi jouer ici ?</h2>
+          <h2 className="text-2xl font-semibold mb-4 text-yellow-300">Pourquoi jouer ici ?</h2>
           <ul className="text-gray-200 list-disc list-inside mb-6">
             <li>Interface fluide et interactive, sans erreurs d’encre.</li>
             <li>Jouez n’importe où, sur PC ou mobile.</li>
@@ -24,7 +24,7 @@ const HomePage = () => {
           </ul>
         </div>
         <div className="mt-6">
-          <h2 className="text-3xl font-semibold mb-4 text-yellow-300">Fonctionnalités du Site</h2>
+          <h2 className="text-2xl font-semibold mb-4 text-yellow-300">Fonctionnalités du Site</h2>
           <ul className="text-gray-200 list-disc list-inside">
             <li>Modes de jeu variés : Joueur contre Joueur, Joueur contre IA, et Multijoueur en ligne.</li>
             <li>Paramètres personnalisables pour adapter l'expérience de jeu.</li>
