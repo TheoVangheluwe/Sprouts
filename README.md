@@ -1,7 +1,7 @@
 # Sprouts
 Projet M1 ISEN 
 
-Pour démarrer le projet il faut avoir un IDE installé (PyCharm, Visual Studio Code, etc.) et Python 3.8 ou supérieur.
+Pour démarrer le projet il faut avoir un IDE installé (PyCharm, Visual Studio Code, etc.) ainsi que Node.js v18 et Python 3.8 (ou supérieur).
 ## Ouvrir un terminal
 Installer les dépendances
 ```bash 
