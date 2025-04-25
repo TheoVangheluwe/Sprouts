@@ -1,3 +1,4 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -5,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="Sprouts Game - A fun and interactive game to play online.">
   <meta name="keywords" content="Sprouts, Game, Online, Fun, Interactive">
+  <link rel="icon" href="{% static 'favicon.ico' %}" type="image/x-icon" />
   <title>Sprouts Game</title>
   {% load render_bundle from webpack_loader %}
   {% render_bundle 'main' %}
